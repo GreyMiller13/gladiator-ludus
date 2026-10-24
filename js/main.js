@@ -15,4 +15,7 @@
   STATE.events.forEach(e => e.enemies.forEach(ensureLook));
   STATE.graveyard.forEach(d => { if (!d.look) d.look = randomLook(); });
   render();
+  try {
+    if (sessionStorage.getItem('ludus_imported')) { sessionStorage.removeItem('ludus_imported'); toast(`Сохранение загружено: ${saveSummary(STATE)}.`); }
+  } catch (e) { /* хранилище недоступно */ }
 })();

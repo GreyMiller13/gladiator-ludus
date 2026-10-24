@@ -42,7 +42,7 @@ const BASE_POSE = {
   lean: 0.06, chest: 0.06, head: 0.02,
   nU: 0.42, nK: 0.32, nF: 0, fU: -0.32, fK: 0.38, fF: 0,
   nA: 0.55, nE: 1.15, nW: 0, fA: 0.3, fE: 1.3, fW: 0.15,
-  grip: 0.2, nGrip: 0.3, draw: 0,
+  grip: 0.2, nGrip: 0.3, draw: 0, slack: 0,
 };
 const STANCES = {
   murmillo:    { nA: 0.5, nE: 1.2, fA: 0.28, fE: 1.25, grip: 0.15, lean: 0.1, chest: 0.06 },
@@ -105,6 +105,7 @@ function skeleton(p) {
     S.headC.y + 12, S.handN.y + 5, S.handF.y + 5,
   );
   S.top = Math.min(S.headTop.y, S.sh.y - 10);
+  S.slack = clamp(p.slack || 0, 0, 1); // 1 — тело обмякло на песке
   return S;
 }
 
@@ -306,7 +307,7 @@ function drawFigure(ctx, spec, pose, x, groundY, o = {}) {
   const wpn = o.disarmed ? null : spec.weapon;
   const bow = wpn && spec.ranged;
   // двуручный хват: ближняя кисть сама находит рукоять
-  if (wpn && spec.twoHanded && !bow) {
+  if (wpn && spec.twoHanded && !bow && S.slack < 0.5) {
     const th = S.thHF + pose.grip;
     reachArm(S, 'N', at(S.handF, th + Math.PI, wpn.b === 'axe' ? 17 : 12), S.thHF, 'down');
   }
@@ -320,7 +321,15 @@ function drawFigure(ctx, spec, pose, x, groundY, o = {}) {
   // 1. дальняя нога
   drawLeg(ctx, S, 'F', far, spec, L, m);
   // 2. дальняя рука с оружием, колчан за спиной
-  if (wpn && !bow) out.blade = drawWeapon(ctx, wpn, S.handF, S.thHF + pose.grip);
+  if (wpn && !bow) {
+    let th = S.thHF + pose.grip, hand = S.handF;
+    // древковое у павшего выпадает из руки и ложится вдоль тела, а не торчит за головой
+    if (S.slack > 0 && (wpn.b === 'spear' || wpn.b === 'trident')) {
+      th += (Math.PI / 2 + 0.04 - th) * S.slack;
+      hand = lerpP(S.handF, { x: S.waist.x, y: S.handF.y }, S.slack);
+    }
+    out.blade = drawWeapon(ctx, wpn, hand, th);
+  }
   if (spec.offhand && spec.offhand.b === 'pharetra') drawQuiver(ctx, S, spec.offhand, g);
   drawArm(ctx, S, 'F', far, spec, L, m);
   // 3. торс, шея, голова
@@ -338,7 +347,13 @@ function drawFigure(ctx, spec, pose, x, groundY, o = {}) {
   drawArm(ctx, S, 'N', skin, spec, L, m);
   if (spec.arms && spec.arms.b === 'galerus') drawGalerus(ctx, S, spec);
   if (shield) drawShield(ctx, oh, S, spec);
-  if (oh && oh.b === 'rete' && !o.noNet) drawNetBundle(ctx, S.handN, sway.cloth);
+  if (oh && oh.b === 'rete' && !o.noNet) {
+    // у павшего сеть лежит кучей на песке
+    ctx.save();
+    ctx.translate(S.handN.x, S.handN.y); ctx.scale(1, 1 - 0.7 * S.slack); ctx.translate(-S.handN.x, -S.handN.y);
+    drawNetBundle(ctx, S.handN, sway.cloth * (1 - S.slack));
+    ctx.restore();
+  }
   if (o.netted) drawNetOverlay(ctx, S);
   ctx.restore();
   return out;
@@ -1110,12 +1125,14 @@ function drawMail(ctx, S, spec, g) {
 // ------------------------------------------------------------
 //  Щиты, сеть, лук и колчан
 // ------------------------------------------------------------
+const SHIELD_FLAT = -1.5, BOW_FLAT = 0;
 function drawShield(ctx, oh, S, spec) {
   const q = oh.q;
   const paint = PAINT[spec.look.paint];
   const rim = BRONZE_Q[q];
   const deco = q >= 4 ? '#f3d27a' : q >= 3 ? '#e2d2a0' : shade(rim, 0.2);
-  const tilt = clamp((S.thFN - Math.PI / 2) * 0.4, -0.7, 0.7);
+  // у павшего щит лежит плашмя вдоль тела
+  const tilt = clamp((S.thFN - Math.PI / 2) * 0.4, -0.7, 0.7) * (1 - S.slack) + SHIELD_FLAT * S.slack;
   ctx.save();
   ctx.translate(S.handN.x, S.handN.y);
   ctx.rotate(tilt);
@@ -1200,7 +1217,7 @@ function drawShield(ctx, oh, S, spec) {
 // Геометрия лука: стрела идёт вдоль ближнего предплечья, тетива натянута на draw (0..1)
 function bowGeom(S, pose, w) {
   const draw = clamp(pose.draw || 0, 0, 1);
-  const dir = S.thFN + (S.thHN - S.thFN) * 0.4;
+  const dir = (S.thFN + (S.thHN - S.thFN) * 0.4) * (1 - S.slack) + BOW_FLAT * S.slack;
   const hand = S.handN;
   const pull = 7 + draw * 36;
   const P = (u, v) => ({ x: hand.x + u * Math.cos(dir) + v * Math.sin(dir), y: hand.y - u * Math.sin(dir) + v * Math.cos(dir) });

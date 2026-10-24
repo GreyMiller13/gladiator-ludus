@@ -433,6 +433,7 @@ button.sound.off { color: var(--dust); }
 .tact { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; padding: 9px 13px; border: 1px solid var(--seam2); background: var(--grain), linear-gradient(#271c15, #1a120e); border-radius: 2px; }
 .tact .tbtns { display: flex; gap: 6px; flex-wrap: wrap; }
 .tact.muted { color: var(--muted); font-style: italic; }
+.tact .warn { color: #f08a6e; }
 
 /* ---------- Итоги и приговор ---------- */
 .results { margin-top: 16px; }
@@ -504,6 +505,12 @@ table.gtable.hitt td, table.gtable.hitt th { text-align: center; }
 .modal.reset { max-width: 540px; text-align: center; }
 .modal.reset h2 { color: var(--blood-hi); font-size: 34px; margin-bottom: 8px; }
 .modal.reset input { margin-top: 6px; width: 100%; padding: 7px 10px; background: #120c09; border: 1px solid var(--seam2); color: var(--text); font: inherit; }
+.modal.savebox { max-width: 640px; }
+.savecols { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; text-align: left; }
+.savecols .panel { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+.savecols .panel p { flex: 1; margin: 0; }
+.savebox .bad { color: #f08a6e; }
+@media (max-width: 560px) { .savecols { grid-template-columns: 1fr; } }
 .modal.ending { max-width: 700px; text-align: center; border-color: var(--q4); }
 .modal.ending .lat { font-family: var(--font-head); letter-spacing: .25em; color: var(--q4); font-size: 16px; }
 .modal.ending h2 { color: var(--bronze-hi); font-size: 34px; margin: 6px 0 12px; }

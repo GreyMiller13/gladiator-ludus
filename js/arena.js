@@ -90,13 +90,21 @@ class ArenaView {
   F(uid) { return this.fighters.find(f => f.uid === uid); }
 
   // Что под курсором: живой боец (по силуэту) или клетка поля
+  // Силуэты в соседних рядах перекрываются: из нескольких бойцов под курсором
+  // выбираем доступную цель, затем того, на чьей клетке курсор, затем ближнего к зрителю.
   pickAt(x, y) {
-    const live = this.fighters.filter(f => f.unit.alive && f.state === 'idle').sort((a, b) => b.y - a.y);
-    for (const f of live) {
-      const s = this.sc(f);
-      if (Math.abs(x - f.x) < 34 * s && y < f.y + 6 && y > f.y - 172 * s) return { uid: f.uid, c: f.unit.c, r: f.unit.r };
-    }
     const cell = cellAt(x, y);
+    const hits = this.fighters.filter(f => {
+      if (!f.unit.alive || f.state !== 'idle') return false;
+      const s = this.sc(f);
+      return Math.abs(x - f.x) < 34 * s && y < f.y + 6 && y > f.y - 172 * s;
+    });
+    if (hits.length) {
+      const H = this.hl, aim = H.ability || H.targets;
+      const rank = f => (aim && aim.has(f.uid) ? 4 : 0) + (cell && f.unit.c === cell.c && f.unit.r === cell.r ? 2 : 0) + f.y / 10000;
+      const f = hits.reduce((a, b) => (rank(b) > rank(a) ? b : a));
+      return { uid: f.uid, c: f.unit.c, r: f.unit.r };
+    }
     return cell ? { uid: null, ...cell } : null;
   }
   // Переставить бойца (расстановка) — сразу, без анимации

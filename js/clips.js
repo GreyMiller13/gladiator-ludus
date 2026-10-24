@@ -8,7 +8,9 @@
 const CLIP_FPS = 30;
 
 // Ключевые позы-состояния
-const FALLEN = { r: -1.5, lean: 0.05, chest: 0.05, head: -0.3, nU: 0.4, nK: 0.55, nF: 0.6, fU: 0.08, fK: 0.25, fF: 0.4, nA: 2.4, nE: 0.4, fA: 2.75, fE: 0.5, dx: 0, dy: 0 };
+// Павший лежит на спине: ближняя рука вдоль тела, дальняя откинута за голову, обе на песке.
+// Угол дальней руки взят через −2π, чтобы при падении она уходила назад-вниз, а не взмывала вверх.
+const FALLEN = { r: -1.5, lean: 0.05, chest: 0.05, head: -0.3, nU: 0.4, nK: 0.55, nF: 0.6, fU: 0.08, fK: 0.25, fF: 0.4, nA: 0.05, nE: 0.15, nW: 0, fA: 3.4 - 2 * Math.PI, fE: 0.2, fW: -0.25, grip: 0, nGrip: 0, draw: 0, slack: 1, dx: 0, dy: 0 };
 const KNEEL = { r: 0, lean: 0.3, chest: 0.22, head: 0.55, nU: 1.45, nK: 1.55, nF: 0, fU: 0.12, fK: 1.75, fF: -1.2, nA: 0.12, nE: 0.25, fA: 0.05, fE: 0.3, dx: 0, dy: 0 };
 const GUARD = { nK: 0.7, fK: 0.66, lean: 0.18, chest: 0.1, nA: 0.95, nE: 0.8, fA: 0.2, fE: 1.25, head: 0.1 };
 
@@ -209,7 +211,7 @@ const CLIPS = {
   // --- переходы между состояниями ---
   fall: { len: 26, end: FALLEN, keys: [
     { f: 5, e: 'o', p: { nK: 0.95, fK: 1.0, lean: 0.25, chest: 0.2, head: 0.4, fA: 0.3, nA: 0.3 } },
-    { f: 12, e: 'i', p: { r: -0.6, lean: -0.2, chest: -0.1, head: -0.3, nK: 0.6, fK: 0.5, nA: 1.2, fA: 1.4 } },
+    { f: 12, e: 'i', p: { r: -0.6, lean: -0.2, chest: -0.1, head: -0.3, nK: 0.6, fK: 0.5, nA: 0.8, fA: -0.5, fE: 0.4 } },
     { f: 20, e: 'i', p: FALLEN },
     { f: 23, e: 'o', p: { ...FALLEN, r: -1.4, head: -0.15 } },
     { f: 26, e: 'io', p: FALLEN },
@@ -231,7 +233,7 @@ const CLIPS = {
   ] },
   fallFromKneel: { len: 24, start: KNEEL, end: FALLEN, keys: [
     { f: 0, p: KNEEL },
-    { f: 6, e: 'o', p: { ...KNEEL, lean: -0.2, chest: -0.3, head: -0.6, nA: 0.8, fA: 0.9 } },
+    { f: 6, e: 'o', p: { ...KNEEL, lean: -0.2, chest: -0.3, head: -0.6, nA: 0.6, fA: -0.4 } },
     { f: 16, e: 'i', p: { ...FALLEN, r: -1.3 } },
     { f: 20, e: 'o', p: { ...FALLEN, r: -1.42, head: -0.15 } },
     { f: 24, e: 'io', p: FALLEN },

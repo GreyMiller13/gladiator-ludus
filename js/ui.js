@@ -71,6 +71,7 @@ function renderHeader() {
       ${res('helm', 'бойцы', `${STATE.gladiators.length}/${MAX_GLADIATORS}`)}
       ${res('sun', 'день', STATE.day)}
       ${soundBtn()}
+      <button class="small" data-act="saveAsk" title="Скачать сохранение в файл или загрузить его на другом устройстве">Сохранение</button>
       <button class="small" data-act="resetAsk" title="Удалить сохранение и начать сначала">Новая игра</button>
       <button class="primary" data-act="nextDay" title="Содержание бойцов: ${upkeepCost()} денариев">Завершить день</button>
     </div>`;
@@ -579,7 +580,7 @@ function guideChapter(ch) {
     <h3>Ход</h3>
     <ul>
       <li>Порядок ходов — по инициативе (очередь видна над ареной). На своём ходу боец может переместиться (до 2–5 клеток) и совершить одно действие: удар, умение, оборону или ожидание.</li>
-      <li>Шаги можно тратить до действия и после него: подойти на 2 клетки, ударить и отступить на оставшуюся. Тратить шаги не обязательно — «Конец хода» (пробел) или клик по своему бойцу оставляют его на месте.</li>
+      <li>Шаги можно тратить до действия и после него: подойти на 2 клетки, ударить и отступить на оставшуюся. Тратить шаги не обязательно — «Конец хода» (пробел) оставляет бойца на месте. Клик по своему бойцу ничего не делает, так что промах мимо врага не съест ход. Если боец ещё может ударить, «Конец хода» нужно нажать дважды.</li>
       <li><b>Оборона</b> (клавиша D): боец остаётся на месте и до следующего хода получает −40% урона, +15% уклонения и +20% блока.</li>
       <li>Лучнику нужна линия выстрела без высоких препятствий. Стрельба в упор: −20% к точности. Сеть летит на 3 клетки.</li>
       <li><b>Сеть и оглушение</b> отнимают у цели её следующий ход. Если цель уже ходила в этом раунде, она пропустит ход в следующем. Пока боец в сети или оглушён, он не уклоняется, не блокирует и не контратакует.</li>
@@ -668,6 +669,59 @@ function showResetDialog() {
     <label class="small muted">Название нового лудуса<br><input id="resetName" type="text" maxlength="28" value="Лудус Батиата"></label>
     <div class="center mt"><button class="danger" data-act="resetConfirm">Удалить прогресс и начать заново</button> <button data-act="resetCancel">Отмена</button></div>
   </div></div>`;
+}
+
+// ------------------------------------------------------------
+//  Перенос сохранения: экспорт в файл и импорт из файла
+// ------------------------------------------------------------
+const SAVE_FILE_TAG = 'gladiator-ludus';
+const saveSummary = st => `«${esc(st.ludusName || 'Лудус')}», день ${st.day}, бойцов ${st.gladiators.length}, денариев ${st.gold}, слава ${st.fame}`;
+
+function showSaveDialog() {
+  UI.importState = null;
+  $('#modal').innerHTML = `<div class="modal-bg" data-act="closeModalBg"><div class="modal reset savebox">
+    <h2>Сохранение</h2>
+    <p>Прогресс хранится только в этом браузере. Чтобы играть на другом устройстве или в другом браузере, скачайте файл и загрузите его там.</p>
+    <div class="savecols">
+      <div class="panel"><h3>Скачать</h3>
+        <p class="small muted">Сейчас: ${saveSummary(STATE)}.</p>
+        <button class="primary" data-act="saveExport">Скачать файл сохранения</button></div>
+      <div class="panel"><h3>Загрузить</h3>
+        <p class="small muted">Прогресс из файла заменит текущий прогресс в этом браузере.</p>
+        <button data-act="saveImportPick">Выбрать файл…</button>
+        <input id="importFile" type="file" accept=".json,application/json" hidden></div>
+    </div>
+    <div id="importPreview"></div>
+    <div class="center mt"><button data-act="resetCancel">Закрыть</button></div>
+  </div></div>`;
+  $('#importFile').addEventListener('change', e => { const f = e.target.files[0]; if (f) readSaveFile(f); e.target.value = ''; });
+}
+
+// Проверка, что в файле действительно сохранение лудуса
+function parseSaveFile(text) {
+  let data;
+  try { data = JSON.parse(text); } catch (e) { return null; }
+  const st = data && data.game === SAVE_FILE_TAG ? data.state : data;
+  const arrays = ['gladiators', 'armory', 'smith', 'market', 'events', 'graveyard', 'journal'];
+  if (!st || typeof st !== 'object' || !arrays.every(k => Array.isArray(st[k]))) return null;
+  if (![st.gold, st.fame, st.day].every(Number.isFinite)) return null;
+  return st;
+}
+
+function readSaveFile(file) {
+  const box = $('#importPreview');
+  if (file.size > 5e6) { box.innerHTML = '<p class="bad">Файл слишком большой для сохранения лудуса.</p>'; return; }
+  const rd = new FileReader();
+  rd.onload = () => {
+    const st = parseSaveFile(String(rd.result));
+    UI.importState = st;
+    box.innerHTML = st
+      ? `<div class="panel mt"><p>В файле: ${saveSummary(st)}.</p>
+          <button class="danger" data-act="saveImport">Заменить текущий прогресс</button></div>`
+      : '<p class="bad mt">Это не файл сохранения «Лудуса». Выберите файл, скачанный кнопкой «Скачать файл сохранения».</p>';
+  };
+  rd.onerror = () => { box.innerHTML = '<p class="bad mt">Не удалось прочитать файл.</p>'; };
+  rd.readAsText(file);
 }
 
 // ============================================================
@@ -777,6 +831,7 @@ function playerTurn(B, u) {
     const T = B.turn = { u, aim: false, busy: false, o: null };
     const clear = () => { v.hl.reach = null; v.hl.targets = null; v.hl.ability = null; };
     const refresh = () => {
+      T.confirmEnd = false;
       const o = T.o = b.options(u);
       v.hl.reach = u.mpLeft > 0 ? o.reach : null;
       v.hl.targets = T.aim ? null : new Set([...o.attackNow.map(f => f.uid), ...o.approach.keys()]);
@@ -810,7 +865,7 @@ function playerTurn(B, u) {
     v.onPick = hit => {
       if (T.busy) return;
       const o = T.o, f = hit.uid && b.unit(hit.uid);
-      if (f === u && !T.aim) return run([() => (b.cmdWait(u) ? 'end' : '')]); // клик по себе — остаться на месте
+      if (f && f.side === u.side) return; // клик по своему бойцу ход не тратит
       if (T.aim) {
         if (f && o.abilityNow.includes(f)) run([() => (b.cmdAbility(u, f) ? 'act' : '')]);
         return;
@@ -872,7 +927,7 @@ function renderTact(B) {
   }
   const u = T.u, A = clsOf(u.g).ability;
   const abReady = A && u.cd === 0;
-  const hint = T.busy ? 'Выполняется…' : T.aim ? `Выберите цель умения «${A.name}» (золотые кольца). Esc — отмена.`
+  const hint = T.busy ? 'Выполняется…' : T.confirmEnd ? '<b class="warn">Боец ещё может атаковать.</b> Нажмите «Конец хода» ещё раз, чтобы всё равно закончить ход.' : T.aim ? `Выберите цель умения «${A.name}» (золотые кольца). Esc — отмена.`
     : u.acted ? (u.mpLeft > 0 ? `Удар нанесён. Можно остаться на месте («Конец хода», пробел) или отойти на ${u.mpLeft} кл. по синим клеткам.` : 'Действие выполнено.')
     : `Красные кольца — кого можно атаковать${u.mpLeft > 0 ? ' (если нужно, боец сам подойдёт)' : ''}.${u.mpLeft > 0 ? ` Синие клетки — куда можно шагнуть (осталось ${u.mpLeft}).` : ''} Тратить шаги не обязательно: «Оборона» или «Конец хода» оставят бойца на месте.`;
   el.innerHTML = `<div class="tact">
@@ -880,7 +935,7 @@ function renderTact(B) {
     <div class="tbtns">
       ${A ? `<button class="small ${T.aim ? 'active' : ''}" data-act="tAbility" ${!abReady || T.busy || u.acted ? 'disabled' : ''} title="${esc(A.desc)}">${A.name}${abReady ? '' : ` (${u.cd})`}</button>` : ''}
       <button class="small" data-act="tDefend" ${T.busy || u.acted ? 'disabled' : ''} title="Остаться на месте и закрыться: −40% урона, +15% уклонения, +20% блока до следующего хода. Клавиша D">Оборона <kbd>D</kbd></button>
-      <button class="small ${u.acted ? 'primary' : ''}" data-act="tWait" ${T.busy ? 'disabled' : ''} title="Закончить ход, не тратя оставшиеся шаги. Пробел">Конец хода <kbd>␣</kbd></button>
+      <button class="small ${u.acted || T.confirmEnd ? 'primary' : ''}" data-act="tWait" ${T.busy ? 'disabled' : ''} title="Закончить ход, не тратя оставшиеся шаги. Пробел">${T.confirmEnd ? 'Точно закончить?' : 'Конец хода'} <kbd>␣</kbd></button>
       <button class="small" data-act="tAuto" ${T.busy ? 'disabled' : ''} title="Дальше бой проведёт ИИ">Автобой</button>
     </div>
   </div>`;
@@ -1350,6 +1405,28 @@ const ACTIONS = {
     save(); render();
   },
   resetAsk: () => showResetDialog(),
+  saveAsk: () => showSaveDialog(),
+  saveExport: () => {
+    save();
+    const data = { game: SAVE_FILE_TAG, version: 1, exported: new Date().toISOString(), state: STATE };
+    const url = URL.createObjectURL(new Blob([JSON.stringify(data)], { type: 'application/json' }));
+    const a = document.createElement('a');
+    a.href = url; a.download = `ludus-day${STATE.day}-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    toast('Файл сохранения скачан.');
+  },
+  saveImportPick: () => $('#importFile') && $('#importFile').click(),
+  saveImport: () => {
+    const st = UI.importState;
+    if (!st) return;
+    if (UI.battle) return toast('Сначала закончите бой.', true);
+    try { localStorage.setItem(SAVE_KEY, JSON.stringify(st)); }
+    catch (e) { return toast('Браузер не дал записать сохранение: хранилище недоступно или переполнено.', true); }
+    // перезагрузка проведёт сохранение через обычную загрузку и миграцию
+    try { sessionStorage.setItem('ludus_imported', '1'); } catch (e) { /* не страшно */ }
+    location.reload();
+  },
   resetCancel: () => { $('#modal').innerHTML = ''; UI.gladId = null; },
   resetConfirm: () => {
     const name = ($('#resetName')?.value || '').trim().slice(0, 28) || 'Лудус';
@@ -1499,7 +1576,14 @@ const ACTIONS = {
     T.aim = !T.aim; T.refresh();
   },
   tDefend: () => { const T = UI.battle && UI.battle.turn; if (T && !T.busy) T.run([() => (UI.battle.b.cmdDefend(T.u) ? 'end' : '')]); },
-  tWait: () => { const T = UI.battle && UI.battle.turn; if (T && !T.busy) T.run([() => (UI.battle.b.cmdWait(T.u) ? 'end' : '')]); },
+  tWait: () => {
+    const T = UI.battle && UI.battle.turn;
+    if (!T || T.busy) return;
+    // боец ещё может ударить — переспросить, чтобы случайно не отдать ход
+    const canHit = !T.u.acted && T.o && (T.o.attackNow.length || T.o.approach.size);
+    if (canHit && !T.confirmEnd) { T.confirmEnd = true; renderTact(UI.battle); return; }
+    T.run([() => (UI.battle.b.cmdWait(T.u) ? 'end' : '')]);
+  },
   tAuto: () => {
     const B = UI.battle, T = B && B.turn;
     if (!T || T.busy) return;
