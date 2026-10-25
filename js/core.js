@@ -520,6 +520,17 @@ function generateEvents() {
   STATE.events = events;
 }
 
+// Бой меньшинством: на обычный бой арены можно выйти на одного бойца меньше — награда за победу ×2
+const SHORT_MULT = 2;
+const canGoShort = ev => !!ev && (ev.kind || 'arena') === 'arena' && !ev.training && !ev.boss && ev.size >= 2;
+function setShort(ev, on) {
+  if (!canGoShort(ev)) return false;
+  ev.short = !!on;
+  if (on) ev.playerSize = ev.size - 1; else delete ev.playerSize;
+  return true;
+}
+const winReward = ev => { const k = ev.short ? SHORT_MULT : 1; return { gold: ev.gold * k, fame: ev.fame * k }; };
+
 // Новый день: содержание бойцов, обновление рынка и событий, платёж по долгу.
 // Возвращает { cost, debt }: debt — результат debtOnNewDay() или null
 function nextDay() {

@@ -484,6 +484,9 @@ function picker(ev) {
       <button class="small ${mode === 'manual' ? 'active' : ''}" data-act="setMode" data-m="manual" title="Вы расставляете бойцов и командуете каждым ходом">Ручное управление</button>
       <span class="muted small">${mode === 'manual' ? 'Вы расставите бойцов на поле и будете отдавать приказы каждому. Перейти на автобой можно в любой момент.' : 'Бойцы встанут в строй и будут сражаться сами.'}</span>
     </div>
+    ${canGoShort(ev) ? `<label class="modesel shortsel"><input type="checkbox" data-act="pickShort" ${ev.short ? 'checked' : ''}>
+      <span>Выйти меньшинством: <b>${ev.size - 1} на ${ev.size}</b></span>
+      <span class="muted small">Толпа любит смельчаков: за победу — <b>${winReward({ ...ev, short: true }).gold}</b> ден. и <b>+${winReward({ ...ev, short: true }).fame}</b> славы вместо ${ev.gold} и +${ev.fame}.</span></label>` : ''}
     <div class="bar-actions">
       <span>Выбрано: <b>${UI.picked.length}/${n}</b></span>
       <button class="primary" data-act="startBattle" ${ready ? '' : 'disabled'}>Выйти на арену</button>
@@ -1266,7 +1269,7 @@ async function finishBattle() {
   }
 
   if (win) {
-    R.gold = ev.gold; R.fame = ev.fame;
+    ({ gold: R.gold, fame: R.fame } = winReward(ev));
     STATE.gold += R.gold;
     track('gold', { amount: R.gold });
     for (const u of enemies) {
@@ -1286,7 +1289,7 @@ async function finishBattle() {
     if (kind === 'final') { STATE.finalWon = true; STATE.finalDay = STATE.day; }
     journal(kind === 'final'
       ? `ФИНАЛ ВЫИГРАН! Чемпионы Рима повержены в Колизее. +${R.gold} денариев, +${R.fame} славы. Император вручает лудусу рудис свободы.`
-      : `Победа: ${T.place}, ${ev.size} на ${ev.size}. +${R.gold} денариев, +${R.fame} славы.${R.loot.length ? ` Трофеи: ${R.loot.map(l => l.it.name).join(', ')}.` : ''}`);
+      : `Победа: ${T.place}, ${playerCount(ev)} на ${ev.size}${ev.short ? ' — в меньшинстве, награда ×2' : ''}. +${R.gold} денариев, +${R.fame} славы.${R.loot.length ? ` Трофеи: ${R.loot.map(l => l.it.name).join(', ')}.` : ''}`);
     track('battleEnd', info);
     storyBattle(info);
     save();
@@ -1711,13 +1714,19 @@ const ACTIONS = {
     }, { ok: `Продать за ${price}`, danger: true });
   },
 
-  pickEvent: d => { UI.eventId = +d.id; UI.picked = []; render(); coach('pick', findEvent(UI.eventId)); setTimeout(() => $('.picker')?.scrollIntoView({ behavior: 'smooth' }), 30); },
+  pickEvent: d => { UI.eventId = +d.id; UI.picked = []; setShort(findEvent(UI.eventId), false); render(); coach('pick', findEvent(UI.eventId)); setTimeout(() => $('.picker')?.scrollIntoView({ behavior: 'smooth' }), 30); },
   setMode: d => {
     STATE.settings = STATE.settings || {};
     STATE.settings.mode = d.m === 'manual' ? 'manual' : 'auto';
     save(); const y = window.scrollY; render(); window.scrollTo(0, y);
   },
-  cancelPick: () => { UI.eventId = null; UI.picked = []; render(); },
+  cancelPick: () => { setShort(findEvent(UI.eventId), false); UI.eventId = null; UI.picked = []; render(); },
+  pickShort: (d, el) => {
+    const ev = findEvent(UI.eventId);
+    if (!setShort(ev, el.checked)) return;
+    UI.picked = UI.picked.slice(0, playerCount(ev));
+    const y = window.scrollY; render(); window.scrollTo(0, y);
+  },
   pickGlad: d => {
     const id = +d.id;
     const ev = findEvent(UI.eventId);

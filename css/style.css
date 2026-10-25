@@ -295,6 +295,8 @@ button.sound.off { color: var(--dust); }
 }
 .modal .close { position: absolute; top: 12px; right: 14px; z-index: 2; }
 .modal .glad-nav { position: absolute; top: 12px; right: 62px; z-index: 2; display: flex; align-items: center; gap: 6px; }
+.shortsel { cursor: pointer; }
+.shortsel input { accent-color: var(--blood-hi); width: 18px; height: 18px; }
 .modal .glad-nav button { min-width: 34px; font-size: 18px; line-height: 1; }
 .ghead { display: flex; gap: 16px; align-items: center; margin-bottom: 14px; padding-right: 40px; flex-wrap: wrap; }
 .ghead h2 { font-size: 38px; color: var(--blood-hi); line-height: 1; text-shadow: 0 2px 0 rgba(0,0,0,.6); }
