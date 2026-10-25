@@ -13,6 +13,7 @@
   if (imported && STATE) {
     toast(`Сохранение загружено: ${saveSummary(STATE)}.`);
     if (STATE.lost) showDebtLost();
+    else flushScenes(() => resumeTutorial());
   } else showMenu();
 })();
 
@@ -21,6 +22,7 @@ function prepareState() {
   migrateState();
   STATE.settings = STATE.settings || { mode: 'auto' };
   if (typeof META !== 'undefined') META.init();
+  if (typeof STORY !== 'undefined') STORY.init();
   // сохранения старых версий: внешность бойцов
   STATE.gladiators.forEach(ensureLook);
   STATE.market.forEach(ensureLook);

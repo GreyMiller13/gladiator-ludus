@@ -9,7 +9,7 @@ const sceneOpen = () => !!SCENE.lines;
 function playScenes(ids, onDone) {
   const list = (ids || []).filter(id => STORY.SCENES[id]);
   if (sceneOpen()) {
-    SCENE.ids.push(...list);
+    SCENE.ids.push(...list.filter(id => id !== SCENE.id && !SCENE.ids.includes(id)));
     const prev = SCENE.onDone;
     SCENE.onDone = () => { if (prev) prev(); if (onDone) onDone(); };
     return;
@@ -27,7 +27,8 @@ function flushScenes(onDone) {
 }
 
 function nextScene() {
-  const id = SCENE.ids.shift();
+  let id = SCENE.ids.shift();
+  while (id && STORY.isSeen(id)) id = SCENE.ids.shift();
   if (!id) return closeScene();
   STORY.markSeen(id);
   save();

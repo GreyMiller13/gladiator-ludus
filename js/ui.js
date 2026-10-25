@@ -807,7 +807,7 @@ function startNewGame(name, tour, lanista = { portrait: 'm1', sex: 'm' }) {
 //  Перенос сохранения: экспорт в файл и импорт из файла
 // ------------------------------------------------------------
 const SAVE_FILE_TAG = 'gladiator-ludus';
-const saveSummary = st => `«${esc(st.ludusName || 'Лудус')}», день ${st.day}, бойцов ${st.gladiators.length}, денариев ${st.gold}, слава ${st.fame}`;
+const saveSummary = st => `«${esc(st.ludusName || 'Лудус')}»${st.story ? `, глава ${['I', 'II', 'III', 'IV'][st.story.chapter] || 'I'}` : ''}, день ${st.day}, бойцов ${st.gladiators.length}, денариев ${st.gold}, слава ${st.fame}`;
 
 function showSaveDialog() {
   UI.importState = null;
@@ -1608,7 +1608,8 @@ const ACTIONS = {
   dlgBg: (d, el, e) => { if (e.target === el) ACTIONS.dlgCancel(); },
   saveExport: () => {
     save();
-    const data = { game: SAVE_FILE_TAG, version: 1, exported: new Date().toISOString(), state: STATE };
+    // версия 2: история, долг и ланиста; файлы версии 1 по-прежнему загружаются (свободный режим)
+    const data = { game: SAVE_FILE_TAG, version: 2, exported: new Date().toISOString(), state: STATE };
     const url = URL.createObjectURL(new Blob([JSON.stringify(data)], { type: 'application/json' }));
     const a = document.createElement('a');
     a.href = url; a.download = `ludus-day${STATE.day}-${new Date().toISOString().slice(0, 10)}.json`;

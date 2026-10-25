@@ -193,6 +193,17 @@ const STORY = (() => {
 
   const onNewDay = () => { if (S()) injectEvents(); };
 
+  // Загруженное сохранение: недостающие поля истории (кроме очереди сцен) и сюжетные события дня
+  function init() {
+    const st = S();
+    if (!st) return;
+    const base = create();
+    delete base.queue;
+    for (const [k, v] of Object.entries(base)) if (st[k] === undefined) st[k] = v;
+    if (!Array.isArray(st.queue)) st.queue = [];
+    injectEvents();
+  }
+
   function onBattle(info) {
     const st = S();
     if (!st || !info) return;
@@ -236,11 +247,17 @@ const STORY = (() => {
   function takeScenes() {
     const st = S();
     if (!st) return [];
-    const ids = st.queue.filter(id => !st.seen[id] && SCENES[id]);
-    st.queue = [];
-    return ids;
+    // очередь чистится, только когда сцена показана: перезагрузка посреди сцен ничего не теряет
+    st.queue = st.queue.filter(id => !st.seen[id] && SCENES[id]);
+    return st.queue.slice();
   }
-  const markSeen = id => { if (S()) S().seen[id] = STATE.day; };
+  function markSeen(id) {
+    const st = S();
+    if (!st) return;
+    st.seen[id] = STATE.day;
+    st.queue = st.queue.filter(x => x !== id);
+  }
+  const isSeen = id => !!(S() && S().seen[id]);
 
   // ------------------------------------------------------------
   //  Сцены: who — doctore | lender | rival | senator | holder (кто держит долг) | me
@@ -341,10 +358,10 @@ const STORY = (() => {
   }
 
   return {
-    create, active, gx, holderName, CHAPTERS, BOSSES, SCENES, NAMES,
+    create, init, active, gx, holderName, CHAPTERS, BOSSES, SCENES, NAMES,
     current, tasks, update, enterChapter, tierOpen, lockText,
     bossEvent, trainingEvent, senatorContract, injectEvents, onNewDay, onBattle, onFinalWon, onDebt,
-    queueScene, takeScenes, markSeen, lines, takeNews,
+    queueScene, takeScenes, markSeen, isSeen, lines, takeNews,
   };
 })();
 const gx = (m, f) => STORY.gx(m, f);

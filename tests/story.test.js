@@ -39,6 +39,14 @@ module.exports = [
     ]);
     assert.deepEqual(plain(ev(ctx, 'STORY.takeNews()')), []);
   } },
+  { name: 'очередь сцен хранится, пока сцена не показана (перезагрузка посреди сцен)', fn: ctx => {
+    story(ctx);
+    ev(ctx, 'STORY.markSeen("prologue"); STORY.queueScene("capua"); STORY.queueScene("rome")');
+    assert.deepEqual(plain(ev(ctx, 'STORY.takeScenes()')), ['capua', 'rome']);
+    ev(ctx, 'STORY.markSeen("capua")');
+    assert.deepEqual(plain(ev(ctx, 'STATE.story.queue')), ['rome']);
+    assert.equal(ev(ctx, 'STORY.isSeen("capua")'), true);
+  } },
   { name: 'пролог не повторяется после просмотра', fn: ctx => {
     story(ctx);
     ev(ctx, 'STORY.markSeen("prologue"); STORY.queueScene("prologue")');
@@ -137,6 +145,17 @@ module.exports = [
     ev(ctx, 'STATE.lost = { day: 7, reason: "debt", amount: 150, short: 20, holder: "lender" }');
     const n = ev(ctx, `Object.keys(STORY.SCENES).reduce((s, id) => s + STORY.lines(id).filter(l => l.text && l.name).length, 0)`);
     assert.ok(n > 40);
+  } },
+  { name: 'загрузка: init дополняет историю и возвращает сюжетные события', fn: ctx => {
+    story(ctx);
+    ev(ctx, 'STATE.story = { v: 1, chapter: 0, done: {}, flags: {} }; STATE.events = []; STORY.init()');
+    assert.equal(ev(ctx, 'typeof STATE.story.seen'), 'object');
+    assert.deepEqual(plain(ev(ctx, 'STATE.story.queue')), []);
+    assert.equal(ev(ctx, 'STATE.events.some(e => e.training)'), true);
+  } },
+  { name: 'загрузка: свободный режим не получает историю', fn: ctx => {
+    ev(ctx, 'newGame("Т"); STORY.init()');
+    assert.equal(ev(ctx, 'STATE.story'), undefined);
   } },
   { name: 'свободный режим: арены открываются славой', fn: ctx => {
     ev(ctx, 'newGame("Т")');
