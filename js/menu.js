@@ -11,6 +11,7 @@ function showMenu() {
   if (UI.battle) return toast('Меню откроется после боя.', true);
   MENU.open = true; MENU.guide = false;
   UI.gladId = null; renderModal();
+  if (typeof hideCoach === 'function') hideCoach(); // обучение продолжится после «Продолжить»
   const el = $('#menu');
   el.hidden = false;
   document.body.classList.add('menu-on');
@@ -75,119 +76,9 @@ function paintMenuBg() {
 }
 
 Object.assign(ACTIONS, {
-  menuContinue: () => { hideMenu(); render(); },
+  menuContinue: () => { hideMenu(); render(); if (typeof resumeTutorial === 'function') resumeTutorial(); },
   menuLost: () => { hideMenu(); render(); showDebtLost(); },
   menuGuide: () => { MENU.guide = true; renderMenu(); $('#menu').scrollTop = 0; },
   menuBack: () => { MENU.guide = false; renderMenu(); },
 });
 
-// ------------------------------------------------------------
-//  Обучение: затемнение, подсветка элемента, пояснение и кнопки
-// ------------------------------------------------------------
-const TOUR_STEPS = [
-  { title: 'Добро пожаловать в лудус', text: 'Вы — ланиста, хозяин школы гладиаторов. Покупайте бойцов, учите их, снаряжайте и выводите на арену. Короткая экскурсия покажет, где что находится.' },
-  { sel: 'header .res > div', title: 'Казна и слава', text: 'Денарии тратятся на бойцов, снаряжение, тренировки и лекаря. Слава открывает новые арены и лавку редкостей. Рядом — число бойцов в казармах и текущий день.' },
-  { tab: 'ludus', sel: 'nav [data-tab="ludus"]', title: 'Лудус', text: 'Казармы: здесь живут ваши бойцы, а справа ведётся хроника лудуса — всё, что случилось за дни.' },
-  { tab: 'ludus', sel: 'main .gcard', title: 'Карточка бойца', text: 'Нажмите на бойца, чтобы открыть его окно: характеристики, снаряжение (вещи можно перетаскивать со склада на бойца и обратно), тренировку, лекаря и выбор школы с 5-го уровня.' },
-  { tab: 'arena', sel: 'nav [data-tab="arena"]', title: 'Арена', text: 'Бои дня. Выберите схватку, отберите бойцов и решите, как сражаться: автобоем или в ручном режиме, командуя каждым ходом. После боя проигравших судит толпа.' },
-  { tab: 'contracts', sel: 'nav [data-tab="contracts"]', title: 'Заказы', text: 'Богатые горожане платят за особые бои: победить без потерь, уложиться в число раундов, выстоять против большинства. Заказные бои идут не насмерть.' },
-  { tab: 'smith', sel: 'nav [data-tab="smith"]', title: 'Кузнец', text: 'Оружие и доспехи. Ассортимент обновляется каждый день, а качество растёт с открытыми аренами. Вещь своей школы даёт бойцу +25% к её характеристикам.' },
-  { tab: 'market', sel: 'nav [data-tab="market"]', title: 'Невольничий рынок', text: 'Новые бойцы. Смотрите на склонности: от них зависит, к какой школе новобранец подойдёт лучше всего.' },
-  { tab: 'armory', sel: 'nav [data-tab="armory"]', title: 'Склад', text: 'Всё снаряжение, которое не надето на бойцов: покупки, трофеи с арены, снятые вещи. Ненужное можно продать.' },
-  { tab: 'glory', sel: 'nav [data-tab="glory"]', title: 'Достижения', text: 'Почётные свершения лудуса и награды за них.' },
-  { tab: 'necro', sel: 'nav [data-tab="necro"]', title: 'Некрополь', text: 'Память о павших бойцах: кто, где и от чьей руки погиб.' },
-  { tab: 'rules', sel: 'nav [data-tab="rules"]', title: 'Справочник', text: 'Все правила и формулы игры: характеристики, бой, приговор толпы, снаряжение и школы. Справочник открывается и из главного меню.' },
-  { tab: 'ludus', sel: 'header [data-act="nextDay"]', title: 'Завершить день', text: 'Когда дела дня сделаны, завершите его: бойцы отдохнут и подлечатся, вы заплатите за их содержание, появятся новые бои, товары и заказы.' },
-  { tab: 'ludus', sel: 'header [data-act="menu"]', title: 'Меню', text: 'Главное меню: продолжить, начать заново, скачать сохранение в файл или загрузить его на другом устройстве и открыть справочник.' },
-  { title: 'Ave, ланиста!', text: 'Начните с рынка или кузнеца: у вашего новобранца лишь грубый гладиус. Удачи на песке арены.' },
-];
-const TOUR = { i: -1 };
-
-function startTour() {
-  hideMenu();
-  UI.gladId = null; renderModal();
-  TOUR.i = 0;
-  $('#tour').hidden = false;
-  window.addEventListener('resize', placeTour);
-  showTourStep();
-}
-function endTour(done) {
-  TOUR.i = -1;
-  const el = $('#tour');
-  el.hidden = true; el.innerHTML = '';
-  window.removeEventListener('resize', placeTour);
-  // с интерфейсом игрок уже знаком: в следующей новой игре галочка обучения снята
-  try { localStorage.setItem(TOUR_PREF, '0'); } catch (e) { /* хранилище недоступно */ }
-  UI.tab = 'ludus'; render(); window.scrollTo(0, 0);
-  if (!done) toast('Обучение пропущено. Правила всегда под рукой в «Справочнике».');
-}
-function tourSteps() { return TOUR_STEPS.filter(s => !s.tab || $(`nav [data-tab="${s.tab}"]`) || s.tab === 'ludus'); }
-
-function showTourStep() {
-  const steps = tourSteps(), st = steps[TOUR.i];
-  if (!st) return endTour(true);
-  if (st.tab && UI.tab !== st.tab) { UI.tab = st.tab; render(); }
-  const last = TOUR.i === steps.length - 1;
-  $('#tour').innerHTML = `<div class="tour-block"></div><div class="tour-hole"></div>
-    <div class="tour-card" role="dialog" aria-modal="true" aria-labelledby="tourTitle">
-      <div class="tour-n">${TOUR.i + 1} из ${steps.length}</div>
-      <h3 id="tourTitle">${st.title}</h3>
-      <p>${st.text}</p>
-      <div class="tour-btns">
-        ${last ? '' : '<button class="linkish" data-act="tourSkip">Пропустить обучение</button>'}
-        <span class="sp"></span>
-        ${TOUR.i > 0 ? '<button data-act="tourPrev">Назад</button>' : ''}
-        <button class="primary" data-act="tourNext">${last ? 'Начать игру' : 'Далее'}</button>
-      </div>
-    </div>`;
-  const target = st.sel && $(st.sel);
-  if (target) {
-    target.scrollIntoView({ block: 'nearest', inline: 'center' });
-    if (st.sel.startsWith('nav') || st.sel.startsWith('header')) window.scrollTo(0, 0);
-  }
-  placeTour();
-  $('#tour [data-act="tourNext"]').focus();
-}
-
-// Подсветка: прямоугольник вокруг всех найденных элементов, карточка — рядом, в пределах экрана
-function placeTour() {
-  const st = tourSteps()[TOUR.i];
-  if (!st) return;
-  const hole = $('#tour .tour-hole'), card = $('#tour .tour-card');
-  const els = st.sel ? [...document.querySelectorAll(st.sel)].filter(e => e.offsetParent) : [];
-  const one = st.sel && st.sel.includes('.gcard') ? els.slice(0, 1) : els;
-  const vw = window.innerWidth, vh = window.innerHeight, pad = 8;
-  if (!one.length) {
-    hole.className = 'tour-hole none';
-    hole.removeAttribute('style');
-    card.style.left = `${Math.max(12, (vw - card.offsetWidth) / 2)}px`;
-    card.style.top = `${Math.max(12, (vh - card.offsetHeight) / 2)}px`;
-    return;
-  }
-  const rs = one.map(e => e.getBoundingClientRect());
-  const r = { l: Math.min(...rs.map(x => x.left)) - pad, t: Math.min(...rs.map(x => x.top)) - pad, rt: Math.max(...rs.map(x => x.right)) + pad, b: Math.max(...rs.map(x => x.bottom)) + pad };
-  r.l = Math.max(4, r.l); r.t = Math.max(4, r.t); r.rt = Math.min(vw - 4, r.rt); r.b = Math.min(vh - 4, r.b);
-  hole.className = 'tour-hole';
-  Object.assign(hole.style, { left: `${r.l}px`, top: `${r.t}px`, width: `${r.rt - r.l}px`, height: `${r.b - r.t}px` });
-  const cw = card.offsetWidth, chh = card.offsetHeight;
-  const below = r.b + 14 + chh < vh;
-  const top = below ? r.b + 14 : Math.max(12, r.t - 14 - chh);
-  const left = clamp((r.l + r.rt) / 2 - cw / 2, 12, vw - cw - 12);
-  card.style.left = `${left}px`; card.style.top = `${top}px`;
-}
-
-// Клавиши во время обучения: Enter/→ — далее, ← — назад, Esc — пропустить
-function tourKey(e) {
-  if (TOUR.i < 0) return false;
-  if (e.key === 'Escape') ACTIONS.tourSkip();
-  else if (e.key === 'ArrowRight') ACTIONS.tourNext();
-  else if (e.key === 'ArrowLeft') ACTIONS.tourPrev();
-  else if (e.key !== 'Enter' && e.key !== 'Tab') e.preventDefault();
-  return true;
-}
-
-Object.assign(ACTIONS, {
-  tourNext: () => { TOUR.i++; showTourStep(); },
-  tourPrev: () => { TOUR.i = Math.max(0, TOUR.i - 1); showTourStep(); },
-  tourSkip: () => endTour(false),
-});

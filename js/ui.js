@@ -85,8 +85,8 @@ function debtRes() {
   const n = STATE.debt && typeof debtNext === 'function' ? debtNext() : null;
   if (!n) return '';
   const when = n.daysLeft <= 0 ? 'сегодня' : n.daysLeft === 1 ? 'завтра' : `через ${n.daysLeft} дн.`;
-  return `<button class="debtres ${debtUrgent() ? 'urgent' : ''}" data-act="debtInfo" title="Долг отца: подробности">${ICON.tablet}
-    <div class="rv"><label>долг</label><strong>${debtLeft()}</strong><small>платёж ${n.amount} ${when}</small></div></button>`;
+  return `<button class="debtres ${debtUrgent() ? 'urgent' : ''}" data-act="debtInfo" title="Долг отца. Ближайший платёж: ${n.amount} ден. (${when}). Нажмите, чтобы увидеть расписание">${ICON.tablet}
+    <div class="rv"><label>долг</label><strong>${debtLeft()}</strong><small>−${n.amount} ${when}</small></div></button>`;
 }
 
 function showDebtDialog() {
@@ -799,7 +799,6 @@ function startNewGame(name, tour, lanista = { portrait: 'm1', sex: 'm' }) {
   // сначала пролог, потом обучение
   flushScenes(() => {
     if (tour && typeof startTutorial === 'function') startTutorial();
-    else if (tour && typeof startTour === 'function') startTour();
     else toast('Начата новая игра.');
   });
 }
@@ -907,6 +906,7 @@ function startBattle() {
   updateBattleHud();
   if (mode === 'manual') startDeploy(UI.battle);
   else runBattle(UI.battle);
+  coach('battleStart', ev);
 }
 
 // ------------------------------------------------------------
@@ -930,6 +930,7 @@ function startDeploy(B) {
     sfx('step', { vol: 0.8 });
     B.deploySel = null; v.hl.selected = null;
     renderTact(B);
+    coach('deployPlace');
   };
   v.faceFoes();
   renderTact(B);
@@ -951,6 +952,7 @@ function deployDone(B) {
   B.phase = 'fight';
   renderTact(B);
   updateBattleHud();
+  coach('fightStart');
   runBattle(B, false);
 }
 
@@ -974,6 +976,7 @@ function playerTurn(B, u) {
     const finish = () => {
       clear(); v.hl.selected = null; v.onPick = null; v.hintFn = null;
       B.turn = null; renderTact(B); resolve();
+      coach('turnEnd');
     };
     // выполнить команду(ы), проиграть события; ended — закончился ли ход
     const run = async steps => {
@@ -993,24 +996,25 @@ function playerTurn(B, u) {
       if (ended || b.over || !u.alive || UI.battle !== B) finish(); else { T.aim = false; refresh(); }
     };
     T.run = run; T.finish = finish; T.refresh = refresh;
-    const atk = f => () => (b.cmdAttack(u, f) ? 'act' : '');
+    const atk = f => () => { const ok = b.cmdAttack(u, f); if (ok) coach('attacked'); return ok ? 'act' : ''; };
+    const step = (c, r) => () => { b.cmdMove(u, c, r); coach('moved'); return ''; };
     v.onPick = hit => {
       if (T.busy) return;
       const o = T.o, f = hit.uid && b.unit(hit.uid);
       if (f && f.side === u.side) return; // клик по своему бойцу ход не тратит
       if (T.aim) {
-        if (f && o.abilityNow.includes(f)) run([() => (b.cmdAbility(u, f) ? 'act' : '')]);
+        if (f && o.abilityNow.includes(f)) run([() => { const ok = b.cmdAbility(u, f); if (ok) coach('ability'); return ok ? 'act' : ''; }]);
         return;
       }
       if (f && f.side !== u.side) {
         if (o.attackNow.includes(f)) return run([atk(f)]);
         const cell = o.approach.get(f.uid);
-        if (cell) run([() => { b.cmdMove(u, cell.c, cell.r); return ''; }, atk(f)]);
+        if (cell) run([step(cell.c, cell.r), atk(f)]);
         return;
       }
       if (!f && u.mpLeft > 0) {
         const n = o.reach.get(cellKey(hit.c, hit.r));
-        if (n && n.d > 0) run([() => { b.cmdMove(u, n.c, n.r); return ''; }]);
+        if (n && n.d > 0) run([step(n.c, n.r)]);
       }
     };
     // подсказка под курсором: шанс попасть или число шагов
@@ -1019,6 +1023,7 @@ function playerTurn(B, u) {
       const f = hv.uid && b.unit(hv.uid);
       const fp = f && v.F(f.uid);
       if (f && f.side !== u.side && fp) {
+        coach('hoverEnemy');
         const from = T.o.attackNow.includes(f) ? u : T.o.approach.get(f.uid);
         if (!from && !(T.aim && T.o.abilityNow.includes(f))) {
           // в пределах дальности, но высокое препятствие закрывает линию выстрела
@@ -1181,6 +1186,9 @@ function battleInfo(B) {
   };
 }
 
+// Обучение узнаёт о действиях игрока (учебный бой, вкладки)
+const coach = (n, d) => { if (typeof coachEvent === 'function') coachEvent(n, d); };
+
 // Итог боя для истории: учебный бой, хозяева арен, победы в Капуе, заказ сенатора, финал
 const storyBattle = info => { if (typeof STORY !== 'undefined' && STATE.story) STORY.onBattle(info); };
 
@@ -1294,6 +1302,7 @@ function renderResults() {
   if (!B) return;
   updateBattleHud();
   $('#bresults').innerHTML = resultsPanel(B);
+  coach('results');
 }
 
 function resultsPanel(B) {
@@ -1419,6 +1428,7 @@ function closeBattle() {
   UI.tab = 'ludus';
   render();
   checkGameOver();
+  coach('battleClosed');
   storyTick();
 }
 
@@ -1458,7 +1468,7 @@ function checkGameOver() {
 //  Обработка действий
 // ============================================================
 const ACTIONS = {
-  tab: d => { UI.tab = d.tab; render(); },
+  tab: d => { UI.tab = d.tab; render(); coach('tab:' + d.tab); if (typeof tabHint === 'function') tabHint(d.tab); },
   nextDay: () => {
     if (STATE.lost) return showDebtLost();
     const n = STATE.debt && debtNext();
@@ -1639,7 +1649,7 @@ const ACTIONS = {
     }, { ok: `Продать за ${price}`, danger: true });
   },
 
-  pickEvent: d => { UI.eventId = +d.id; UI.picked = []; render(); setTimeout(() => $('.picker')?.scrollIntoView({ behavior: 'smooth' }), 30); },
+  pickEvent: d => { UI.eventId = +d.id; UI.picked = []; render(); coach('pick', findEvent(UI.eventId)); setTimeout(() => $('.picker')?.scrollIntoView({ behavior: 'smooth' }), 30); },
   setMode: d => {
     STATE.settings = STATE.settings || {};
     STATE.settings.mode = d.m === 'manual' ? 'manual' : 'auto';
@@ -1878,7 +1888,7 @@ function bindEvents() {
       return;
     }
     if (typeof sceneKey === 'function' && sceneKey(e)) return;
-    if (typeof tourKey === 'function' && tourKey(e)) return;
+    if (typeof coachKey === 'function' && coachKey(e)) return;
     if (e.key === 'Escape' && UI.gladId) ACTIONS.closeModal();
     if (e.key === 'Escape' && UI.battle && UI.battle.turn && UI.battle.turn.aim) { UI.battle.turn.aim = false; UI.battle.turn.refresh(); }
     // ручной бой: пробел — конец хода, D — оборона

@@ -111,6 +111,7 @@ header::after {
 .brand span { font-size: 13px; color: var(--muted); font-style: italic; }
 .brand h1 { font-size: 34px; line-height: 1; color: var(--blood-hi); text-shadow: 0 0 1px #5a0c06, 0 2px 0 rgba(0,0,0,.6); }
 .res { display: flex; gap: 22px; flex-wrap: wrap; margin-left: auto; align-items: center; }
+@media (min-width: 1000px) { .res { gap: 14px; } }
 .res > div { display: flex; align-items: center; gap: 8px; }
 .res svg { width: 22px; height: 22px; color: var(--bronze); flex: none; }
 .res .rv { display: flex; flex-direction: column; line-height: 1.05; }
@@ -606,7 +607,17 @@ body.menu-on { overflow: hidden; }
 }
 
 /* ---------- Обучение ---------- */
-#tour { position: fixed; inset: 0; z-index: 58; }
+#coach { position: fixed; inset: 0; z-index: 58; }
+#coach[hidden] { display: none; }
+#coach:not(.blocking) { pointer-events: none; }
+#coach:not(.blocking) .tour-card { pointer-events: auto; }
+.tour-hole.soft { box-shadow: none; animation: coachPulse 1.4s ease-in-out infinite; }
+@keyframes coachPulse { 50% { outline-color: rgba(212,170,104,.2); } }
+.coach-card.dock { left: auto; top: auto; right: 16px; bottom: 16px; }
+.coach-head { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+.coach-head img { width: 56px; height: 56px; flex: none; }
+.coach-head b { font-family: var(--font-head); font-weight: 400; font-size: 21px; color: var(--bronze-hi); }
+@media (max-width: 560px) { .coach-card.dock { left: 8px; right: 8px; bottom: 8px; width: auto; } .coach-head img { width: 44px; height: 44px; } }
 .tour-block { position: fixed; inset: 0; }
 .tour-hole { position: fixed; border-radius: 3px; box-shadow: 0 0 0 9999px rgba(8,4,2,.74); outline: 2px solid var(--bronze-hi); outline-offset: 0; pointer-events: none; transition: left .25s, top .25s, width .25s, height .25s; }
 .tour-hole.none { left: 50%; top: 50%; width: 0; height: 0; outline: none; }
