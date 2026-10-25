@@ -516,6 +516,9 @@ button.sound.off { color: var(--dust); }
   box-shadow: inset 0 2px 0 rgba(255,255,255,.04), 0 8px 20px rgba(0,0,0,.4);
 }
 .tomb h3 { color: var(--bone); font-size: 23px; margin-bottom: 2px; padding: 0; }
+.tomb.freed { border-color: var(--q4); }
+.tomb.freed h3 { color: var(--q4); }
+.modal.ending.rudis .portrait { display: block; margin: 4px auto 10px; }
 .tomb h3::after { display: none; }
 .tomb .epi { font-style: italic; color: var(--muted); font-size: 14px; margin-top: 8px; }
 

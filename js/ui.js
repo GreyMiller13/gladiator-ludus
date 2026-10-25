@@ -111,7 +111,7 @@ function showDebtLost() {
     <img class="debt-face" src="${PORTRAIT.url(holder, 'pleased', 120)}" alt="">
     <h2>Лудус отобран</h2>
     <p>${holder === 'rival' ? 'Гней Вар' : 'Лукрион'} забирает школу за долги отца: на ${L.day}-й день на платёж ${L.amount || 0} ден. не хватило ${L.short || 0}.</p>
-    <p class="muted">Дней прожито: ${STATE.day}. Бойцов в казарме: ${STATE.gladiators.length}. Павших: ${STATE.graveyard.length}. Выплачено по долгу: ${STATE.debt ? STATE.debt.paid : 0} ден.</p>
+    <p class="muted">Дней прожито: ${STATE.day}. Бойцов в казарме: ${STATE.gladiators.length}. Павших: ${fallenCount()}. Выплачено по долгу: ${STATE.debt ? STATE.debt.paid : 0} ден.</p>
     <div class="center"><button class="primary" data-act="newGameAsk">Новая игра</button> <button data-act="saveAsk">Загрузить сохранение</button></div>
   </div></div>`;
 }
@@ -544,14 +544,14 @@ function screenArmory() {
 
 function screenNecro() {
   const graves = STATE.graveyard.slice().reverse().map(d => `
-    <div class="tomb">
-      <img class="portrait" style="margin:0 auto 8px;display:block" src="${portrait({ id: 'grave' + d.day + d.name, cls: d.cls, look: d.look, attrs: d.attrs || clsOf(d).base, equip: d.equip || {} }, 64, 80, { gray: true })}" alt="">
+    <div class="tomb ${d.freed ? 'freed' : ''}">
+      <img class="portrait" style="margin:0 auto 8px;display:block" src="${portrait({ id: 'grave' + d.day + d.name, cls: d.cls, look: d.look, attrs: d.attrs || clsOf(d).base, equip: d.equip || {} }, 64, 80, { gray: !d.freed })}" alt="">
       <h3>${esc(d.name)}</h3>
       <div class="small muted">${clsOf(d).name} · ур. ${d.level} · ${esc(d.origin)}</div>
       <div class="kv" style="justify-content:center"><span>Бои <b>${d.record.fights}</b></span><span>Победы <b>${d.record.wins}</b></span><span>Убийства <b>${d.record.kills}</b></span></div>
-      <div class="epi">Пал в день ${d.day}, ${esc(d.place)}. ${d.killer ? `Добил: ${esc(d.killer)}.` : ''} ${d.kills ? `В последнем бою поверг ${d.kills} ${plural(d.kills, 'противника', 'противников', 'противников')}, но толпа не пощадила.` : 'Толпа опустила палец.'}</div>
+      ${d.freed ? `<div class="epi">Отпущен на волю в день ${d.day}, ${esc(d.place)}. Получил рудис из рук ланисты.</div>` : `<div class="epi">Пал в день ${d.day}, ${esc(d.place)}. ${d.killer ? `Добил: ${esc(d.killer)}.` : ''} ${d.kills ? `В последнем бою поверг ${d.kills} ${plural(d.kills, 'противника', 'противников', 'противников')}, но толпа не пощадила.` : 'Толпа опустила палец.'}</div>`}
     </div>`).join('');
-  return `<div class="screen-title"><h2>Некрополь</h2><p>Здесь покоятся бойцы вашего лудуса.</p></div>
+  return `<div class="screen-title"><h2>Некрополь</h2><p>${STATE.graveyard.some(d => d.freed) ? 'Здесь покоятся павшие и вспоминают отпущенных на волю.' : 'Здесь покоятся бойцы вашего лудуса.'}</p></div>
     ${graves ? `<div class="grid">${graves}</div>` : '<p class="empty-note">Пока ни один ваш боец не пал. Пусть так и останется.</p>'}`;
 }
 
@@ -1433,8 +1433,27 @@ function closeBattle() {
 }
 
 
+// Павшие в некрополе (отпущенные на волю — отдельно)
+const fallenCount = () => STATE.graveyard.filter(d => !d.freed).length;
+
+// Эпилог истории: кому достанется рудис свободы
+function showEpilogueChoice() {
+  const best = STATE.gladiators.slice().sort((a, b) => b.fame - a.fame)[0];
+  if (!best) { STATE.story.flags.epilogue = 'none'; save(); return showEnding(); }
+  $('#modal').innerHTML = `<div class="modal-bg"><div class="modal ending rudis">
+    <div class="lat">RUDIS LIBERTATIS</div>
+    <h2>Кому достанется рудис?</h2>
+    <img class="portrait" src="${portrait(best, 96, 120)}" alt="">
+    <p>Император протягивает деревянный рудис — знак свободы. По обычаю его вручают лучшему бойцу. Первым среди равных называют <b>${esc(best.name)}</b>: ${best.record.wins} ${plural(best.record.wins, 'победа', 'победы', 'побед')}, слава ${best.fame}.</p>
+    <p class="muted small">Вольный боец уйдёт из лудуса навсегда, а в Некрополе появится запись о нём.</p>
+    <div class="center"><button class="primary" data-act="freeBest" data-id="${best.id}">Вручить рудис: ${esc(best.name)}</button> <button data-act="keepBest" data-id="${best.id}">Оставить в лудусе</button></div>
+  </div></div>`;
+}
+
 // Концовка: победа в финале
 function showEnding() {
+  // в истории — сначала финальная сцена и выбор, кому отдать рудис
+  if (STATE.story && !STATE.story.flags.epilogue) return flushScenes(() => showEpilogueChoice());
   const all = [...STATE.gladiators];
   const kills = all.reduce((s, g) => s + g.record.kills, 0) + STATE.graveyard.reduce((s, d) => s + d.record.kills, 0);
   const ach = STATE.meta && STATE.meta.achievements ? Object.keys(STATE.meta.achievements).length : 0;
@@ -1442,14 +1461,23 @@ function showEnding() {
   $('#modal').innerHTML = `<div class="modal-bg"><div class="modal ending">
     <div class="lat">RUDIS LIBERTATIS</div>
     <h2>${esc(STATE.ludusName)} — величайший лудус Рима</h2>
-    <p>Чемпионы Императора повержены на песке Колизея. Толпа скандирует имена ваших бойцов, а Император вручает лудусу деревянный рудис — знак свободы и вечной славы.${best ? ` Первым среди равных называют <b>${esc(best.name)}</b>.` : ''}</p>
+    <p>Чемпионы Императора повержены на песке Колизея. Толпа скандирует имена ваших бойцов, а Император вручает лудусу деревянный рудис — знак свободы и вечной славы.${endingLine(best)}</p>
+    ${STATE.story && STATE.story.flags.debtCancelled ? `<p>Разорённый Вар больше ничего не может требовать: остаток долга, ${STATE.story.flags.debtCancelled} ден., списан.</p>` : ''}
+    ${STATE.story ? `<p>Имя отца снова звучит с почтением. Лудус ${gx('сына', 'дочери')} Марка — первый в Риме.</p>` : ''}
     <div class="kv" style="justify-content:center">
       <span>Дней <b>${STATE.day}</b></span><span>Слава лудуса <b>${STATE.fame}</b></span><span>Повержено врагов <b>${kills}</b></span>
-      <span>Бойцов в лудусе <b>${all.length}</b></span><span>Павших <b>${STATE.graveyard.length}</b></span>${ach ? `<span>Достижений <b>${ach}</b></span>` : ''}
+      <span>Бойцов в лудусе <b>${all.length}</b></span><span>Павших <b>${fallenCount()}</b></span>${ach ? `<span>Достижений <b>${ach}</b></span>` : ''}
     </div>
     <p class="muted small">Можно продолжить игру этим лудусом или начать новую историю.</p>
     <div class="center"><button class="primary" data-act="endingContinue">Продолжить</button> <button data-act="newGame">Новая игра</button></div>
   </div></div>`;
+}
+
+function endingLine(best) {
+  const f = STATE.story && STATE.story.flags;
+  if (f && f.epilogue === 'freed') return ` <b>${esc(f.freedName)}</b> принимает рудис и уходит из лудуса вольным человеком.`;
+  if (f && f.epilogue === 'kept') return ` Рудис висит в казарме, а <b>${esc(f.keptName)}</b> остаётся — ради новых побед.`;
+  return best ? ` Первым среди равных называют <b>${esc(best.name)}</b>.` : '';
 }
 
 function checkGameOver() {
@@ -1460,7 +1488,7 @@ function checkGameOver() {
   $('#modal').innerHTML = `<div class="modal-bg"><div class="modal" style="max-width:560px;text-align:center">
     <h2 style="color:var(--blood);font-size:34px">Лудус пал</h2>
     <p>В казармах не осталось бойцов, а казна пуста. Кредиторы забирают имущество.</p>
-    <p class="muted">Дней прожито: ${STATE.day}. Павших бойцов: ${STATE.graveyard.length}.</p>
+    <p class="muted">Дней прожито: ${STATE.day}. Павших бойцов: ${fallenCount()}.</p>
     <button class="primary" data-act="newGame">Начать заново</button></div></div>`;
 }
 
@@ -1728,6 +1756,25 @@ const ACTIONS = {
   bClose: () => closeBattle(),
   bEnding: () => { closeBattle(); showEnding(); },
   endingContinue: () => { $('#modal').innerHTML = ''; render(); },
+  freeBest: d => {
+    const g = glad(+d.id);
+    if (!g) return;
+    STATE.gladiators = STATE.gladiators.filter(x => x.id !== g.id);
+    STATE.graveyard.push({
+      freed: true, name: g.name, cls: g.cls, level: g.level, origin: g.origin, record: { ...g.record },
+      look: g.look, attrs: { ...g.attrs }, equip: JSON.parse(JSON.stringify(g.equip)), day: STATE.day, place: 'Колизей',
+    });
+    journal(`${g.name} получает рудис свободы и уходит из лудуса вольным человеком.`);
+    Object.assign(STATE.story.flags, { epilogue: 'freed', freedName: g.name });
+    save();
+    showEnding();
+  },
+  keepBest: d => {
+    const g = glad(+d.id);
+    Object.assign(STATE.story.flags, { epilogue: 'kept', keptName: g ? g.name : '' });
+    save();
+    showEnding();
+  },
   // расстановка и ручной бой
   dAuto: () => { const B = UI.battle; if (B && B.phase === 'deploy') deployAuto(B); },
   dStart: () => { const B = UI.battle; if (B && B.phase === 'deploy') deployDone(B); },
