@@ -207,7 +207,9 @@ class Battle {
     if (p === 0 || e === 0) {
       this.over = true;
       this.winner = p > 0 ? 'player' : 'enemy';
-      this.say(this.winner === 'player' ? 'Толпа ревёт — победа за вашим лудусом!' : 'Ваши бойцы повержены.', 'sys big');
+      // бой дня на ставки: игрок лишь зритель
+      if (this.event.kind === 'bet') this.say(`Толпа ревёт — победил ${this.alive(this.winner)[0] ? this.alive(this.winner)[0].g.name : 'сильнейший'}!`, 'sys big');
+      else this.say(this.winner === 'player' ? 'Толпа ревёт — победа за вашим лудусом!' : 'Ваши бойцы повержены.', 'sys big');
       this.ev({ t: 'end', winner: this.winner });
     }
     return this.over;

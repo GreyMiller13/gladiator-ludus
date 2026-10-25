@@ -295,6 +295,37 @@ button.sound.off { color: var(--dust); }
 }
 .modal .close { position: absolute; top: 12px; right: 14px; z-index: 2; }
 .modal .glad-nav { position: absolute; top: 12px; right: 62px; z-index: 2; display: flex; align-items: center; gap: 6px; }
+/* ---------- Ставки на бой дня ---------- */
+.betpanel .eh { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.betpanel .eh h3 { padding: 0; margin: 0; }
+.betpanel .eh h3::after { display: none; }
+.betpanel .fmt { font-family: var(--font-head); font-size: 24px; color: var(--blood-hi); white-space: nowrap; }
+.bet-sides { display: grid; grid-template-columns: 1fr auto 1fr; gap: 12px; align-items: stretch; margin: 10px 0; }
+.bet-vs { align-self: center; font-family: var(--font-head); font-size: 26px; color: var(--dim); }
+.bet-side { display: flex; gap: 12px; padding: 10px 12px; border: 1px solid var(--seam); background: var(--plaster2); border-radius: 2px; }
+.bet-side.picked { border-color: var(--bronze); }
+.bet-side.won { border-color: var(--q2); }
+.bet-side .portrait { width: 64px; height: 80px; flex: none; }
+.bet-who { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.bet-odds { display: flex; align-items: baseline; gap: 10px; }
+.bet-pct { font-family: var(--font-head); font-size: 28px; line-height: 1; color: var(--bone); }
+.bet-pct.fav { color: var(--bronze-hi); }
+.bet-btns { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.bet-tag { font-size: 13px; padding: 1px 8px; border: 1px solid var(--bronze); color: var(--bronze-hi); border-radius: 2px; }
+.bet-tag.won { border-color: var(--q2); color: var(--q2); }
+.bet-stake { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding-top: 10px; border-top: 1px solid var(--seam); }
+.bet-stake .sp { flex: 1; }
+.bet-amt { min-width: 52px; text-align: center; font-family: var(--font-head); font-size: 22px; color: var(--bronze-hi); }
+@media (max-width: 700px) { .bet-sides { grid-template-columns: 1fr; } .bet-vs { justify-self: center; font-size: 20px; } }
+.modal.dlg.fighter-info { max-width: 760px; }
+.fi-head { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 12px; }
+.fi-head .portrait { width: 64px; height: 80px; flex: none; }
+.fi-cols { display: grid; grid-template-columns: 1fr 1.3fr; gap: 16px; text-align: left; }
+.fi-cols h4 { margin: 0 0 6px; color: var(--bronze); font-family: var(--font-head); font-weight: 400; font-size: 19px; }
+.fi-kv { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; font-size: 15px; }
+.fi-kv span { color: var(--muted); }
+.fi-perks { margin: 0; padding-left: 18px; }
+@media (max-width: 640px) { .fi-cols { grid-template-columns: 1fr; } }
 .shortsel { cursor: pointer; }
 .shortsel input { accent-color: var(--blood-hi); width: 18px; height: 18px; }
 .modal .glad-nav button { min-width: 34px; font-size: 18px; line-height: 1; }

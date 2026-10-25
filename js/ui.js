@@ -135,9 +135,10 @@ function storyTick() {
 
 // Конец дня: содержание, платёж по долгу, сцены истории
 function endDay() {
-  const { cost, debt } = nextDay();
+  const { cost, debt, bet } = nextDay();
   UI.eventId = null; UI.picked = [];
   toast(`День ${STATE.day}. Содержание бойцов: −${cost} ден.`, STATE.gold < 0);
+  if (bet) toast(bet);
   if (STATE.gold < 0 && !STATE.lost) toast('Казна ушла в минус! Покупки недоступны, пока денарии не вернутся.', true);
   if (debt) debtToast(debt);
   if (debt && debt.type === 'cleared') track('debtCleared');
@@ -247,7 +248,7 @@ function renderModal() {
 
   const derived = [
     ['Здоровье', s.maxHp, 'hp'], ['Урон', `${s.dmgMin}–${s.dmgMax}${s.dmgMult !== 1 ? ` ×${s.dmgMult.toFixed(2)}` : ''}`, 'dmg'],
-    ['Точность', `+${s.acc}%`, 'acc'], ['Уклонение', `${s.dodge}%`, 'dodge'], ['Броня', `${s.armor}`, 'armor'],
+    ['Точность', `${s.acc >= 0 ? '+' : ''}${s.acc}%`, 'acc'], ['Уклонение', `${s.dodge}%`, 'dodge'], ['Броня', `${s.armor}`, 'armor'],
     ['Шанс крита', `${s.crit}% · ×${s.critMult.toFixed(2)}`, 'crit'], ['Блок щитом', `${s.block}%`, 'block'],
     ['Инициатива', `${s.init} · шагов ${s.move}`, 'init'], ['Дальность', `${s.reach} кл.`, 'reach'], ['Сопротивление', `${Math.min(100, s.resist)}%`, 'resist'],
   ];
@@ -420,6 +421,7 @@ const changeClassCost = g => 40 * g.level;
 function screenArena() {
   const tiers = TIERS.map((T, i) => ({ T, i }));
   let html = `<div class="screen-title"><h2>Арена</h2><p>Каждый боец может выйти на песок один раз в день. Раненые не сражаются.</p></div>`;
+  html += betPanel();
   html += finalCard();
   for (const { T, i } of tiers) {
     if (!tierOpen(i)) {
@@ -433,6 +435,106 @@ function screenArena() {
   }
   html += eventPicker('arena') + eventPicker('final');
   return html;
+}
+
+// ------------------------------------------------------------
+//  Ставки на бой дня
+// ------------------------------------------------------------
+const pct = p => `${Math.round(p * 100)}%`;
+const xOdds = k => `×${k.toFixed(2)}`;
+function betAmount() {
+  const top = Math.min(betMax(), Math.floor(STATE.gold / BET_STEP) * BET_STEP);
+  UI.betAmt = clamp(UI.betAmt || BET_MIN, BET_MIN, Math.max(BET_MIN, top));
+  return { amt: UI.betAmt, top };
+}
+
+function betPanel() {
+  if (typeof ensureBet !== 'function') return '';
+  const bet = ensureBet(), F = [bet.a, bet.b];
+  const open = !bet.done && bet.pick === null;
+  const { amt, top } = betAmount();
+  const canBet = open && top >= BET_MIN;
+  const side = i => {
+    const g = F[i], s = computeStats(g), fav = bet.p[i] > bet.p[1 - i];
+    return `<div class="bet-side ${bet.pick === i ? 'picked' : ''} ${bet.done && bet.winner === i ? 'won' : ''}">
+      <img class="portrait" src="${portrait(g, 64, 80, { bust: true, enemy: i === 1 })}" alt="">
+      <div class="bet-who">
+        <b>${esc(g.name)}</b> <span class="muted small">${clsOf(g).name}, ур. ${g.level}</span>
+        <div class="tiny muted">Здоровье ${s.maxHp} · урон ${s.dmgMin}–${s.dmgMax} · броня ${s.armor} · уклонение ${s.dodge}%</div>
+        <div class="bet-odds"><span class="bet-pct ${fav ? 'fav' : ''}">${pct(bet.p[i])}</span><span>коэффициент <b>${xOdds(bet.odds[i])}</b></span></div>
+        <div class="bet-btns">
+          <button class="small" data-act="betInspect" data-i="${i}">Подробнее</button>
+          ${canBet ? `<button class="small primary" data-act="betPlace" data-i="${i}">Поставить ${amt} → ${Math.round(amt * bet.odds[i])}</button>` : ''}
+          ${bet.pick === i ? `<span class="bet-tag">ваша ставка ${bet.stake}</span>` : ''}
+          ${bet.done && bet.winner === i ? '<span class="bet-tag won">победитель</span>' : ''}
+        </div>
+      </div>
+    </div>`;
+  };
+  let foot;
+  if (bet.done) {
+    const w = F[bet.winner];
+    foot = `<p class="small">${bet.pick === null ? `Победил ${esc(w.name)}. Вы смотрели без ставки.` : bet.payout ? `Победил ${esc(w.name)} — ставка сыграла: <b class="q2">+${bet.payout}</b> денариев.` : `Победил ${esc(w.name)} — ставка ${bet.stake} денариев проиграна.`} Новый бой — завтра.</p>`;
+  } else if (bet.pick !== null) {
+    foot = `<div class="bet-stake"><span class="small">Ваша ставка: ${bet.stake} денариев, боец — ${esc(F[bet.pick].name)} (${xOdds(bet.odds[bet.pick])}). Если он победит — <b>${Math.round(bet.stake * bet.odds[bet.pick])}</b> денариев.</span>
+      <span class="sp"></span><button class="primary" data-act="betWatch">Смотреть бой</button></div>`;
+  } else {
+    foot = `<div class="bet-stake">
+      ${top >= BET_MIN ? `<span>Ставка:</span><button class="small" data-act="betAmt" data-d="-1" ${amt <= BET_MIN ? 'disabled' : ''} aria-label="Меньше">−</button><b class="bet-amt">${amt}</b><button class="small" data-act="betAmt" data-d="1" ${amt >= top ? 'disabled' : ''} aria-label="Больше">+</button>
+      <span class="muted small">от ${BET_MIN} до ${betMax()} с шагом ${BET_STEP}</span>` : `<span class="muted small">Для ставки нужно хотя бы ${BET_MIN} денариев.</span>`}
+      <span class="sp"></span><button data-act="betWatch">Смотреть без ставки</button></div>`;
+  }
+  return `<div class="panel betpanel mt">
+    <div class="eh"><h3>Бой дня: ставки</h3><span class="fmt">1 на 1</span></div>
+    <p class="small muted">Устроитель игр прогнал этот бой ${BET_SIMS} раз и назначил коэффициенты по шансам бойцов, оставив себе свою долю. Одна ставка в день.</p>
+    <div class="bet-sides">${side(0)}<div class="bet-vs">vs</div>${side(1)}</div>
+    ${foot}
+  </div>`;
+}
+
+// Карточка чужого бойца: характеристики, снаряжение, школа и навыки
+function showFighterInfo(g) {
+  const s = computeStats(g), C = clsOf(g);
+  const attrs = ATTR_KEYS.map(k => `<span>${ATTRS[k].name}</span><b>${s.attrs[k]}</b>`).join('');
+  const derived = [['Здоровье', s.maxHp], ['Урон', `${s.dmgMin}–${s.dmgMax}`], ['Точность', `${s.acc >= 0 ? '+' : ''}${s.acc}%`], ['Уклонение', `${s.dodge}%`], ['Броня', s.armor],
+    ['Шанс крита', `${s.crit}%`], ['Блок щитом', `${s.block}%`], ['Инициатива', s.init], ['Дальность', `${s.reach} кл.`]]
+    .map(([a, b]) => `<span>${a}</span><b>${b}</b>`).join('');
+  const items = SLOT_KEYS.map(k => g.equip[k]).filter(Boolean);
+  const perks = Object.entries(g.perks || {}).filter(([id, r]) => PERKS[id] && r > 0)
+    .map(([id, r]) => `<li><b>${PERKS[id].name}</b> ${r}/${PERKS[id].max}</li>`).join('');
+  showDialog({
+    title: esc(g.name), cls: 'fighter-info', ok: false, cancel: 'Закрыть',
+    body: `<div class="fi-head"><img class="portrait" src="${portrait(g, 64, 80, { bust: true })}" alt=""><div><b>${C.name}</b>${g.cls ? ` <span class="muted tiny">${C.latin}</span>` : ''} · уровень ${g.level} · ${esc(g.origin)}
+        ${C.ability ? `<div class="small"><b>${C.ability.name}:</b> ${C.ability.desc}</div>` : '<div class="small muted">Без школы: ни особого приёма, ни навыков.</div>'}</div></div>
+      <div class="fi-cols">
+        <div><h4>Характеристики</h4><div class="fi-kv">${attrs}</div><div class="fi-kv mt">${derived}</div></div>
+        <div><h4>Снаряжение</h4>${items.length ? `<div class="list">${items.map(it => itemRow(it, '', true, g)).join('')}</div>` : '<p class="small muted">Без снаряжения.</p>'}
+          ${g.cls ? `<h4 class="mt">Навыки школы</h4>${perks ? `<ul class="fi-perks small">${perks}</ul>` : '<p class="small muted">Пока ни одного.</p>'}` : ''}</div>
+      </div>`,
+  });
+}
+
+function startBetBattle() {
+  const bet = STATE.bet;
+  if (!bet || bet.done) return;
+  const ev = betEvent(bet), a = ensureLook(cloneGlad(bet.a)), b = ensureLook(cloneGlad(bet.b));
+  openBattle(new Battle([a], [b], ev, { mode: 'auto' }), ev, [], 'auto', { bet: true });
+}
+
+async function finishBetBattle(B) {
+  const b = B.b, bet = STATE.bet;
+  const w = b.winner === 'player' ? 0 : 1, F = [bet.a, bet.b];
+  const pay = settleBet(w);
+  journal(`Бой дня: победил ${F[w].name}, повержен ${F[1 - w].name}.${bet.pick === null ? '' : pay ? ` Ставка сыграла: +${pay} денариев.` : ` Ставка ${bet.stake} денариев проиграна.`}`);
+  save();
+  B.phase = 'scenes';
+  updateBattleHud();
+  await B.view.salute(b.winner);
+  if (UI.battle !== B) return;
+  B.phase = 'results';
+  updateBattleHud();
+  const sub = bet.pick === null ? 'Вы смотрели без ставки.' : pay ? `Ставка сыграла: +${pay} денариев.` : `Ставка ${bet.stake} денариев проиграна.`;
+  $('#bresults').innerHTML = `<div class="panel results center"><h2 class="${pay ? 'win' : ''}">Победил ${esc(F[w].name)}</h2><div class="sub">${sub}</div><button class="primary" data-act="bClose">Вернуться на арену</button></div>`;
 }
 
 // Финал игры: открывается при славе FINAL_FAME
@@ -606,7 +708,7 @@ const tipAttrHtml = (txt) => esc(txt).replace(/\n/g, '&#10;');
 // ------------------------------------------------------------
 const GUIDE = [
   ['ludus', 'Лудус и школы'], ['stats', 'Характеристики'], ['combat', 'Бой и поле'],
-  ['gear', 'Снаряжение и лавки'], ['crowd', 'Приговор толпы'], ['meta', 'Заказы, достижения, финал'], ['story', 'История и долг'],
+  ['gear', 'Снаряжение и лавки'], ['crowd', 'Приговор толпы'], ['meta', 'Заказы, ставки, финал'], ['story', 'История и долг'],
 ];
 function screenRules() {
   const ch = UI.guide || 'ludus';
@@ -726,6 +828,10 @@ function guideChapter(ch) {
     case 'meta': return `
     <h3>Заказы</h3>
     <p>Каждый день — несколько показательных боёв по найму: у патронов, на пирах, свадьбах и праздниках. Это бои <b>не насмерть</b>: выбывший боец сдаётся и отлёживается день. Сложность от «Лёгкого» до «Опасного» — чем труднее, тем выше плата. У некоторых заказов есть условие (без потерь, за N раундов, в меньшинстве, продержаться). Провал приносит лишь плату за выход. Иногда появляется легендарный заказ с реликвией.</p>
+    <h3>Бой меньшинством</h3>
+    <p>На обычный бой арены 2 на 2 или 3 на 3 можно выйти на одного бойца меньше — отметьте это при выборе бойцов. Награда за победу (денарии и слава) — <b>×${SHORT_MULT}</b>. Учебный бой и бои с хозяевами арен — только поровну.</p>
+    <h3>Ставки на бой дня</h3>
+    <p>Каждый день на арене проходит один бой 1 на 1 между чужими бойцами текущей арены. Их снаряжение, характеристики, школу и навыки можно посмотреть заранее. Устроитель игр прогоняет бой ${BET_SIMS} раз и по шансам назначает коэффициенты, оставляя себе ${Math.round(BET_MARGIN * 100)}%: у слабого бойца коэффициент выше. Ставка — от ${BET_MIN} с шагом ${BET_STEP}, предел растёт с ареной: ${BET_MAX.join(' / ')} денариев (Помпеи / Капуя / Рим / Колизей). Выигрыш — ставка × коэффициент. Одна ставка в день; если не посмотреть бой, он пройдёт без вас при завершении дня.</p>
     <h3>Достижения и реликвии</h3>
     <p>Достижения дают денарии и славу, самые трудные — реликвии. Прогресс виден на вкладке «Достижения».</p>
     <h3>Финал</h3>
@@ -910,6 +1016,12 @@ function startBattle() {
   const mode = ev.training ? 'manual' : battleMode(); // учебный бой — всегда с подсказками, вручную
   const b = new Battle(glads, ev.enemies, ev, { mode });
   UI.picked = []; UI.eventId = null;
+  openBattle(b, ev, glads, mode);
+  coach('battleStart', ev);
+}
+
+// Экран боя: поле, очередь, составы и журнал. extra — поля для UI.battle (например, bet: true)
+function openBattle(b, ev, glads, mode, extra = {}) {
   const host = $('#battle');
   host.hidden = false;
   document.body.style.overflow = 'hidden';
@@ -917,7 +1029,7 @@ function startBattle() {
   const title = ev.kind === 'contract' ? `Заказ: ${esc(ev.title)}` : ev.kind === 'final' ? 'Финал · Игры за рудис свободы' : ev.title ? esc(ev.title) : T.name;
   host.innerHTML = `<div class="bwrap">
     <div class="btop">
-      <div><h2>${T.place}</h2><span class="muted">${title} · ${playerCount(ev)} на ${ev.size} · ${mode === 'manual' ? 'ручное управление' : 'автобой'} · <span id="bRound">выход бойцов</span></span></div>
+      <div><h2>${T.place}</h2><span class="muted">${title} · ${playerCount(ev)} на ${ev.size} · ${extra.bet ? 'вы на трибуне' : mode === 'manual' ? 'ручное управление' : 'автобой'} · <span id="bRound">выход бойцов</span></span></div>
       <div class="bctl" id="bCtl"></div>
     </div>
     <div class="turnq" id="bQueue"></div>
@@ -932,11 +1044,10 @@ function startBattle() {
   </div>`;
   const view = new ArenaView($('#arenaCanvas'), b);
   music('arena');
-  UI.battle = { b, event: ev, glads, view, phase: mode === 'manual' ? 'deploy' : 'fight', speed: 1, results: null, verdicts: null };
+  UI.battle = { b, event: ev, glads, view, phase: mode === 'manual' ? 'deploy' : 'fight', speed: 1, results: null, verdicts: null, ...extra };
   updateBattleHud();
   if (mode === 'manual') startDeploy(UI.battle);
   else runBattle(UI.battle);
-  coach('battleStart', ev);
 }
 
 // ------------------------------------------------------------
@@ -1173,8 +1284,8 @@ function updateBattleHud() {
   if (!B) return;
   const b = B.b;
   $('#bRound').textContent = B.phase === 'deploy' ? 'расстановка' : b.round ? `раунд ${b.round}` : 'выход бойцов';
-  $('#rosterP').innerHTML = `<div class="side-label">${esc(STATE.ludusName)}</div>` + b.units.filter(u => u.side === 'player').map(u => unitRow(u, B)).join('');
-  $('#rosterE').innerHTML = '<div class="side-label">Противники</div>' + b.units.filter(u => u.side === 'enemy').map(u => unitRow(u, B)).join('');
+  $('#rosterP').innerHTML = `<div class="side-label">${B.bet ? 'Первый боец' : esc(STATE.ludusName)}</div>` + b.units.filter(u => u.side === 'player').map(u => unitRow(u, B)).join('');
+  $('#rosterE').innerHTML = `<div class="side-label">${B.bet ? 'Второй боец' : 'Противники'}</div>` + b.units.filter(u => u.side === 'enemy').map(u => unitRow(u, B)).join('');
   const log = $('#bLog');
   const near = log.scrollHeight - log.scrollTop - log.clientHeight < 60;
   log.innerHTML = b.log.map(l => `<p class="${l.kind}">${l.text}</p>`).join('');
@@ -1182,7 +1293,7 @@ function updateBattleHud() {
   const fighting = B.phase === 'fight' && !b.over;
   $('#bCtl').innerHTML = [1, 2, 4].map((s, i) => `<button class="small ${B.speed === s ? 'active' : ''}" data-act="bSpeed" data-s="${s}" title="Клавиша ${i + 1}">×${s} <kbd>${i + 1}</kbd></button>`).join('')
     + soundBtn()
-    + (fighting ? `<button class="small" data-act="bSkip" ${B.view.skip ? 'disabled' : ''}>Пропустить бой</button><button class="small danger" data-act="bSurrender" ${B.surrenderReq ? 'disabled' : ''}>Сдаться</button>` : '');
+    + (fighting ? `<button class="small" data-act="bSkip" ${B.view.skip ? 'disabled' : ''}>Пропустить бой</button>${B.bet ? '' : `<button class="small danger" data-act="bSurrender" ${B.surrenderReq ? 'disabled' : ''}>Сдаться</button>`}` : '');
   renderQueue(B);
 }
 
@@ -1225,6 +1336,7 @@ const storyBattle = info => { if (typeof STORY !== 'undefined' && STATE.story) S
 async function finishBattle() {
   const B = UI.battle;
   if (!B || B.phase !== 'fight') return;
+  if (B.bet) return finishBetBattle(B);
   const b = B.b, ev = B.event, T = b.tier, view = B.view;
   const win = b.winner === 'player';
   const kind = ev.kind || 'arena';
@@ -1455,7 +1567,7 @@ function closeBattle() {
   $('#battle').hidden = true;
   $('#battle').innerHTML = '';
   document.body.style.overflow = '';
-  UI.tab = 'ludus';
+  UI.tab = B && B.bet ? 'arena' : 'ludus';
   render();
   checkGameOver();
   coach('battleClosed');
@@ -1737,6 +1849,14 @@ const ACTIONS = {
     const y = window.scrollY; render(); window.scrollTo(0, y);
   },
   startBattle: () => startBattle(),
+  betAmt: d => { betAmount(); UI.betAmt += +d.d * BET_STEP; betAmount(); const y = window.scrollY; render(); window.scrollTo(0, y); },
+  betPlace: d => {
+    const { amt } = betAmount();
+    if (!placeBet(+d.i, amt)) return toast('Ставку сделать нельзя.', true);
+    save(); const y = window.scrollY; render(); window.scrollTo(0, y);
+  },
+  betInspect: d => { const bet = STATE.bet; if (bet) showFighterInfo([bet.a, bet.b][+d.i]); },
+  betWatch: () => startBetBattle(),
 
   buyItem: d => {
     const idx = STATE.smith.findIndex(i => i.id === +d.item);

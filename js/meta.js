@@ -95,7 +95,7 @@ for (const [id, A] of Object.entries(ARTIFACTS)) {
 // ------------------------------------------------------------
 const META = (() => {
   // Группы достижений
-  const GROUPS = { arena: 'Арена', fighters: 'Бойцы', ludus: 'Лудус', contracts: 'Заказы', special: 'Особые' };
+  const GROUPS = { arena: 'Арена', fighters: 'Бойцы', ludus: 'Лудус', contracts: 'Заказы', bets: 'Ставки', special: 'Особые' };
 
   // key — счётчик в STATE.meta.c, target — сколько нужно
   const ACH = [
@@ -130,6 +130,11 @@ const META = (() => {
     { id: 'contract40', group: 'contracts', name: 'Поставщик двора', desc: 'Выполнить 40 заказов.', key: 'contracts', target: 40, reward: { gold: 600, fame: 15 } },
     { id: 'contractHard', group: 'contracts', name: 'Опасное ремесло', desc: 'Выполнить заказ уровня «Опасный».', key: 'contractsHard', target: 1, reward: { gold: 250 } },
     { id: 'contractFew', group: 'contracts', name: 'Меньшинством', desc: 'Выполнить заказ, сражаясь в меньшинстве.', key: 'contractsOutnumbered', target: 1, reward: { gold: 150 } },
+    // Ставки
+    { id: 'bet1', group: 'bets', name: 'Глаз знатока', desc: 'Выиграть ставку на бой дня.', key: 'betsWon', target: 1, reward: { gold: 50 } },
+    { id: 'betUnderdog', group: 'bets', name: 'Вера в слабого', desc: `Выиграть ставку на бойца с коэффициентом не ниже ${typeof BET_UNDERDOG !== 'undefined' ? BET_UNDERDOG : 2.5}.`, key: 'betUnderdog', target: 1, reward: { gold: 150 } },
+    { id: 'bet10', group: 'bets', name: 'Завсегдатай трибун', desc: 'Выиграть 10 ставок.', key: 'betsWon', target: 10, reward: { gold: 300 } },
+    { id: 'bet5000', group: 'bets', name: 'Любимец Фортуны', desc: 'Выиграть на ставках в сумме 5000 денариев сверх поставленного.', key: 'betProfit', target: 5000, reward: { fame: 20 } },
     // Особые
     { id: 'manual', group: 'special', name: 'Рука ланисты', desc: 'Победить, лично отдавая приказы (ручное управление боем).', key: 'manualWins', target: 1, reward: { gold: 75 } },
     { id: 'lastBreath', group: 'special', name: 'На волоске', desc: 'Победить, когда у вашего бойца на ногах осталось не больше 10% здоровья.', key: 'lastBreath', target: 1, reward: { gold: 150 } },
@@ -147,6 +152,7 @@ const META = (() => {
     executed: 0, spared: 0, manualWins: 0, lastBreath: 0, finalWins: 0,
     contracts: 0, contractsFailed: 0, contractsHard: 0, contractsOutnumbered: 0, earned: 0,
     bestLevel: 0, bestGladWins: 0, schools: 0, bestFame: 0, day: 0, legendary: 0, artifacts: 0, debtCleared: 0,
+    betsWon: 0, betUnderdog: 0, betProfit: 0,
   };
 
   // Откуда берутся реликвии: из достижений или из «легендарных заказов»
@@ -409,6 +415,13 @@ const META = (() => {
         break;
       case 'debtCleared':
         c.debtCleared = 1;
+        break;
+      case 'bet':
+        if (d.won) {
+          c.betsWon++;
+          c.betProfit += Math.max(0, Math.round(+d.profit || 0));
+          if (+d.odds >= (typeof BET_UNDERDOG !== 'undefined' ? BET_UNDERDOG : 2.5)) c.betUnderdog++;
+        }
         break;
       case 'gold':
         if (+d.amount > 0) c.earned += Math.round(+d.amount);

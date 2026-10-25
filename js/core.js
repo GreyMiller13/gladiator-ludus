@@ -531,8 +531,8 @@ function setShort(ev, on) {
 }
 const winReward = ev => { const k = ev.short ? SHORT_MULT : 1; return { gold: ev.gold * k, fame: ev.fame * k }; };
 
-// Новый день: содержание бойцов, обновление рынка и событий, платёж по долгу.
-// Возвращает { cost, debt }: debt — результат debtOnNewDay() или null
+// Новый день: содержание бойцов, обновление рынка и событий, ставка дня, платёж по долгу.
+// Возвращает { cost, debt, bet }: debt — результат debtOnNewDay() или null, bet — итог несыгранной ставки или null
 function nextDay() {
   if (STATE.lost) return { cost: 0, debt: null };
   const cost = upkeepCost();
@@ -544,11 +544,13 @@ function nextDay() {
   }
   refreshSmith(); refreshMarket(); generateEvents(); refreshRareShop();
   journal(`Наступил день ${STATE.day}. Содержание бойцов: −${cost} денариев.`);
+  // ставка решается до платежа по долгу: выигрыш успевает в казну
+  const bet = typeof betOnNewDay === 'function' ? betOnNewDay() : null;
   const debt = STATE.debt && typeof debtOnNewDay === 'function' ? debtOnNewDay() : null;
   if (typeof META !== 'undefined') META.onNewDay();
   if (STATE.story && typeof STORY !== 'undefined') STORY.onNewDay();
   save();
-  return { cost, debt };
+  return { cost, debt, bet };
 }
 
 function gladiatorStatus(g) {
