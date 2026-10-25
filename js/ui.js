@@ -69,6 +69,7 @@ function renderHeader() {
     <div class="brand">${ICON.crest}<div><span>лудус</span><h1>${esc(STATE.ludusName)}</h1></div></div>
     <div class="res">
       ${res('coin', 'денарии', STATE.gold, STATE.gold < 0 ? 'neg' : '')}
+      ${debtRes()}
       ${res('laurel', 'слава лудуса', STATE.fame)}
       ${res('helm', 'бойцы', `${STATE.gladiators.length}/${MAX_GLADIATORS}`)}
       ${res('sun', 'день', STATE.day)}
@@ -78,12 +79,71 @@ function renderHeader() {
     </div>`;
 }
 
+// Долг отца в шапке: остаток и ближайший платёж; красный, если срок близко, а денег не хватает
+function debtRes() {
+  const n = STATE.debt && typeof debtNext === 'function' ? debtNext() : null;
+  if (!n) return '';
+  const when = n.daysLeft <= 0 ? 'сегодня' : n.daysLeft === 1 ? 'завтра' : `через ${n.daysLeft} дн.`;
+  return `<button class="debtres ${debtUrgent() ? 'urgent' : ''}" data-act="debtInfo" title="Долг отца: подробности">${ICON.tablet}
+    <div class="rv"><label>долг</label><strong>${debtLeft()}</strong><small>платёж ${n.amount} ${when}</small></div></button>`;
+}
+
+function showDebtDialog() {
+  const d = STATE.debt;
+  if (!d) return;
+  const n = debtNext();
+  const rows = n ? d.plan.slice(d.idx, d.idx + 3).map((a, k) => `<tr><td>${debtDay(d.idx + k)}-й день</td><td>${a} ден.</td></tr>`).join('') : '';
+  showDialog({
+    title: 'Долг отца', cls: 'debtdlg',
+    body: `<img class="debt-face" src="${PORTRAIT.url(d.holder, 'neutral', 96)}" alt="">
+      <p>Долг держит <b>${debtHolderName()}</b>. ${n ? `Осталось выплатить <b>${debtLeft()}</b> ден.` : 'Долг закрыт.'} Выплачено: ${d.paid} ден.</p>
+      ${rows ? `<table class="debt-plan"><caption>Ближайшие платежи</caption>${rows}</table>` : ''}
+      <p class="small muted">Платёж списывается сам в день срока. Если денег не хватит — лудус отберут.</p>`,
+    ok: 'Понятно', cancel: false,
+  });
+}
+
+// Итог проигрыша: кредитор забирает лудус
+function showDebtLost() {
+  const L = STATE.lost || {}, holder = L.holder || 'lender';
+  $('#modal').innerHTML = `<div class="modal-bg"><div class="modal lostdebt">
+    <img class="debt-face" src="${PORTRAIT.url(holder, 'pleased', 120)}" alt="">
+    <h2>Лудус отобран</h2>
+    <p>${holder === 'rival' ? 'Гней Вар' : 'Лукрион'} забирает школу за долги отца: на ${L.day}-й день на платёж ${L.amount || 0} ден. не хватило ${L.short || 0}.</p>
+    <p class="muted">Дней прожито: ${STATE.day}. Бойцов в казарме: ${STATE.gladiators.length}. Павших: ${STATE.graveyard.length}. Выплачено по долгу: ${STATE.debt ? STATE.debt.paid : 0} ден.</p>
+    <div class="center"><button class="primary" data-act="newGameAsk">Новая игра</button> <button data-act="saveAsk">Загрузить сохранение</button></div>
+  </div></div>`;
+}
+
+function debtToast(r) {
+  const holder = debtHolderName();
+  if (r.type === 'warn') toast(`Через ${r.daysLeft} ${r.daysLeft === 1 ? 'день' : 'дня'} платёж по долгу: ${r.amount} ден. (${holder}).`, STATE.gold < r.amount);
+  if (r.type === 'paid') toast(`<img class="toast-face" src="${PORTRAIT.url(STATE.debt.holder, 'pleased', 28)}" alt="">Платёж ${r.amount} ден. внесён. Осталось ${r.left}.`);
+  if (r.type === 'cleared') toast('Последний платёж внесён — долг отца уплачен!');
+}
+
+// Конец дня: содержание, платёж по долгу, сцены истории
+function endDay() {
+  const { cost, debt } = nextDay();
+  UI.eventId = null; UI.picked = [];
+  toast(`День ${STATE.day}. Содержание бойцов: −${cost} ден.`, STATE.gold < 0);
+  if (STATE.gold < 0 && !STATE.lost) toast('Казна ушла в минус! Покупки недоступны, пока денарии не вернутся.', true);
+  if (debt) debtToast(debt);
+  if (debt && debt.type === 'cleared') track('debtCleared');
+  if (STATE.story && debt) STORY.onDebt(debt);
+  render();
+  if (STATE.lost) { flushScenes(() => showDebtLost()); return; }
+  flushScenes();
+  checkGameOver();
+}
+
 // Значки шапки (рисуются линией, цвет — от текста)
 const ICON = {
   crest: '<svg class="crest" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 40L35 10M39 40L13 10"/><path d="M31 9l6-1-1 6M17 9l-6-1 1 6"/><path d="M15 36l-4 4M33 36l4 4"/><path d="M17 30c0-9 3-14 7-14s7 5 7 14l-2 5h-10z" fill="currentColor" fill-opacity=".25"/><path d="M24 16v-5M20 12c1-3 7-3 8 0"/><path d="M21 26h6"/></svg>',
   coin: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="5.5" stroke-dasharray="1.5 1.5"/><path d="M10 9.5h3.2a1.6 1.6 0 010 3.2H10v-3.2zm0 3.2h3.6a1.6 1.6 0 010 3.2H10z"/></svg>',
   laurel: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M12 21c-5-2-8-6-8-12M12 21c5-2 8-6 8-12"/><path d="M5 9c1 1 2 1 3 0-1-1-2-1-3 0zM4.5 13c1 .8 2.2.8 3-.2-1-.8-2.2-.8-3 .2zM6 16.8c1 .5 2.2.3 2.8-.7-1-.5-2.2-.3-2.8.7zM19 9c-1 1-2 1-3 0 1-1 2-1 3 0zM19.5 13c-1 .8-2.2.8-3-.2 1-.8 2.2-.8 3 .2zM18 16.8c-1 .5-2.2.3-2.8-.7 1-.5 2.2-.3 2.8.7z" fill="currentColor"/></svg>',
   helm: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M5 18c0-8 3-12 7-12s7 4 7 12l-3 1v-4h-8v4z"/><path d="M12 6V3M9 4c1-1.5 5-1.5 6 0"/><path d="M9 12h6"/></svg>',
+  tablet: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="1.5"/><rect x="7" y="7" width="10" height="10" fill="currentColor" fill-opacity=".2"/><path d="M9 10h6M9 13h4" stroke-linecap="round"/></svg>',
   sun: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4L7 17M17 7l1.4-1.4"/></svg>',
 };
 
@@ -1379,13 +1439,20 @@ function checkGameOver() {
 const ACTIONS = {
   tab: d => { UI.tab = d.tab; render(); },
   nextDay: () => {
-    const { cost } = nextDay();
-    UI.eventId = null; UI.picked = [];
-    toast(`День ${STATE.day}. Содержание бойцов: −${cost} ден.`, STATE.gold < 0);
-    if (STATE.gold < 0) toast('Казна в долгу! Покупки недоступны, пока долг не погашен.', true);
-    render();
-    checkGameOver();
+    if (STATE.lost) return showDebtLost();
+    const n = STATE.debt && debtNext();
+    const after = STATE.gold - upkeepCost();
+    // накануне платежа, если денег не хватит, — переспросить
+    if (n && n.daysLeft === 1 && after < n.amount) {
+      return showDialog({
+        title: 'Завтра платёж', danger: true, ok: 'Завершить день',
+        text: `Завтра платёж ${n.amount} ден. (${debtHolderName()}). В казне после содержания не хватит ${n.amount - after} ден. Всё равно завершить день?`,
+        onOk: () => { closeDialog(); endDay(); },
+      });
+    }
+    endDay();
   },
+  debtInfo: () => showDebtDialog(),
   openGlad: d => { UI.gladId = +d.id; UI.slotSel = null; renderModal(); },
   closeModal: () => { UI.gladId = null; renderModal(); },
   closeModalBg: (d, el, e) => { if (e.target === el) ACTIONS.closeModal(); },

@@ -117,6 +117,21 @@ header::after {
 .res label { font-size: 12px; font-style: italic; color: var(--muted); }
 .res strong { font-family: var(--font-head); font-size: 22px; font-weight: 400; }
 .res .neg { color: #e0786b; }
+.res .debtres { display: flex; align-items: center; gap: 8px; padding: 2px 8px 2px 4px; background: none; border: 1px solid transparent; border-radius: 2px; box-shadow: none; color: var(--text); font-family: var(--font-body); text-align: left; }
+.res .debtres:hover { border-color: var(--seam2); }
+.res .debtres small { font-size: 12px; color: var(--muted); white-space: nowrap; }
+.res .debtres.urgent { border-color: var(--blood); }
+.res .debtres.urgent strong, .res .debtres.urgent small, .res .debtres.urgent svg { color: #e0786b; }
+.toast-face { width: 28px; height: 28px; vertical-align: middle; margin-right: 8px; }
+.modal.dlg.debtdlg p { margin: 8px 0; }
+.debt-face { display: block; width: 96px; height: 96px; margin: 0 auto 6px; }
+.debt-plan { margin: 6px auto 8px; border-collapse: collapse; min-width: 220px; }
+.debt-plan caption { font-size: 14px; color: var(--muted); font-style: italic; padding-bottom: 4px; }
+.debt-plan td { padding: 3px 12px; border-top: 1px solid var(--seam); }
+.debt-plan td:last-child { text-align: right; font-family: var(--font-head); font-size: 18px; color: var(--bronze-hi); }
+.modal.lostdebt { max-width: 560px; text-align: center; }
+.modal.lostdebt .debt-face { width: 120px; height: 120px; }
+.modal.lostdebt h2 { color: var(--blood); font-size: 34px; margin: 4px 0 8px; }
 
 nav {
   display: flex; gap: 2px; padding: 8px 22px 0; overflow-x: auto;

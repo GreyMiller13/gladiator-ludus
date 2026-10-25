@@ -134,6 +134,7 @@ const META = (() => {
     { id: 'manual', group: 'special', name: 'Рука ланисты', desc: 'Победить, лично отдавая приказы (ручное управление боем).', key: 'manualWins', target: 1, reward: { gold: 75 } },
     { id: 'lastBreath', group: 'special', name: 'На волоске', desc: 'Победить, когда у вашего бойца на ногах осталось не больше 10% здоровья.', key: 'lastBreath', target: 1, reward: { gold: 150 } },
     { id: 'legendary', group: 'special', name: 'Работа мастера', desc: 'Владеть легендарным предметом.', key: 'legendary', target: 1, reward: { gold: 150 } },
+    { id: 'debtFree', group: 'special', name: 'Долг отца уплачен', desc: 'Выплатить долг отца до последнего денария.', key: 'debtCleared', target: 1, reward: { fame: 20 } },
     { id: 'day50', group: 'special', name: 'Полвека', desc: 'Продержать лудус 50 дней.', key: 'day', target: 50, reward: { gold: 300 } },
     { id: 'relics3', group: 'special', name: 'Собиратель реликвий', desc: 'Получить 3 реликвии.', key: 'artifacts', target: 3, reward: { gold: 400, fame: 10 } },
     { id: 'freedom', group: 'special', name: 'Рудис свободы', desc: 'Победить в финальной битве.', key: 'finalWins', target: 1, reward: { fame: 50, art: 'art_rudis' } },
@@ -145,7 +146,7 @@ const META = (() => {
     arenaFights: 0, arenaWins: 0, kills: 0, wins3: 0, flawless3: 0, tier1: 0, tier2: 0, tier3: 0,
     executed: 0, spared: 0, manualWins: 0, lastBreath: 0, finalWins: 0,
     contracts: 0, contractsFailed: 0, contractsHard: 0, contractsOutnumbered: 0, earned: 0,
-    bestLevel: 0, bestGladWins: 0, schools: 0, bestFame: 0, day: 0, legendary: 0, artifacts: 0,
+    bestLevel: 0, bestGladWins: 0, schools: 0, bestFame: 0, day: 0, legendary: 0, artifacts: 0, debtCleared: 0,
   };
 
   // Откуда берутся реликвии: из достижений или из «легендарных заказов»
@@ -405,6 +406,9 @@ const META = (() => {
         break;
       case 'levelUp':
         c.bestLevel = Math.max(c.bestLevel, +d.level || (d.g && d.g.level) || 0);
+        break;
+      case 'debtCleared':
+        c.debtCleared = 1;
         break;
       case 'gold':
         if (+d.amount > 0) c.earned += Math.round(+d.amount);

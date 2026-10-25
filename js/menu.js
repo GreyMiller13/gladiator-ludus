@@ -35,9 +35,10 @@ function renderMenu() {
     <div class="menu-crest">${ICON.crest}</div>
     <span class="menu-pre">лудус</span>
     <h1 class="menu-title">Кровь и&nbsp;Песок</h1>
-    <p class="menu-sub">Купите рабов, выучите их ремеслу гладиатора и проведите через арены Помпей, Капуи и Рима — к Играм за рудис свободы.</p>
+    <p class="menu-sub">Отец оставил вам лудус в Помпеях и долг в пять тысяч денариев. Выучите бойцов, расплатитесь с кредиторами и проведите школу через арены Капуи и Рима — к Играм за рудис свободы.</p>
     <div class="menu-btns">
-      ${STATE ? `<button class="primary" data-act="menuContinue">Продолжить<small>${saveSummary(STATE)}</small></button>` : ''}
+      ${STATE && STATE.lost ? `<button class="primary" data-act="menuLost">Итог: лудус отобран<small>${saveSummary(STATE)}</small></button>` : ''}
+      ${STATE && !STATE.lost ? `<button class="primary" data-act="menuContinue">Продолжить<small>${saveSummary(STATE)}</small></button>` : ''}
       <button class="${STATE ? '' : 'primary'}" data-act="newGameAsk">Новая игра</button>
       <button data-act="saveAsk">Сохранение</button>
       <button data-act="menuGuide">Справочник</button>
@@ -75,6 +76,7 @@ function paintMenuBg() {
 
 Object.assign(ACTIONS, {
   menuContinue: () => { hideMenu(); render(); },
+  menuLost: () => { hideMenu(); render(); showDebtLost(); },
   menuGuide: () => { MENU.guide = true; renderMenu(); $('#menu').scrollTop = 0; },
   menuBack: () => { MENU.guide = false; renderMenu(); },
 });

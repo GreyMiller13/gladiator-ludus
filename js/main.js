@@ -10,8 +10,10 @@
   // после импорта сохранения сразу продолжаем игру, иначе встречает главное меню
   let imported = false;
   try { imported = !!sessionStorage.getItem('ludus_imported'); sessionStorage.removeItem('ludus_imported'); } catch (e) { /* хранилище недоступно */ }
-  if (imported && STATE) toast(`Сохранение загружено: ${saveSummary(STATE)}.`);
-  else showMenu();
+  if (imported && STATE) {
+    toast(`Сохранение загружено: ${saveSummary(STATE)}.`);
+    if (STATE.lost) showDebtLost();
+  } else showMenu();
 })();
 
 // Загруженное сохранение: миграция и поля, которых не было в старых версиях
