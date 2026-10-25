@@ -386,6 +386,12 @@ button.sound.off { color: var(--dust); }
 .event { cursor: pointer; }
 .event.sel { border-color: var(--blood-hi); box-shadow: 0 0 0 1px var(--blood-hi) inset, 0 0 26px rgba(155,29,20,.22); }
 .event.done { opacity: .42; cursor: default; }
+.event.boss { border-color: var(--bronze); background-image: var(--grain), linear-gradient(170deg, rgba(168,129,74,.16), transparent 60%); }
+.event.boss .eh h3 { color: var(--bronze-hi); }
+.event.training { border-color: var(--olive); }
+.event .ev-note { color: var(--muted); font-style: italic; margin-top: 2px; }
+.event.storyc { border-color: var(--bronze); }
+.m-diff.story { color: var(--bronze-hi); border-color: var(--bronze); }
 .event .eh { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
 .event .eh h3 { padding: 0; margin: 0; }
 .event .eh h3::after { display: none; }

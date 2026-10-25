@@ -619,9 +619,9 @@ const META = (() => {
     }).join('');
     const outcome = c.done
       ? `<div class="m-outcome ${c.success ? 'ok' : 'fail'}">${c.success ? 'Выполнен' : 'Провален'}${c.result ? ` · ${c.result.gold} ден.` : ''}</div>` : '';
-    return `<div class="panel event contract ${art ? 'legend' : ''} ${sel ? 'sel' : ''} ${c.done ? 'done' : ''}" data-act="${c.done ? '' : 'pickEvent'}" data-id="${c.id}">
+    return `<div class="panel event contract ${c.story ? 'storyc' : ''} ${art ? 'legend' : ''} ${sel ? 'sel' : ''} ${c.done ? 'done' : ''}" data-act="${c.done ? '' : 'pickEvent'}" data-id="${c.id}">
       <div class="eh"><h3>${escH(c.title)}</h3><span class="fmt">${c.playerSize} на ${c.size}</span></div>
-      <div class="m-cl"><span class="m-diff d${c.difficulty}">${D.name}</span><span class="muted small">${escH(c.client)}</span></div>
+      <div class="m-cl">${c.story ? '<span class="m-diff story">Сюжетный заказ</span>' : `<span class="m-diff d${c.difficulty}">${D.name}</span>`}<span class="muted small">${escH(c.client)}</span></div>
       <div class="small m-desc">${escH(c.desc)}</div>
       <div class="m-cond"><span class="m-lbl">Условие</span>${escH(c.cond ? c.cond.text : 'Победить')}</div>
       <div class="foes">${foes}</div>

@@ -82,6 +82,7 @@ module.exports = [
     assert.equal(ev(ctx, 'STATE.debt.holder'), 'rival');
     assert.ok(ev(ctx, 'debtLeft()') > left);
     assert.ok(plain(ev(ctx, 'STORY.takeScenes()')).includes('capua'));
+    assert.equal(ev(ctx, 'STATE.events.filter(e => e.tier === 1 && !e.done).length'), 2, 'бои в Капуе доступны сразу, а не со следующего дня');
   } },
   { name: 'победы в Капуе считаются только в главе II', fn: ctx => {
     story(ctx);

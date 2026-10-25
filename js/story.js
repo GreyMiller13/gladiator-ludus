@@ -150,6 +150,11 @@ const STORY = (() => {
   function enterChapter(n) {
     const T = TIERS[n];
     journal(`${CHAPTERS[n].title}. Открыта арена: ${T.place}.`);
+    // на новой арене можно сразиться в тот же день
+    if (Array.isArray(STATE.events)) for (const size of [1, 2]) {
+      STATE.events.push({ id: uid(), tier: n, size, enemies: generateEnemyTeam(n, size),
+        gold: Math.round(T.gold * FORMAT_MULT[size]), fame: Math.round(T.fame * FORMAT_MULT[size]), done: false });
+    }
     if (n === 1) {
       if (typeof debtActive === 'function' && debtActive()) { debtRaise(DEBT_RAISE); STATE.debt.holder = 'rival'; }
       queueScene('capua');

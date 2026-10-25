@@ -418,8 +418,8 @@ function screenArena() {
   let html = `<div class="screen-title"><h2>Арена</h2><p>Каждый боец может выйти на песок один раз в день. Раненые не сражаются.</p></div>`;
   html += finalCard();
   for (const { T, i } of tiers) {
-    if (STATE.fame < T.fameReq) {
-      html += `<div class="locked-tier mt">${T.name} (${T.place}) — откроется при славе лудуса ${T.fameReq}.</div>`;
+    if (!tierOpen(i)) {
+      html += `<div class="locked-tier mt">${T.name} (${T.place}). ${STATE.story ? STORY.lockText(i) : `Откроется при славе лудуса ${T.fameReq}.`}</div>`;
       continue;
     }
     const evs = STATE.events.filter(e => e.tier === i);
@@ -447,8 +447,11 @@ function finalCard() {
 
 function eventCard(ev) {
   const sel = ev.id === UI.eventId;
-  return `<div class="panel event ${sel ? 'sel' : ''} ${ev.done ? 'done' : ''}" data-act="${ev.done ? '' : 'pickEvent'}" data-id="${ev.id}">
-    <div class="eh"><h3>${ev.done ? 'Бой окончен' : 'Поединок'}</h3><span class="fmt">${ev.size} на ${ev.size}</span></div>
+  const title = ev.done ? 'Бой окончен' : ev.boss ? esc(ev.title) : ev.training ? 'Учебный бой' : 'Поединок';
+  return `<div class="panel event ${ev.boss ? 'boss' : ''} ${ev.training ? 'training' : ''} ${sel ? 'sel' : ''} ${ev.done ? 'done' : ''}" data-act="${ev.done ? '' : 'pickEvent'}" data-id="${ev.id}">
+    <div class="eh"><h3>${title}</h3><span class="fmt">${ev.size} на ${ev.size}</span></div>
+    ${ev.training ? '<div class="small ev-note">Без смертей · ручное управление · наставник подскажет</div>' : ''}
+    ${ev.boss && !ev.done ? '<div class="small ev-note">Победа откроет следующую арену. Проигранный бой можно повторить завтра.</div>' : ''}
     <div class="foes">${ev.enemies.map(e => `<div class="foe"><img class="portrait sm" src="${portrait(e, 44, 55, { bust: true, enemy: true })}" alt=""><span><b class="enemy">${esc(e.name)}</b><br><span class="muted small">${clsOf(e).name}, ур. ${e.level}</span></span></div>`).join('')}</div>
     <div class="reward"><span>Награда <b>${ev.gold}</b> ден.</span><span>Слава <b>+${ev.fame}</b></span></div>
   </div>`;
@@ -875,14 +878,14 @@ function startBattle() {
   const glads = UI.picked.map(glad).filter(Boolean);
   if (glads.length !== playerCount(ev)) return;
   ev.enemies.forEach(ensureLook);
-  const mode = battleMode();
+  const mode = ev.training ? 'manual' : battleMode(); // учебный бой — всегда с подсказками, вручную
   const b = new Battle(glads, ev.enemies, ev, { mode });
   UI.picked = []; UI.eventId = null;
   const host = $('#battle');
   host.hidden = false;
   document.body.style.overflow = 'hidden';
   const T = b.tier;
-  const title = ev.kind === 'contract' ? `Заказ: ${esc(ev.title)}` : ev.kind === 'final' ? 'Финал · Игры за рудис свободы' : T.name;
+  const title = ev.kind === 'contract' ? `Заказ: ${esc(ev.title)}` : ev.kind === 'final' ? 'Финал · Игры за рудис свободы' : ev.title ? esc(ev.title) : T.name;
   host.innerHTML = `<div class="bwrap">
     <div class="btop">
       <div><h2>${T.place}</h2><span class="muted">${title} · ${playerCount(ev)} на ${ev.size} · ${mode === 'manual' ? 'ручное управление' : 'автобой'} · <span id="bRound">выход бойцов</span></span></div>
@@ -1178,6 +1181,9 @@ function battleInfo(B) {
   };
 }
 
+// Итог боя для истории: учебный бой, хозяева арен, победы в Капуе, заказ сенатора, финал
+const storyBattle = info => { if (typeof STORY !== 'undefined' && STATE.story) STORY.onBattle(info); };
+
 async function finishBattle() {
   const B = UI.battle;
   if (!B || B.phase !== 'fight') return;
@@ -1214,6 +1220,7 @@ async function finishBattle() {
     if (typeof META === 'undefined' && win) STATE.gold += ev.gold;
     R.contract = res; R.gold = res.gold || 0;
     track('battleEnd', info);
+    storyBattle(info);
     save();
     B.phase = 'scenes';
     updateBattleHud();
@@ -1229,7 +1236,7 @@ async function finishBattle() {
     track('gold', { amount: R.gold });
     for (const u of enemies) {
       const m = mercyBreakdown(u, b);
-      const spared = kind === 'final' ? true : chance(m.total);
+      const spared = kind === 'final' || ev.training ? true : chance(m.total);
       if (!spared) R.fame += 1;
       R.enemyFates.push({ u, chance: m.total, spared });
       for (const it of Object.values(u.g.equip)) {
@@ -1246,6 +1253,7 @@ async function finishBattle() {
       ? `ФИНАЛ ВЫИГРАН! Чемпионы Рима повержены в Колизее. +${R.gold} денариев, +${R.fame} славы. Император вручает лудусу рудис свободы.`
       : `Победа: ${T.place}, ${ev.size} на ${ev.size}. +${R.gold} денариев, +${R.fame} славы.${R.loot.length ? ` Трофеи: ${R.loot.map(l => l.it.name).join(', ')}.` : ''}`);
     track('battleEnd', info);
+    storyBattle(info);
     save();
     // сцена: толпа решает судьбу поверженных противников
     B.phase = 'scenes';
@@ -1269,6 +1277,7 @@ async function finishBattle() {
   } else {
     STATE.fame = Math.max(0, STATE.fame - 1);
     track('battleEnd', info);
+    storyBattle(info);
     save();
     B.verdicts = players.map(u => ({ u, bribed: false, result: null }));
     B.phase = 'verdict';
@@ -1368,7 +1377,7 @@ async function revealVerdicts() {
     B.current = i;
     const m = mercyBreakdown(v.u, B.b, v.bribed);
     v.chance = m.total;
-    const live = Math.random() * 100 < m.total;
+    const live = B.event.training || Math.random() * 100 < m.total; // в учебном бою никто не гибнет
     const g = v.u.g;
     const execU = (v.u.killedBy && v.u.killedBy.alive) ? v.u.killedBy : B.b.alive('enemy')[0];
     await B.view.execution(v.u.uid, execU && execU.uid, live ? 'live' : 'die', `${g.name} · шанс помилования ${m.total}%`);
