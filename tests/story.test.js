@@ -25,7 +25,7 @@ module.exports = [
   { name: 'победа в учебном бою отмечается как выполненная задача', fn: ctx => {
     story(ctx);
     ev(ctx, 'STORY.onBattle({ training: true, win: true, kind: "arena", tier: 0 })');
-    assert.ok(ev(ctx, 'STATE.journal.some(j => j.text.includes("Задача выполнена: Выиграйте учебный бой"))'));
+    assert.ok(ev(ctx, 'STATE.journal.some(j => j.text.includes("Задача выполнена: Выиграйте первый бой"))'));
     ev(ctx, 'STATE.gold = 5000; nextDay()');
     assert.equal(ev(ctx, 'STATE.events.some(e => e.training)'), false);
   } },
@@ -34,7 +34,7 @@ module.exports = [
     assert.deepEqual(plain(ev(ctx, 'STORY.takeNews()')), []);
     ev(ctx, 'STORY.onBattle({ training: true, win: true, kind: "arena", tier: 0 })');
     assert.deepEqual(plain(ev(ctx, 'STORY.takeNews()')), [
-      { type: 'done', text: 'Выиграйте учебный бой' },
+      { type: 'done', text: 'Выиграйте первый бой' },
       { type: 'new', text: 'Возьмите второго бойца' },
     ]);
     assert.deepEqual(plain(ev(ctx, 'STORY.takeNews()')), []);
@@ -171,5 +171,17 @@ module.exports = [
     assert.equal(ev(ctx, 'tierOpen(1)'), true);
     assert.equal(ev(ctx, 'STATE.events.some(e => e.training)'), false);
     assert.equal(ev(ctx, 'STORY.current()'), null);
+  } },
+  { name: 'первая победа в любом бою запускает сцену и снимает учебный бой', fn: ctx => {
+    story(ctx);
+    ev(ctx, 'STORY.takeScenes()');
+    ev(ctx, 'STORY.onBattle({ win: true, kind: "arena", tier: 0 })');
+    assert.ok(ev(ctx, 'STATE.story.flags.trainWon'));
+    assert.ok(ev(ctx, 'STORY.takeScenes().includes("firstWin")'));
+    assert.equal(ev(ctx, 'STATE.events.some(e => e.training && !e.done)'), false);
+    assert.equal(ev(ctx, 'STORY.tasks().find(t => t.id === "train").state'), 'done');
+  } },
+  { name: 'имена хозяев арен не достаются случайным бойцам', fn: ctx => {
+    for (const n of ['Келад', 'Крикс', 'Ганник', 'Приск', 'Вер', 'Тетраит']) assert.equal(ev(ctx, 'NAMES.includes("' + n + '")'), false, n);
   } },
 ];

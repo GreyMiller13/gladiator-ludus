@@ -294,6 +294,10 @@ function renderModal() {
   <div class="modal-bg" data-act="closeModalBg">
     <div class="modal glad">
       <button class="close" data-act="closeModal">✕</button>
+      ${STATE.gladiators.length > 1 ? `<div class="glad-nav">
+        <button class="small" data-act="gladStep" data-d="-1" title="Предыдущий боец (←)" aria-label="Предыдущий боец">‹</button>
+        <span class="tiny muted">${STATE.gladiators.indexOf(g) + 1} / ${STATE.gladiators.length}</span>
+        <button class="small" data-act="gladStep" data-d="1" title="Следующий боец (→)" aria-label="Следующий боец">›</button></div>` : ''}
       <div class="ghead">
         <img class="portrait" src="${portrait(g, 64, 80, { bust: true })}" alt="">
         <div>
@@ -315,7 +319,7 @@ function renderModal() {
           <div class="panel"><h3>Снаряжение</h3>${doll}</div>
           <div class="panel stash" data-drop="stash"><h3>Склад лудуса${sel ? `: ${SLOTS[sel].toLowerCase()} <button class="small" data-act="slotSel" data-slot="">Все слоты</button>` : ' <span class="muted small">перетащите вещь на бойца или нажмите на слот, чтобы отобрать подходящие</span>'}</h3><div class="stashbox">${stashHtml}</div></div>
         </div>
-        <div class="panel gscroll"><h3>Характеристики</h3>
+        <div class="panel gscroll attrs-panel"><h3>Характеристики</h3>
           ${g.freeAttr ? `<div class="points">Свободных очков: ${g.freeAttr}</div>` : ''}
           ${attrs}
           <div class="derived">${derived.map(([a, b, k]) => `<span data-tip="${tipAttrHtml(tipStat[k](s))}">${a}</span><span>${b}</span>`).join('')}</div>
@@ -325,7 +329,7 @@ function renderModal() {
             <span>Помилован <b>${g.record.spared}</b></span><span>Слава <b>${g.fame}</b></span>
           </div>
         </div>
-        <div class="panel gscroll">${g.cls ? `<h3>Специализация: ${C.name}</h3>${specTree(g)}` : `<h3>Выбор школы</h3>${schoolPicker(g)}`}</div>
+        <div class="panel gscroll school-panel">${g.cls ? `<h3>Специализация: ${C.name}</h3>${specTree(g)}` : `<h3>Выбор школы</h3>${schoolPicker(g)}`}</div>
       </div>
     </div>
   </div>`;
@@ -736,7 +740,7 @@ function guideChapter(ch) {
     <h3>Развитие</h3>
     <ul>
       <li>За каждый уровень — 3 очка атрибутов, а с 5-го уровня — ещё 1 очко специализации: на 5-м уровне у бойца 1 очко, на 6-м — 2 и так далее. Если школу выбрать позже, накопленные с 5-го уровня очки достанутся ей сразу.</li>
-      <li>Древо специализации у каждой школы своё: 4 ступени, открывающиеся на уровнях 1, 4, 7 и 10. В каждой ступени два навыка по 3 ранга, на IV ступени — венчающий навык. Всех навыков не взять — придётся выбирать путь.</li>
+      <li>Древо специализации у каждой школы своё: 4 ступени, открывающиеся на уровнях 5, 8, 11 и 14. В каждой ступени два навыка по 3 ранга, на IV ступени — венчающий навык. Всех навыков не взять — придётся выбирать путь.</li>
     </ul>`;
   }
 }
@@ -1225,7 +1229,7 @@ async function finishBattle() {
   const players = b.units.filter(u => u.side === 'player');
   const enemies = b.units.filter(u => u.side === 'enemy');
   const R = { win, kind, rows: [], gold: 0, fame: 0, loot: [], enemyFates: [] };
-  const xpK = kind === 'contract' ? (ev.xpMult ?? 0.6) : 1;
+  const xpK = kind === 'contract' ? (ev.xpMult ?? 0.6) : (ev.xpMult ?? 1);
 
   for (const u of players) {
     const g = u.g;
@@ -1535,14 +1539,20 @@ const ACTIONS = {
     endDay();
   },
   debtInfo: () => showDebtDialog(),
-  openGlad: d => { UI.gladId = +d.id; UI.slotSel = null; renderModal(); },
-  closeModal: () => { UI.gladId = null; renderModal(); },
+  openGlad: d => { UI.gladId = +d.id; UI.slotSel = null; renderModal(); coach('openGlad'); },
+  closeModal: () => { UI.gladId = null; renderModal(); coach('modalClosed'); },
+  // листать бойцов лудуса, не закрывая окно
+  gladStep: d => {
+    const L = STATE.gladiators, i = L.findIndex(x => x.id === UI.gladId);
+    if (i < 0 || L.length < 2) return;
+    UI.gladId = L[(i + +d.d + L.length) % L.length].id; UI.slotSel = null; renderModal();
+  },
   closeModalBg: (d, el, e) => { if (e.target === el) ACTIONS.closeModal(); },
 
   addAttr: d => {
     const g = glad(UI.gladId);
     if (!g || g.freeAttr <= 0) return;
-    g.attrs[d.k]++; g.freeAttr--; save(); render();
+    g.attrs[d.k]++; g.freeAttr--; save(); render(); coach('attrSpent', g.freeAttr);
   },
   learn: d => {
     const g = glad(UI.gladId);
@@ -1570,7 +1580,7 @@ const ACTIONS = {
     STATE.armory.push(...off);
     const extra = off.filter(o => o.slot !== it.slot);
     if (extra.length) toast(`${isTwoHanded(it) ? 'Двуручное оружие занимает обе руки' : 'Предметы несовместимы'}: снято — ${extra.map(o => o.name).join(', ')}.`);
-    save(); render();
+    save(); render(); coach('equipped', it.slot);
   },
   chooseClass: d => {
     const g = glad(UI.gladId);
@@ -1961,6 +1971,9 @@ function bindEvents() {
     if (typeof sceneKey === 'function' && sceneKey(e)) return;
     if (typeof coachKey === 'function' && coachKey(e)) return;
     if (e.key === 'Escape' && UI.gladId) ACTIONS.closeModal();
+    if (UI.gladId && !UI.battle && (e.key === 'ArrowLeft' || e.key === 'ArrowRight') && !/INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) {
+      e.preventDefault(); ACTIONS.gladStep({ d: e.key === 'ArrowLeft' ? -1 : 1 });
+    }
     if (e.key === 'Escape' && UI.battle && UI.battle.turn && UI.battle.turn.aim) { UI.battle.turn.aim = false; UI.battle.turn.refresh(); }
     // ручной бой: пробел — конец хода, D — оборона
     if (UI.battle && UI.battle.turn && !/INPUT|TEXTAREA/.test(e.target.tagName)) {

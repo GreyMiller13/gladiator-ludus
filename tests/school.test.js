@@ -23,4 +23,16 @@ module.exports = [
     assert.equal(ev(ctx, 'g.freeSpec'), 2);
     assert.equal(ev(ctx, 'm.freeSpec'), 0);
   } },
+  { name: 'ступени школы: I открывается на 5-м уровне, II — на 8-м', fn: ctx => {
+    ev(ctx, 'newGame("Т"); var g = createGladiator("murmillo", 5); g.freeSpec = 3');
+    assert.equal(ev(ctx, 'canLearnPerk(g, { ...PERKS.mur_wall, cls: "murmillo" })'), true);
+    assert.equal(ev(ctx, 'canLearnPerk(g, { ...PERKS.mur_iron, cls: "murmillo" })'), false);
+    ev(ctx, 'levelUp(g); levelUp(g); levelUp(g)');
+    assert.equal(ev(ctx, 'canLearnPerk(g, { ...PERKS.mur_iron, cls: "murmillo" })'), true);
+  } },
+  { name: 'старое сохранение: навыки закрытых теперь ступеней возвращаются очками', fn: ctx => {
+    ev(ctx, 'newGame("Т"); var g = createGladiator("murmillo", 6); g.perks = { mur_wall: 1, mur_iron: 2 }; g.freeSpec = 0; STATE.gladiators.push(g); migrateState()');
+    assert.equal(ev(ctx, 'JSON.stringify(g.perks)'), '{"mur_wall":1}');
+    assert.equal(ev(ctx, 'g.freeSpec'), 2);
+  } },
 ];

@@ -294,6 +294,8 @@ button.sound.off { color: var(--dust); }
   box-shadow: 0 24px 70px rgba(0,0,0,.7), inset 0 0 60px rgba(0,0,0,.4);
 }
 .modal .close { position: absolute; top: 12px; right: 14px; z-index: 2; }
+.modal .glad-nav { position: absolute; top: 12px; right: 62px; z-index: 2; display: flex; align-items: center; gap: 6px; }
+.modal .glad-nav button { min-width: 34px; font-size: 18px; line-height: 1; }
 .ghead { display: flex; gap: 16px; align-items: center; margin-bottom: 14px; padding-right: 40px; flex-wrap: wrap; }
 .ghead h2 { font-size: 38px; color: var(--blood-hi); line-height: 1; text-shadow: 0 2px 0 rgba(0,0,0,.6); }
 .ghead .portrait { width: 64px; height: 80px; }
@@ -616,6 +618,8 @@ body.menu-on { overflow: hidden; }
 #coach:not(.blocking) .tour-card { pointer-events: auto; }
 .tour-hole.soft { box-shadow: none; animation: coachPulse 1.4s ease-in-out infinite; }
 @keyframes coachPulse { 50% { outline-color: rgba(212,170,104,.2); } }
+.tour-hole.nudge { animation: coachNudge .5s ease-out; }
+@keyframes coachNudge { 30% { outline-color: var(--blood-hi); outline-width: 4px; } }
 .coach-card.dock { left: auto; top: auto; right: 16px; bottom: 16px; }
 .coach-head { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
 .coach-head img { width: 56px; height: 56px; flex: none; }

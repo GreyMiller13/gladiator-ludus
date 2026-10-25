@@ -23,6 +23,8 @@ const STORY = (() => {
     roma: { tier: 2, title: 'Чемпионы Рима', gold: 800, fame: 50,
       team: [{ name: 'Приск', cls: 'secutor', level: 12, quality: 3 }, { name: 'Вер', cls: 'thraex', level: 12, quality: 3 }, { name: 'Тетраит', cls: 'hoplomachus', level: 12, quality: 3 }] },
   };
+  // имена хозяев арен — только у них: рекруты и противники берут другие
+  for (const B of Object.values(BOSSES)) for (const m of B.team) { const i = NAMES.indexOf(m.name); if (i >= 0) NAMES.splice(i, 1); }
 
   function bossEvent(key) {
     const B = BOSSES[key];
@@ -35,7 +37,7 @@ const STORY = (() => {
     const g = createGladiator(null, 1, { name: 'Сур' });
     for (const k of ATTR_KEYS) g.attrs[k] = 3;
     g.equip.weapon = makeItem('gladius', 0);
-    return { id: uid(), kind: 'arena', training: true, title: 'Учебный бой', tier: 0, size: 1, enemies: [g], gold: 30, fame: 2, done: false };
+    return { id: uid(), kind: 'arena', training: true, title: 'Учебный бой', tier: 0, size: 1, enemies: [g], gold: 30, fame: 2, xpMult: 1.7, done: false };
   }
 
   function senatorContract() {
@@ -57,7 +59,7 @@ const STORY = (() => {
 
   const CHAPTERS = [
     { key: 'pompeii', title: 'Глава I. Помпеи', tasks: [
-      { id: 'train', text: 'Выиграйте учебный бой', tab: 'arena', check: () => !!S().flags.trainWon },
+      { id: 'train', text: 'Выиграйте первый бой', tab: 'arena', check: () => !!S().flags.trainWon },
       { id: 'recruit', text: 'Возьмите второго бойца', tab: 'market', check: () => STATE.gladiators.length >= 2,
         progress: () => `${Math.min(STATE.gladiators.length, 2)} / 2` },
       { id: 'pay1', text: 'Внесите первый платёж', check: () => !!STATE.debt && STATE.debt.idx >= 1,
@@ -207,7 +209,11 @@ const STORY = (() => {
   function onBattle(info) {
     const st = S();
     if (!st || !info) return;
-    if (info.training && info.win && !st.flags.trainWon) { st.flags.trainWon = STATE.day; queueScene('firstWin'); }
+    // первая победа — в любом бою; учебный бой после неё больше не нужен
+    if (info.win && !st.flags.trainWon) {
+      st.flags.trainWon = STATE.day; queueScene('firstWin');
+      STATE.events = STATE.events.filter(e => !e.training || e.done);
+    }
     if (info.boss && info.win && !st.bosses[info.boss]) {
       st.bosses[info.boss] = STATE.day;
       queueScene(`boss${BOSSES[info.boss].tier}Won`);
@@ -262,7 +268,7 @@ const STORY = (() => {
   // ------------------------------------------------------------
   //  Сцены: who — doctore | lender | rival | senator | holder (кто держит долг) | me
   // ------------------------------------------------------------
-  const NAMES = { doctore: 'Ферокс', lender: 'Лукрион', rival: 'Гней Вар', senator: 'Публий Сервилий', me: 'Вы' };
+  const SPEAKERS = { doctore: 'Ферокс', lender: 'Лукрион', rival: 'Гней Вар', senator: 'Публий Сервилий', me: 'Вы' };
   const next = () => (typeof debtNext === 'function' && debtNext()) || { amount: 0, day: 0, daysLeft: 0 };
 
   const SCENES = {
@@ -352,13 +358,13 @@ const STORY = (() => {
     return (SCENES[id] || []).map(l => {
       const who = l.who === 'holder' ? ((STATE.debt && STATE.debt.holder) || 'lender') : l.who;
       const me = who === 'me';
-      return { who, me, key: me ? ((STATE.lanista && STATE.lanista.portrait) || 'm1') : who, name: NAMES[who], expr: l.expr || 'neutral',
+      return { who, me, key: me ? ((STATE.lanista && STATE.lanista.portrait) || 'm1') : who, name: SPEAKERS[who], expr: l.expr || 'neutral',
         text: typeof l.text === 'function' ? l.text() : l.text };
     });
   }
 
   return {
-    create, init, active, gx, holderName, CHAPTERS, BOSSES, SCENES, NAMES,
+    create, init, active, gx, holderName, CHAPTERS, BOSSES, SCENES, NAMES: SPEAKERS,
     current, tasks, update, enterChapter, tierOpen, lockText,
     bossEvent, trainingEvent, senatorContract, injectEvents, onNewDay, onBattle, onFinalWon, onDebt,
     queueScene, takeScenes, markSeen, isSeen, lines, takeNews,

@@ -118,13 +118,19 @@ const TUTOR_STEPS = [
     text: 'А это долг твоего отца. Платёж спишется сам в срок — следи, чтобы хватило денег. Нажми потом на счётчик, и увидишь расписание.' },
   { id: 'tasks', g: 'intro', modal: true, sel: '#taskbar', wait: 'next',
     text: 'Здесь — чего от тебя ждут сейчас. Нажми потом на строку, чтобы увидеть все задачи главы.' },
-  { id: 'glad', g: 'intro', modal: true, tab: 'ludus', sel: 'main .gcard', one: true, wait: 'next',
-    text: 'Твой единственный боец. Нажми на карточку — там очки характеристик, снаряжение, тренировка и лекарь.' },
-  { id: 'toArena', g: 'intro', sel: 'nav [data-tab="arena"]', wait: 'tab:arena',
+  { id: 'glad', g: 'intro', lock: true, tab: 'ludus', sel: 'main .gcard', one: true, wait: 'openGlad',
+    text: 'Твой единственный боец. Нажми на его карточку.' },
+  { id: 'gift', g: 'intro', modal: true, back: 'glad', sel: '#modal .doll', wait: 'next',
+    text: 'Это снаряжение бойца: шлем, доспех, оружие, щит — у каждой вещи свой слот. Безоружным на песок не выходят. Держи старый гладиус твоего отца — он уже на складе лудуса.' },
+  { id: 'equip', g: 'intro', lock: true, back: 'glad', sel: '#modal .dslot[data-slot="weapon"], #modal .panel.stash', wait: 'equipped', accept: d => d === 'weapon',
+    text: 'Надень меч: нажми «Надеть» рядом с ним на складе или перетащи его на бойца.' },
+  { id: 'closeGlad', g: 'intro', lock: true, back: 'glad', sel: '#modal [data-act="closeModal"]', wait: 'modalClosed',
+    text: 'Теперь он похож на гладиатора. Здесь же бойца тренируют и лечат. Закрой окно.' },
+  { id: 'toArena', g: 'intro', lock: true, sel: 'nav [data-tab="arena"]', wait: 'tab:arena',
     text: 'Пора на песок. Открой «Арену».' },
-  { id: 'pickTraining', g: 'intro', sel: '.event.training', wait: 'pick', accept: d => d && d.training,
+  { id: 'pickTraining', g: 'intro', lock: true, sel: '.event.training', wait: 'pick', accept: d => d && d.training,
     text: 'Учебный бой: слабый новобранец, никто не погибнет. Выбери его.' },
-  { id: 'pickGlad', g: 'intro', sel: '.picker', wait: 'battleStart', accept: d => d && d.training,
+  { id: 'pickGlad', g: 'intro', lock: true, sel: '.picker', deny: '[data-act="cancelPick"]', wait: 'battleStart', accept: d => d && d.training,
     text: 'Отметь своего бойца и начни бой.' },
   { id: 'deploy', g: 'battle', dock: true, sel: '#bTact', wait: 'deployPlace',
     text: 'Расстановка. Нажми на своего бойца, затем на любую подсвеченную клетку слева — он встанет туда.' },
@@ -144,11 +150,19 @@ const TUTOR_STEPS = [
     text: 'Теперь ходит противник. Дерись так же, пока кто-то не упадёт.' },
   { id: 'mercy', g: 'battle', dock: true, sel: '#bresults', wait: 'battleClosed',
     text: 'Бой окончен. Поверженных судит толпа: шанс помилования зависит от того, как они дрались. В учебном бою никто не гибнет. Возвращайся в лудус.' },
-  { id: 'toSmith', g: 'after', sel: 'nav [data-tab="smith"]', wait: 'tab:smith',
-    text: 'У новобранца лишь ржавый гладиус. Загляни к кузнецу.' },
+  { id: 'lvlGlad', g: 'after', lock: true, tab: 'ludus', sel: 'main .gcard', one: true, wait: 'openGlad',
+    text: () => (tutorGlad() && tutorGlad().freeAttr ? 'Победа — это опыт: боец дорос до 2-го уровня. Открой его карточку.' : 'Открой карточку бойца — посмотрим, чему его учить.') },
+  { id: 'attrs', g: 'after', lock: true, back: 'lvlGlad', sel: '#modal .attrs-panel', wait: 'attrSpent', accept: d => d === 0, skip: () => !(tutorGlad() && tutorGlad().freeAttr),
+    text: 'Каждый уровень даёт 3 очка характеристик. Раздай их кнопками «+». Сила — урон, ловкость — уклонение, выносливость — здоровье, мастерство — точность, воля — милость толпы. Наведи на название, чтобы узнать больше.' },
+  { id: 'school', g: 'after', modal: true, back: 'lvlGlad', sel: '#modal .school-panel', wait: 'next',
+    text: () => `С ${SCHOOL_LEVEL}-го уровня бойца посвящают в школу: мирмиллон, ретиарий и другие. Звёзды показывают, к какой он годится лучше, — раздавай очки с прицелом на неё. После посвящения каждый уровень даёт очко на умения школы: первая ступень открыта сразу, следующие — на ${TIER_LEVEL[2]}, ${TIER_LEVEL[3]} и ${TIER_LEVEL[4]}-м уровнях.` },
+  { id: 'closeGlad2', g: 'after', lock: true, back: 'lvlGlad', sel: '#modal [data-act="closeModal"]', wait: 'modalClosed',
+    text: 'Закрой окно бойца.' },
+  { id: 'toSmith', g: 'after', lock: true, sel: 'nav [data-tab="smith"]', wait: 'tab:smith',
+    text: 'Гладиус отца стар и туп. Загляни к кузнецу.' },
   { id: 'smith', g: 'after', modal: true, sel: 'main .screen-title', wait: 'next',
     text: 'Оружие и доспехи. Вещь своей школы даёт бойцу +25% к её характеристикам. Купленное ложится на склад — надень в окне бойца или перетащи на него.' },
-  { id: 'toMarket', g: 'after', sel: 'nav [data-tab="market"]', wait: 'tab:market',
+  { id: 'toMarket', g: 'after', lock: true, sel: 'nav [data-tab="market"]', wait: 'tab:market',
     text: 'Одного бойца мало. Загляни на невольничий рынок.' },
   { id: 'market', g: 'after', modal: true, sel: 'main .screen-title', wait: 'next',
     text: 'Смотри на склонности: от них зависит, к какой школе новобранец подойдёт лучше. Второй боец — твоя следующая задача.' },
@@ -169,12 +183,22 @@ const TUTOR = { timer: null, hint: null };
 const tutorState = () => (STATE && STATE.story && STATE.story.tutor) || null;
 const tutorOn = () => !!(tutorState() && tutorState().on);
 const coachStepIdx = () => TUTOR_STEPS.findIndex(s => s.id === (tutorState() || {}).step);
+const tutorGlad = () => (STATE && STATE.gladiators[0]) || null;
+// модальный шаг и шаг «нажми сюда» затемняют всё вокруг цели, остальные — только мерцающая рамка
+const holeCls = s => (s.modal || s.lock ? '' : 'soft');
+const coachText = s => (typeof s.text === 'function' ? s.text() : s.text);
 const coachCanAttack = () => { const T = UI.battle && UI.battle.turn; return !!(T && T.o && T.o.attackNow.length); };
 
 function startTutorial() {
   if (!STATE || !STATE.story) return;
   STATE.story.tutor = { on: true, step: TUTOR_STEPS[0].id, hints: true };
   delete STATE.story.tutorWanted;
+  const g = tutorGlad();
+  if (g && g.equip.weapon && !g.record.fights) {
+    STATE.armory.push(g.equip.weapon);
+    STATE.story.tutor.gift = g.equip.weapon.id;
+    g.equip.weapon = null;
+  }
   save();
   UI.gladId = null; renderModal();
   showCoach();
@@ -183,7 +207,10 @@ function startTutorial() {
 function endTutorial(done) {
   const t = tutorState();
   if (t) t.on = false;
+  const g = tutorGlad(), gi = t ? STATE.armory.findIndex(i => i.id === t.gift) : -1;
+  if (g && !g.equip.weapon && gi >= 0) g.equip.weapon = STATE.armory.splice(gi, 1)[0];
   save();
+  if (typeof render === 'function' && !UI.battle) render();
   hideCoach();
   // с обучением игрок уже знаком: в следующей новой игре галочка снята
   try { localStorage.setItem(TOUR_PREF, '0'); } catch (e) { /* хранилище недоступно */ }
@@ -199,6 +226,8 @@ function resumeTutorial() {
   if (st.g === 'battle' && !UI.battle) tutorState().step = STATE.story.flags.trainWon ? 'toSmith' : 'toArena';
   // выбранное событие после перезагрузки не сохраняется — снова с перехода на арену
   if (st.id === 'pickTraining' || st.id === 'pickGlad') tutorState().step = 'toArena';
+  // шаги в окне бойца — с открытия карточки
+  if (st.back && !UI.gladId) tutorState().step = st.back;
   showCoach();
 }
 
@@ -255,10 +284,10 @@ function coachCard(s) {
   el.hidden = false;
   el.className = s.modal ? 'blocking' : '';
   const btn = s.wait === 'next' ? `<button class="primary" data-act="coachNext">${s.last ? 'Начать игру' : s.hint ? 'Понятно' : 'Далее'}</button>` : '';
-  el.innerHTML = `${s.modal ? '<div class="tour-block"></div>' : ''}<div class="tour-hole ${s.modal ? '' : 'soft'}"></div>
+  el.innerHTML = `${s.modal ? '<div class="tour-block"></div>' : ''}<div class="tour-hole ${holeCls(s)}"></div>
     <div class="tour-card coach-card ${s.dock ? 'dock' : ''}" role="dialog" aria-labelledby="coachWho">
       <div class="coach-head"><img src="${PORTRAIT.url('doctore', 'neutral', 56)}" alt=""><b id="coachWho">Ферокс</b></div>
-      <p>${s.text}</p>
+      <p>${coachText(s)}</p>
       <div class="tour-btns">
         ${s.hint ? '' : '<button class="linkish" data-act="coachSkip">Пропустить обучение</button>'}
         <span class="sp"></span>${btn}
@@ -297,13 +326,13 @@ function coachPlace() {
   if (!s || !hole || !card) return;
   const found = coachTargets(s), els = s.one ? found.slice(0, 1) : found;
   const vw = window.innerWidth, vh = window.innerHeight, pad = 8;
-  if (!els.length) { hole.className = `tour-hole none ${s.modal ? '' : 'soft'}`; hole.removeAttribute('style'); }
+  if (!els.length) { hole.className = `tour-hole none ${holeCls(s)}`; hole.removeAttribute('style'); }
   let r = null;
   if (els.length) {
     const rs = els.map(x => x.getBoundingClientRect());
     r = { l: Math.min(...rs.map(x => x.left)) - pad, t: Math.min(...rs.map(x => x.top)) - pad, rt: Math.max(...rs.map(x => x.right)) + pad, b: Math.max(...rs.map(x => x.bottom)) + pad };
     r.l = Math.max(4, r.l); r.t = Math.max(4, r.t); r.rt = Math.min(vw - 4, r.rt); r.b = Math.min(vh - 4, r.b);
-    hole.className = `tour-hole ${s.modal ? '' : 'soft'}`;
+    hole.className = `tour-hole ${holeCls(s)}${hole.classList.contains('nudge') ? ' nudge' : ''}`;
     Object.assign(hole.style, { left: `${r.l}px`, top: `${r.t}px`, width: `${Math.max(0, r.rt - r.l)}px`, height: `${Math.max(0, r.b - r.t)}px` });
   }
   if (s.dock) { card.style.left = ''; card.style.top = ''; return; }
@@ -322,6 +351,11 @@ function coachPlace() {
 function coachKey(e) {
   const s = TUTOR.step;
   if (!s) return false;
+  // шаг «нажми сюда»: Esc и стрелки не закрывают и не листают окна, Enter работает только на нужной кнопке
+  if (s.lock && !s.modal) {
+    if (e.key === 'Escape' || e.key.startsWith('Arrow') || ((e.key === 'Enter' || e.key === ' ') && !coachAllows(e.target))) { e.preventDefault(); return true; }
+    return false;
+  }
   // в бою Esc отменяет прицеливание, поэтому обучение он пропускает только на модальных шагах
   if (e.key === 'Escape' && (s.modal || s.hint)) { e.preventDefault(); s.hint ? ACTIONS.coachNext() : ACTIONS.coachSkip(); return true; }
   if (!s.modal) return false;
@@ -329,6 +363,24 @@ function coachKey(e) {
   else if (e.key !== 'Tab') e.preventDefault();
   return true;
 }
+
+// Шаг «нажми сюда»: пока он не выполнен, работает только подсвеченное (и окна поверх страницы)
+function coachAllows(el) {
+  const s = TUTOR.step;
+  if (!s || !s.lock || s.modal || !tutorOn() || !el || !el.closest) return true;
+  if (el.closest('#coach, #scene, #dialog, #toasts, #menu')) return true;
+  if (s.deny && el.closest(s.deny)) return false;
+  return coachTargets(s).some(t => t.contains(el));
+}
+function coachGuard(e) {
+  if (coachAllows(e.target)) return;
+  e.preventDefault(); e.stopPropagation();
+  const hole = $('#coach .tour-hole');
+  if (!hole) return;
+  hole.classList.remove('nudge');
+  requestAnimationFrame(() => hole.classList.add('nudge'));
+}
+for (const t of ['click', 'pointerdown']) document.addEventListener(t, coachGuard, true);
 
 Object.assign(ACTIONS, {
   coachNext: () => {

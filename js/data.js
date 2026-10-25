@@ -12,7 +12,7 @@ const ATTRS = {
 const ATTR_KEYS = Object.keys(ATTRS);
 
 // Уровни, на которых открываются ступени специализации
-const TIER_LEVEL = { 1: 1, 2: 4, 3: 7, 4: 10 };
+const TIER_LEVEL = { 1: 5, 2: 8, 3: 11, 4: 14 };
 const MAX_LEVEL = 20;
 
 // ------------------------------------------------------------

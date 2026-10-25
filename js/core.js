@@ -387,6 +387,10 @@ function migrateGladiator(g, spare = null) {
   if (!g.cls && !g.talent) { g.talent = {}; for (const k of ATTR_KEYS) g.talent[k] = 3; }
   // раньше очки школы копились с 1-го уровня; у бойца без школы оставляем только заработанные с 5-го
   if (!g.cls) g.freeSpec = Math.min(g.freeSpec || 0, Math.max(0, g.level - SCHOOL_LEVEL + 1));
+  // ступени школы открываются позже, чем раньше: навыки ещё закрытых ступеней возвращаются очками
+  for (const id of Object.keys(g.perks || {})) {
+    if (PERKS[id] && g.level < TIER_LEVEL[PERKS[id].tier]) { g.freeSpec = (g.freeSpec || 0) + g.perks[id]; delete g.perks[id]; }
+  }
 }
 function migrateState() {
   for (const g of STATE.gladiators) migrateGladiator(g, STATE.armory);
