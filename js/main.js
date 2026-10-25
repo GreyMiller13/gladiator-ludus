@@ -17,13 +17,13 @@
   } else showMenu();
 })();
 
-// Загруженное сохранение: миграция и поля, которых не было в старых версиях
+// Загруженное сохранение: недостающие поля
 function prepareState() {
   migrateState();
   STATE.settings = STATE.settings || { mode: 'auto' };
   if (typeof META !== 'undefined') META.init();
   if (typeof STORY !== 'undefined') STORY.init();
-  // сохранения старых версий: внешность бойцов
+  // внешность бойцов
   STATE.gladiators.forEach(ensureLook);
   STATE.market.forEach(ensureLook);
   STATE.events.forEach(e => e.enemies.forEach(ensureLook));

@@ -82,7 +82,7 @@ module.exports = [
     assert.equal(ev(ctx, 'STATE.debt.cleared'), true);
     assert.equal(ev(ctx, 'debtNext()'), null);
   } },
-  { name: 'свободный режим: старая игра без долга', fn: ctx => {
+  { name: 'игра без истории: без долга', fn: ctx => {
     ev(ctx, 'newGame("Т")');
     assert.equal(ev(ctx, 'nextDay()').debt, null);
     assert.equal(ev(ctx, 'STATE.debt'), undefined);

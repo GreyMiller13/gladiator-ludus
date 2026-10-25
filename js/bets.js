@@ -116,7 +116,7 @@ function settleBet(winner) {
   return bet.payout;
 }
 
-// Бой дня для ставок есть всегда: в новой игре и в старом сохранении он появляется при первом взгляде
+// Бой дня для ставок появляется при первом взгляде на арену
 function ensureBet() {
   if (!STATE.bet || STATE.bet.day !== STATE.day) { STATE.bet = newBet(); save(); }
   if (!STATE.bet.seed) { STATE.bet.seed = rnd(1, 2 ** 31 - 1); save(); }

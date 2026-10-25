@@ -18,7 +18,7 @@ module.exports = [
     ev(ctx, 'newGame("Т"); var e = createGladiator("murmillo", 12, { autoSpend: true })');
     assert.equal(ev(ctx, 'e.freeSpec + Object.values(e.perks).reduce((s, r) => s + r, 0)'), 8);
   } },
-  { name: 'старое сохранение: у бойца без школы лишние очки школы снимаются', fn: ctx => {
+  { name: 'загрузка: у бойца без школы лишние очки школы снимаются', fn: ctx => {
     ev(ctx, 'newGame("Т"); var g = createGladiator(null, 6); g.freeSpec = 6; STATE.gladiators.push(g); var m = createGladiator(null, 3); m.freeSpec = 3; STATE.market.push(m); migrateState()');
     assert.equal(ev(ctx, 'g.freeSpec'), 2);
     assert.equal(ev(ctx, 'm.freeSpec'), 0);
@@ -30,7 +30,7 @@ module.exports = [
     ev(ctx, 'levelUp(g); levelUp(g); levelUp(g)');
     assert.equal(ev(ctx, 'canLearnPerk(g, { ...PERKS.mur_iron, cls: "murmillo" })'), true);
   } },
-  { name: 'старое сохранение: навыки закрытых теперь ступеней возвращаются очками', fn: ctx => {
+  { name: 'загрузка: навыки закрытых по уровню ступеней возвращаются очками', fn: ctx => {
     ev(ctx, 'newGame("Т"); var g = createGladiator("murmillo", 6); g.perks = { mur_wall: 1, mur_iron: 2 }; g.freeSpec = 0; STATE.gladiators.push(g); migrateState()');
     assert.equal(ev(ctx, 'JSON.stringify(g.perks)'), '{"mur_wall":1}');
     assert.equal(ev(ctx, 'g.freeSpec'), 2);

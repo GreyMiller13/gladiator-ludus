@@ -153,7 +153,7 @@ module.exports = [
     assert.deepEqual(plain(ev(ctx, 'STATE.story.queue')), []);
     assert.equal(ev(ctx, 'STATE.events.some(e => e.training)'), true);
   } },
-  { name: 'загрузка: свободный режим не получает историю', fn: ctx => {
+  { name: 'загрузка: игра без истории не получает историю', fn: ctx => {
     ev(ctx, 'newGame("Т"); STORY.init()');
     assert.equal(ev(ctx, 'STATE.story'), undefined);
   } },
@@ -165,7 +165,7 @@ module.exports = [
     toChapter(ctx, 3);
     assert.equal(ev(ctx, 'finalUnlocked()'), true);
   } },
-  { name: 'свободный режим: арены открываются славой', fn: ctx => {
+  { name: 'игра без истории: арены открываются славой', fn: ctx => {
     ev(ctx, 'newGame("Т")');
     ev(ctx, 'STATE.fame = 40');
     assert.equal(ev(ctx, 'tierOpen(1)'), true);

@@ -271,7 +271,7 @@ const META = (() => {
     const c = M().c;
     const records = [...allGladiators(), ...(STATE.graveyard || [])].map(g => (g && g.record) || {});
     const sum = k => records.reduce((s, r) => s + (r[k] || 0), 0);
-    // в старых версиях не было заказов — все победы и убийства с арены
+    // победы и убийства — с арены
     // (победа в бою 2 на 2 или 3 на 3 записана каждому бойцу — делим сумму примерно на размер команды)
     const best = k => Math.max(0, ...records.map(r => r[k] || 0));
     c.arenaWins = Math.max(best('wins'), Math.round(sum('wins') / 2));
