@@ -338,7 +338,8 @@ function powerScore(g) {
 // ------------------------------------------------------------
 const SAVE_KEY = 'gladiator_ludus_proto_v1';
 
-function newGame(ludusName = 'Лудус') {
+// opts.story — новая история: долг отца, главы и задачи; opts.lanista — { portrait, sex } игрока
+function newGame(ludusName = 'Лудус', opts = {}) {
   STATE = {
     ludusName, gold: 200, fame: 0, day: 1, nextId: 1,
     gladiators: [], armory: [], smith: [], market: [], events: [], graveyard: [],
@@ -348,6 +349,11 @@ function newGame(ludusName = 'Лудус') {
   const g = createGladiator(null, 1);
   g.equip.weapon = makeItem('gladius', 0);
   STATE.gladiators.push(g);
+  if (opts.story) {
+    STATE.lanista = { portrait: 'm1', sex: 'm', ...(opts.lanista || {}) };
+    STATE.debt = newDebt();
+    if (typeof STORY !== 'undefined') STATE.story = STORY.create();
+  }
   refreshSmith(); refreshMarket(); generateEvents(); refreshRareShop(true);
   journal(`Вы приобрели лудус и единственного новобранца. Купите ему снаряжение или найдите второго бойца на рынке. С ${SCHOOL_LEVEL}-го уровня бойца можно посвятить в школу.`);
   if (typeof META !== 'undefined') META.init();
@@ -504,7 +510,10 @@ function generateEvents() {
   STATE.events = events;
 }
 
+// Новый день: содержание бойцов, обновление рынка и событий, платёж по долгу.
+// Возвращает { cost, debt }: debt — результат debtOnNewDay() или null
 function nextDay() {
+  if (STATE.lost) return { cost: 0, debt: null };
   const cost = upkeepCost();
   STATE.gold -= cost;
   STATE.day++;
@@ -514,9 +523,10 @@ function nextDay() {
   }
   refreshSmith(); refreshMarket(); generateEvents(); refreshRareShop();
   journal(`Наступил день ${STATE.day}. Содержание бойцов: −${cost} денариев.`);
+  const debt = STATE.debt && typeof debtOnNewDay === 'function' ? debtOnNewDay() : null;
   if (typeof META !== 'undefined') META.onNewDay();
   save();
-  return cost;
+  return { cost, debt };
 }
 
 function gladiatorStatus(g) {

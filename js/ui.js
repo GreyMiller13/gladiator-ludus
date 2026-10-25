@@ -1366,7 +1366,7 @@ function checkGameOver() {
 const ACTIONS = {
   tab: d => { UI.tab = d.tab; render(); },
   nextDay: () => {
-    const cost = nextDay();
+    const { cost } = nextDay();
     UI.eventId = null; UI.picked = [];
     toast(`День ${STATE.day}. Содержание бойцов: −${cost} ден.`, STATE.gold < 0);
     if (STATE.gold < 0) toast('Казна в долгу! Покупки недоступны, пока долг не погашен.', true);
