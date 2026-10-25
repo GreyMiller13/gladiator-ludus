@@ -522,6 +522,15 @@ body.drag-on #tip { display: none !important; }
 .dlg-field span { display: block; font-size: 14px; color: var(--muted); font-style: italic; margin-bottom: 5px; }
 .dlg-field input, .modal.dlg input[type="text"] { width: 100%; padding: 8px 11px; background: #120c09; border: 1px solid var(--seam2); border-radius: 2px; color: var(--text); font: inherit; font-size: 17px; }
 .dlg-field input:focus { outline: none; border-color: var(--bronze-hi); box-shadow: 0 0 0 1px var(--bronze-hi); }
+.modal.dlg.newgame { max-width: 600px; }
+.lanista-wrap { margin-top: 14px; text-align: left; }
+.lanista-wrap > span { font-size: 14px; color: var(--muted); }
+.lanista-pick { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 6px; }
+.lanista-pick .lp { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 4px 6px; background: rgba(0,0,0,.25); border: 1px solid var(--seam); border-radius: 2px; box-shadow: none; font-family: var(--font-body); font-size: 13px; line-height: 1.2; color: var(--muted); }
+.lanista-pick .lp img { width: 88px; height: 88px; }
+.lanista-pick .lp:hover { border-color: var(--seam2); color: var(--text); }
+.lanista-pick .lp.on { border-color: var(--bronze-hi); color: var(--bronze-hi); background: rgba(168,129,74,.12); box-shadow: 0 0 0 1px var(--bronze-hi) inset; }
+@media (max-width: 560px) { .lanista-pick .lp img { width: 68px; height: 68px; } .lanista-pick .lp { font-size: 12px; } }
 .dlg-check { display: flex; gap: 9px; align-items: center; justify-content: center; margin-top: 14px; font-size: 15px; color: var(--text); cursor: pointer; }
 .dlg-check input { width: 17px; height: 17px; accent-color: var(--blood-hi); }
 .dlg-btns { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 20px; }

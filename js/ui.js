@@ -695,27 +695,39 @@ function showNewGameDialog() {
   try { tourOn = localStorage.getItem(TOUR_PREF) !== '0'; } catch (e) { /* хранилище недоступно */ }
   showDialog({
     title: 'Новая игра',
+    cls: 'newgame',
     text: STATE
       ? 'Весь текущий прогресс — бойцы, снаряжение, денарии, слава, достижения и некрополь — будет <b>удалён без возможности восстановления</b>. Чтобы вернуться к нему позже, сначала скачайте файл в «Сохранении».'
-      : 'Вы покупаете захудалую школу гладиаторов. Как назовёте свой лудус?',
+      : 'Отец оставил вам лудус в Помпеях — и долг. Кто вы и как назовёте школу?',
     input: { label: 'Название лудуса', value: 'Лудус Батиата', max: 28 },
-    after: `<label class="dlg-check"><input id="dlgTour" type="checkbox" ${tourOn ? 'checked' : ''}> Пройти обучение — покажем, где что находится</label>`,
+    after: `<div class="lanista-wrap"><span>Ваш ланиста</span><div class="lanista-pick">${PORTRAIT.LANISTAS.map((l, i) => `
+      <button type="button" class="lp ${i ? '' : 'on'}" data-act="pickLanista" data-k="${l.key}" title="${esc(l.title)}. ${esc(l.desc)}" aria-pressed="${i ? 'false' : 'true'}">
+        <img src="${PORTRAIT.url(l.key, 'neutral', 88)}" alt=""><span>${esc(l.title)}</span></button>`).join('')}</div></div>
+      <label class="dlg-check"><input id="dlgTour" type="checkbox" ${tourOn ? 'checked' : ''}> Пройти обучение — наставник проведёт через первый бой</label>`,
     ok: STATE ? 'Удалить прогресс и начать' : 'Начать игру', danger: !!STATE,
-    onOk: name => startNewGame((name || '').trim().slice(0, 28) || 'Лудус', $('#dlgTour').checked),
+    onOk: name => {
+      const k = ($('.lanista-pick .lp.on') || { dataset: { k: 'm1' } }).dataset.k;
+      const L = PORTRAIT.LANISTAS.find(x => x.key === k) || PORTRAIT.LANISTAS[0];
+      startNewGame((name || '').trim().slice(0, 28) || 'Лудус', $('#dlgTour').checked, { portrait: L.key, sex: L.sex });
+    },
   });
 }
-function startNewGame(name, tour) {
+function startNewGame(name, tour, lanista = { portrait: 'm1', sex: 'm' }) {
   try { localStorage.removeItem(SAVE_KEY); localStorage.setItem(TOUR_PREF, tour ? '1' : '0'); } catch (e) { /* хранилище недоступно */ }
   if (UI.battle) closeBattle();
-  newGame(name);
+  newGame(name, { story: true, lanista });
   STATE.settings = { mode: 'auto' };
   UI.tab = 'ludus'; UI.gladId = null; UI.eventId = null; UI.picked = [];
   $('#modal').innerHTML = '';
   save();
   if (typeof hideMenu === 'function') hideMenu();
   render();
-  if (tour && typeof startTour === 'function') setTimeout(startTour, 60);
-  else toast('Начата новая игра.');
+  // сначала пролог, потом обучение
+  flushScenes(() => {
+    if (tour && typeof startTutorial === 'function') startTutorial();
+    else if (tour && typeof startTour === 'function') startTour();
+    else toast('Начата новая игра.');
+  });
 }
 
 // ------------------------------------------------------------
@@ -1454,6 +1466,9 @@ const ACTIONS = {
     save(); render();
   },
   menu: () => showMenu(),
+  pickLanista: (d, el) => {
+    document.querySelectorAll('.lanista-pick .lp').forEach(b => { b.classList.toggle('on', b === el); b.setAttribute('aria-pressed', b === el ? 'true' : 'false'); });
+  },
   newGameAsk: () => showNewGameDialog(),
   saveAsk: () => showSaveDialog(),
   dlgOk: () => {
