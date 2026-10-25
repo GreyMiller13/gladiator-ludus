@@ -6,7 +6,7 @@
 const BET_MIN = 50, BET_STEP = 50;
 const BET_MAX = [300, 600, 1200, 2500]; // предел ставки на арене Помпей, Капуи, Рима, Колизея
 const BET_MARGIN = 0.08;                // доля устроителя игр
-const BET_SIMS = 200;
+const BET_SIMS = 150;
 const BET_UNDERDOG = 2.5;               // «тёмная лошадка» — коэффициент не ниже этого
 
 const betTier = () => clamp(Math.max(...unlockedTiers()), 0, TIERS.length - 1);
@@ -15,9 +15,40 @@ const betOdds = p => Math.max(1.05, Math.floor((1 - BET_MARGIN) / Math.max(0.03,
 const betEvent = bet => ({ ...bet.ev, enemies: [bet.b] });
 const cloneGlad = g => JSON.parse(JSON.stringify(g));
 
+// Генератор случайных чисел с зерном (mulberry32)
+function seededRandom(seed) {
+  let s = seed >>> 0;
+  return () => {
+    s = (s + 0x6D2B79F5) >>> 0;
+    let t = Math.imul(s ^ (s >>> 15), s | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function withRandom(rng, fn) {
+  const r = Math.random;
+  Math.random = rng;
+  try { return fn(); } finally { Math.random = r; }
+}
+
+// Бой дня с зерном ставки: исход задан заранее. Ход боя берёт случайность только из зерна
+// (анимация на экране — из обычного Math.random), поэтому показанный бой, его повтор после
+// перезагрузки и бой без показа при конце дня заканчиваются одинаково
+function betBattle(bet) {
+  const rng = seededRandom(bet.seed);
+  const B = withRandom(rng, () => new Battle([cloneGlad(bet.a)], [cloneGlad(bet.b)], betEvent(bet), { mode: 'auto' }));
+  for (const k of ['beginTurn', 'aiTurn']) {
+    const f = B[k].bind(B);
+    B[k] = (...args) => withRandom(rng, () => f(...args));
+  }
+  return B;
+}
+
 // Один бой без показа: 'player' — победил первый боец, 'enemy' — второй
 function simDuel(a, b, ev) {
-  const B = new Battle([cloneGlad(a)], [cloneGlad(b)], ev, { mode: 'auto' });
+  return runDuel(new Battle([cloneGlad(a)], [cloneGlad(b)], ev, { mode: 'auto' }));
+}
+function runDuel(B) {
   let guard = 0;
   while (!B.over && guard++ < 4000) {
     const t = B.beginTurn();
@@ -56,7 +87,7 @@ function newBet() {
     let wins = 0;
     for (let i = 0; i < BET_SIMS; i++) if (simDuel(a, b, ev) === 'player') wins++;
     const pa = wins / BET_SIMS;
-    bet = { day: STATE.day, tier, a, b, ev, p: [pa, 1 - pa], odds: [betOdds(pa), betOdds(1 - pa)], pick: null, stake: 0, done: false, winner: null, payout: 0 };
+    bet = { day: STATE.day, tier, seed: rnd(1, 2 ** 31 - 1), a, b, ev, p: [pa, 1 - pa], odds: [betOdds(pa), betOdds(1 - pa)], pick: null, stake: 0, done: false, winner: null, payout: 0 };
     if (pa >= 0.1 && pa <= 0.9) break;
   }
   return bet;
@@ -88,6 +119,7 @@ function settleBet(winner) {
 // Бой дня для ставок есть всегда: в новой игре и в старом сохранении он появляется при первом взгляде
 function ensureBet() {
   if (!STATE.bet || STATE.bet.day !== STATE.day) { STATE.bet = newBet(); save(); }
+  if (!STATE.bet.seed) { STATE.bet.seed = rnd(1, 2 ** 31 - 1); save(); }
   return STATE.bet;
 }
 
@@ -96,7 +128,8 @@ function betOnNewDay() {
   const bet = STATE.bet;
   let note = null;
   if (bet && !bet.done && bet.pick !== null) {
-    const w = simDuel(bet.a, bet.b, betEvent(bet)) === 'player' ? 0 : 1;
+    if (!bet.seed) bet.seed = rnd(1, 2 ** 31 - 1);
+    const w = runDuel(betBattle(bet)) === 'player' ? 0 : 1;
     const pay = settleBet(w);
     note = `Бой дня прошёл без вас: победил ${[bet.a, bet.b][w].name}. ${pay ? `Ставка сыграла: +${pay} денариев.` : `Ставка ${bet.stake} денариев проиграна.`}`;
     journal(note);

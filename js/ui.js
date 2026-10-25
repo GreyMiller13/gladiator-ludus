@@ -517,8 +517,9 @@ function showFighterInfo(g) {
 function startBetBattle() {
   const bet = STATE.bet;
   if (!bet || bet.done) return;
-  const ev = betEvent(bet), a = ensureLook(cloneGlad(bet.a)), b = ensureLook(cloneGlad(bet.b));
-  openBattle(new Battle([a], [b], ev, { mode: 'auto' }), ev, [], 'auto', { bet: true });
+  const B = betBattle(bet);
+  B.units.forEach(u => ensureLook(u.g));
+  openBattle(B, B.event, [], 'auto', { bet: true });
 }
 
 async function finishBetBattle(B) {

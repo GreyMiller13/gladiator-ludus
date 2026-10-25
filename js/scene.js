@@ -121,8 +121,10 @@ const TUTOR_STEPS = [
   { id: 'glad', g: 'intro', lock: true, tab: 'ludus', sel: 'main .gcard', one: true, wait: 'openGlad',
     text: 'Твой единственный боец. Нажми на его карточку.' },
   { id: 'gift', g: 'intro', modal: true, back: 'glad', sel: '#modal .doll', wait: 'next',
-    text: 'Это снаряжение бойца: шлем, доспех, оружие, щит — у каждой вещи свой слот. Безоружным на песок не выходят. Держи старый гладиус твоего отца — он уже на складе лудуса.' },
-  { id: 'equip', g: 'intro', lock: true, back: 'glad', sel: '#modal .dslot[data-slot="weapon"], #modal .panel.stash', wait: 'equipped', accept: d => d === 'weapon',
+    text: () => (tutorGlad() && tutorGlad().equip.weapon
+      ? 'Это снаряжение бойца: шлем, доспех, оружие, щит — у каждой вещи свой слот. Старый гладиус твоего отца уже у него в руке. Новые вещи ложатся на склад — надевай их здесь.'
+      : 'Это снаряжение бойца: шлем, доспех, оружие, щит — у каждой вещи свой слот. Безоружным на песок не выходят. Держи старый гладиус твоего отца — он уже на складе лудуса.') },
+  { id: 'equip', g: 'intro', lock: true, back: 'glad', sel: '#modal .dslot[data-slot="weapon"], #modal .panel.stash', wait: 'equipped', accept: d => d === 'weapon', skip: () => !!(tutorGlad() && tutorGlad().equip.weapon),
     text: 'Надень меч: нажми «Надеть» рядом с ним на складе или перетащи его на бойца.' },
   { id: 'closeGlad', g: 'intro', lock: true, back: 'glad', sel: '#modal [data-act="closeModal"]', wait: 'modalClosed',
     text: 'Теперь он похож на гладиатора. Здесь же бойца тренируют и лечат. Закрой окно.' },
@@ -223,9 +225,11 @@ function resumeTutorial() {
   if (!tutorOn()) return;
   const st = TUTOR_STEPS[coachStepIdx()];
   if (!st) return endTutorial(true);
-  if (st.g === 'battle' && !UI.battle) tutorState().step = STATE.story.flags.trainWon ? 'toSmith' : 'toArena';
+  if (st.g === 'battle' && !UI.battle) tutorState().step = 'toArena';
   // выбранное событие после перезагрузки не сохраняется — снова с перехода на арену
   if (st.id === 'pickTraining' || st.id === 'pickGlad') tutorState().step = 'toArena';
+  // учебный бой уже позади — выигран или проигран — дальше шаги после боя
+  if (tutorState().step === 'toArena' && (STATE.story.flags.trainWon || !STATE.events.some(e => e.training && !e.done))) tutorState().step = 'lvlGlad';
   // шаги в окне бойца — с открытия карточки
   if (st.back && !UI.gladId) tutorState().step = st.back;
   showCoach();
@@ -370,7 +374,8 @@ function coachAllows(el) {
   if (!s || !s.lock || s.modal || !tutorOn() || !el || !el.closest) return true;
   if (el.closest('#coach, #scene, #dialog, #toasts, #menu')) return true;
   if (s.deny && el.closest(s.deny)) return false;
-  return coachTargets(s).some(t => t.contains(el));
+  const found = coachTargets(s);
+  return (s.one ? found.slice(0, 1) : found).some(t => t.contains(el));
 }
 function coachGuard(e) {
   if (coachAllows(e.target)) return;

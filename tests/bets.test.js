@@ -86,9 +86,23 @@ module.exports = [
     const ctx = loadGame([...DEFAULT_FILES, 'combat', 'bets']);
     ev(ctx, 'newGame("Т", { story: true }); STATE.day = DEBT_EVERY - 1; STATE.bet = newBet(); STATE.bet.odds = [3, 1.2]');
     // в казне не хватает на первый платёж и содержание, но ставка на первого бойца закроет разницу
-    ev(ctx, 'STATE.gold = upkeepCost() + 100; placeBet(0, 50); simDuel = () => "player"; var r = nextDay()');
+    ev(ctx, 'STATE.gold = upkeepCost() + 100; placeBet(0, 50); runDuel = () => "player"; var r = nextDay()');
     assert.equal(ev(ctx, 'STATE.lost'), undefined);
     assert.equal(ev(ctx, 'r.debt.type'), 'paid');
     assert.equal(ev(ctx, 'STATE.debt.paid'), ev(ctx, 'DEBT_PLAN[0]'));
+  } },
+  { name: 'ставки: исход боя дня задан заранее — перезагрузка и конец дня его не переигрывают', fn: () => {
+    const ctx = game();
+    ev(ctx, 'STATE.bet = newBet()');
+    assert.equal(typeof ev(ctx, 'STATE.bet.seed'), 'number');
+    // показанный бой (по ходам, как на экране) и бой при конце дня дают одно и то же
+    const shown = () => ev(ctx, `(() => { const B = betBattle(STATE.bet); let g = 0;
+      while (!B.over && g++ < 4000) { const t = B.beginTurn(); Math.random(); if (t.act && !B.over) B.aiTurn(t.u); Math.random(); B.events.length = 0; }
+      return B.winner + ':' + B.round + ':' + B.log.length; })()`);
+    const first = shown();
+    for (let i = 0; i < 5; i++) assert.equal(shown(), first);
+    const w = first.split(':')[0] === 'player' ? 0 : 1;
+    ev(ctx, 'STATE.gold = 1000; placeBet(' + w + ', 100); nextDay()');
+    assert.ok(ev(ctx, 'STATE.journal.some(j => j.text.includes("Ставка сыграла"))'));
   } },
 ];
