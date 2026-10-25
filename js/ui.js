@@ -1773,6 +1773,7 @@ function bindEvents() {
       else if (e.key === 'Enter' && e.target.tagName !== 'BUTTON') { e.preventDefault(); ACTIONS.dlgOk(); }
       return;
     }
+    if (typeof sceneKey === 'function' && sceneKey(e)) return;
     if (typeof tourKey === 'function' && tourKey(e)) return;
     if (e.key === 'Escape' && UI.gladId) ACTIONS.closeModal();
     if (e.key === 'Escape' && UI.battle && UI.battle.turn && UI.battle.turn.aim) { UI.battle.turn.aim = false; UI.battle.turn.refresh(); }
