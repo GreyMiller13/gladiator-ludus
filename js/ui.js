@@ -237,10 +237,12 @@ function renderModal() {
   const s = computeStats(g);
   const st = gladiatorStatus(g);
 
+  const keyCls = g.cls || bestClasses(g, 1)[0].c, key = classBuild(keyCls);
   const attrs = ATTR_KEYS.map(k => {
     const bonus = s.attrs[k] - g.attrs[k];
-    return `<div class="attr">
-      <span class="an" data-tip="${tipAttrHtml(tipAttr[k]())}">${ATTRS[k].name}</span>
+    const mark = key.main.includes(k) ? `<i class="keymark" data-tip="${tipAttrHtml(`Главная характеристика ${g.cls ? 'школы' : 'для школы, к которой боец пригоден лучше всего'}: ${CLASSES[keyCls].name}`)}">◆</i>` : '';
+    return `<div class="attr ${mark ? 'key' : ''}">
+      <span class="an" data-tip="${tipAttrHtml(tipAttr[k]())}">${ATTRS[k].name}${mark}</span>
       <span class="av">${g.attrs[k]}${bonus ? ` <small>+${bonus}</small>` : ''}</span>
       ${g.freeAttr > 0 ? `<button class="plus" data-act="addAttr" data-k="${k}">+</button>` : '<span></span>'}
     </div>`;
@@ -268,7 +270,7 @@ function renderModal() {
     const B = ITEM_BASES[it.base];
     const tipTxt = `${it.name} — ${B.artifact ? 'реликвия' : B.rare ? 'редкость' : QUALITIES[it.q].name.toLowerCase()}\n${itemStatsText(it, g.cls)}${itemFits(it, g.cls) ? '\nШкольная выучка: +25%' : ''}\nДля школ: ${B.classes.map(c => CLASSES[c].name).join(', ')}`;
     return `<div class="dslot ${QUALITIES[it.q].cls} ${B.artifact ? 'relic' : B.rare ? 'rare' : ''} ${sel === slot ? 'on' : ''}" data-act="slotSel" data-slot="${slot}" data-drag="eq" data-drop="slot" data-tip="${tipAttrHtml(`${tipTxt}\nПеретащите на склад, чтобы снять`)}">
-      <img src="${itemIcon(it, 52)}" alt=""><div class="dtx"><label>${SLOTS[slot]}</label><span class="iname ${QUALITIES[it.q].cls}">${esc(it.name)}</span>${itemFits(it, g.cls) ? '<span class="fitbadge">школа</span>' : ''}</div>
+      <img src="${itemIcon(it, 52)}" alt=""><div class="dtx"><label>${SLOTS[slot]}</label><span class="iname ${QUALITIES[it.q].cls}">${hyph(esc(it.name))}</span>${itemFits(it, g.cls) ? '<span class="fitbadge">школа</span>' : ''}</div>
       <button class="dx" data-act="unequip" data-slot="${slot}" title="Снять">✕</button></div>`;
   };
   const doll = `<div class="doll">
@@ -317,11 +319,12 @@ function renderModal() {
       </div>
       <div class="gmain">
         <div class="gcolA">
-          <div class="panel"><h3>Снаряжение</h3>${doll}</div>
+          <div class="panel dollpanel"><h3>Снаряжение</h3>${doll}</div>
           <div class="panel stash" data-drop="stash"><h3>Склад лудуса${sel ? `: ${SLOTS[sel].toLowerCase()} <button class="small" data-act="slotSel" data-slot="">Все слоты</button>` : ' <span class="muted small">перетащите вещь на бойца или нажмите на слот, чтобы отобрать подходящие</span>'}</h3><div class="stashbox">${stashHtml}</div></div>
         </div>
         <div class="panel gscroll attrs-panel"><h3>Характеристики</h3>
           ${g.freeAttr ? `<div class="points">Свободных очков: ${g.freeAttr}</div>` : ''}
+          <p class="tiny muted keynote">◆ — главные для ${g.cls ? `школы «${C.name}»` : `школы, к которой боец пригоден лучше всего: ${CLASSES[keyCls].name}`}. Что нужно каждой школе — в карточках школ и в «Справочнике».</p>
           ${attrs}
           <div class="derived">${derived.map(([a, b, k]) => `<span data-tip="${tipAttrHtml(tipStat[k](s))}">${a}</span><span>${b}</span>`).join('')}</div>
           ${hitTable}
@@ -356,6 +359,18 @@ function itemRow(it, actionHtml = '', showSlot = false, g = null, showDesc = fal
   </div>`;
 }
 
+// Какие характеристики качать школе: строка для карточек и подсказка для наведения
+const attrNames = ks => ks.map(k => ATTRS[k].name).join(', ');
+function buildHtml(c) {
+  const b = classBuild(c);
+  return `<div class="build tiny"><span><b>Главное:</b> ${attrNames(b.main)}</span>${b.useful.length ? `<span><b>Полезно:</b> ${attrNames(b.useful)}</span>` : ''}${b.low.length ? `<span class="muted">Почти не нужно: ${attrNames(b.low)}</span>` : ''}
+    <div class="muted">${CLASSES[c].build}</div></div>`;
+}
+function buildTip(c) {
+  const b = classBuild(c);
+  return [`${CLASSES[c].name}: главное — ${attrNames(b.main)}`, b.useful.length ? `Полезно: ${attrNames(b.useful)}` : '', b.low.length ? `Почти не нужно: ${attrNames(b.low)}` : '', CLASSES[c].build].filter(Boolean).join('\n');
+}
+
 // Выбор школы для новобранца
 function schoolPicker(g) {
   const ranked = CLASS_KEYS.map(c => ({ c, a: classAptitude(g, c) })).sort((x, y) => y.a - x.a);
@@ -367,6 +382,7 @@ function schoolPicker(g) {
       <div class="sh">${emblem(c)}<div><b>${C.name}</b> <span class="muted tiny">${C.latin}</span><div class="apt" title="Насколько характеристики бойца подходят школе">${stars(a)}</div></div>
         ${open ? `<button class="small primary" data-act="chooseClass" data-cls="${c}">Посвятить</button>` : ''}</div>
       <div class="small">${C.desc}</div>
+      ${buildHtml(c)}
       <div class="tiny"><b>${C.ability.name}:</b> ${C.ability.desc}</div>
       <div class="tiny muted">Снаряжение школы (покупается у кузнеца): ${kit}</div>
     </div>`;
@@ -380,7 +396,8 @@ function schoolPicker(g) {
 function specTree(g) {
   const C = clsOf(g);
   const A = C.ability;
-  let html = `<div class="ability"><h4>Умение: ${A.name}</h4><div class="small">${A.desc}</div><div class="tiny muted">Перезарядка: ${A.cd} хода</div></div>`;
+  let html = `<div class="ability"><h4>Что развивать</h4>${buildHtml(g.cls)}</div>
+    <div class="ability"><h4>Умение: ${A.name}</h4><div class="small">${A.desc}</div><div class="tiny muted">Перезарядка: ${A.cd} хода</div></div>`;
   html += g.freeSpec ? `<div class="points">Очков специализации: ${g.freeSpec}</div>` : '<div class="points muted">Очки специализации: 0 (1 за каждый уровень начиная с 5-го)</div>';
   for (const tier of [1, 2, 3, 4]) {
     const perks = C.perks.filter(p => p.tier === tier);
@@ -403,7 +420,7 @@ function perkBox(g, p, locked) {
   const cur = r ? p.desc(at(r - 1)) : p.desc(at(0));
   const next = r && r < p.max ? `<div class="pn2">Ранг ${r + 1}: ${p.desc(at(r))}</div>` : '';
   return `<div class="perk ${r ? 'has' : ''} ${r === p.max ? 'maxed' : ''}">
-    <div class="ph"><span class="pn">${p.name}</span><span class="pips">${pips}</span>
+    <div class="ph"><span class="pn">${hyph(p.name)}</span><span class="pips">${pips}</span>
       ${can && !locked ? `<button class="plus" data-act="learn" data-perk="${p.id}">+</button>` : ''}</div>
     <div class="pd">${r ? '' : '<span class="muted">Ранг 1: </span>'}${cur}</div>${next}
   </div>`;
@@ -451,7 +468,7 @@ function betAmount() {
 function betPanel() {
   if (typeof ensureBet !== 'function') return '';
   const bet = ensureBet(), F = [bet.a, bet.b];
-  const open = !bet.done && bet.pick === null;
+  const open = !bet.done && bet.pick === null && !bet.watched;
   const { amt, top } = betAmount();
   const canBet = open && top >= BET_MIN;
   const side = i => {
@@ -476,8 +493,11 @@ function betPanel() {
     const w = F[bet.winner];
     foot = `<p class="small">${bet.pick === null ? `Победил ${esc(w.name)}. Вы смотрели без ставки.` : bet.payout ? `Победил ${esc(w.name)} — ставка сыграла: <b class="q2">+${bet.payout}</b> денариев.` : `Победил ${esc(w.name)} — ставка ${bet.stake} денариев проиграна.`} Новый бой — завтра.</p>`;
   } else if (bet.pick !== null) {
-    foot = `<div class="bet-stake"><span class="small">Ваша ставка: ${bet.stake} денариев, боец — ${esc(F[bet.pick].name)} (${xOdds(bet.odds[bet.pick])}). Если он победит — <b>${Math.round(bet.stake * bet.odds[bet.pick])}</b> денариев.</span>
-      <span class="sp"></span><button class="primary" data-act="betWatch">Смотреть бой</button></div>`;
+    foot = `<div class="bet-stake"><span class="small">Ваша ставка: ${bet.stake} денариев, боец — ${esc(F[bet.pick].name)} (${xOdds(bet.odds[bet.pick])}). Если он победит — <b>${Math.round(bet.stake * bet.odds[bet.pick])}</b> денариев.${bet.watched ? ' Бой уже начался — ставку не отменить.' : ''}</span>
+      <span class="sp"></span>${bet.watched ? '' : '<button data-act="betCancel">Отменить ставку</button>'}<button class="primary" data-act="betWatch">${bet.watched ? 'Досмотреть бой' : 'Смотреть бой'}</button></div>`;
+  } else if (bet.watched) {
+    foot = `<div class="bet-stake"><span class="small">Бой уже начался — ставки закрыты.</span>
+      <span class="sp"></span><button class="primary" data-act="betWatch">Досмотреть бой</button></div>`;
   } else {
     foot = `<div class="bet-stake">
       ${top >= BET_MIN ? `<span>Ставка:</span><button class="small" data-act="betAmt" data-d="-1" ${amt <= BET_MIN ? 'disabled' : ''} aria-label="Меньше">−</button><b class="bet-amt">${amt}</b><button class="small" data-act="betAmt" data-d="1" ${amt >= top ? 'disabled' : ''} aria-label="Больше">+</button>
@@ -486,7 +506,7 @@ function betPanel() {
   }
   return `<div class="panel betpanel mt">
     <div class="eh"><h3>Бой дня: ставки</h3><span class="fmt">1 на 1</span></div>
-    <p class="small muted">Устроитель игр прогнал этот бой ${BET_SIMS} раз и назначил коэффициенты по шансам бойцов, оставив себе свою долю. Одна ставка в день.</p>
+    <p class="small muted">Устроитель игр прогнал этот бой ${BET_SIMS} раз и назначил коэффициенты по шансам бойцов, оставив себе свою долю. Одна ставка в день. Ставка играет, только если посмотреть бой: до начала боя её можно отменить, а если завершить день без просмотра — она вернётся в казну.</p>
     <div class="bet-sides">${side(0)}<div class="bet-vs">vs</div>${side(1)}</div>
     ${foot}
   </div>`;
@@ -517,6 +537,7 @@ function showFighterInfo(g) {
 function startBetBattle() {
   const bet = STATE.bet;
   if (!bet || bet.done) return;
+  watchBet(); save();
   const B = betBattle(bet);
   B.units.forEach(u => ensureLook(u.g));
   openBattle(B, B.event, [], 'auto', { bet: true });
@@ -626,7 +647,7 @@ function screenMarket() {
   const full = STATE.gladiators.length >= MAX_GLADIATORS;
   const cards = STATE.market.map(g => {
     const s = computeStats(g);
-    const apt = bestClasses(g, 3).map(x => `${CLASSES[x.c].name} <span class="apt">${stars(x.a)}</span>`).join('<br>');
+    const apt = bestClasses(g, 3).map(x => `<span class="tipname" data-tip="${tipAttrHtml(buildTip(x.c))}">${CLASSES[x.c].name}</span> <span class="apt">${stars(x.a)}</span>`).join('<br>');
     return `<div class="panel">
       <div class="gcard" style="cursor:default;border:none;padding:0;background:none"><img class="portrait" src="${portrait(g, 64, 80, { bust: true })}" alt="">
         <div><div class="gname">${esc(g.name)}</div><div class="gsub">${clsOf(g).name} · ур. ${g.level} · ${esc(g.origin)}</div></div></div>
@@ -703,6 +724,24 @@ const SLOT_GLYPH = {
   belt: '<svg viewBox="0 0 32 32" width="30" height="30" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 13h24v6H4z"/><rect x="13" y="11" width="6" height="10"/><path d="M16 14v4"/></svg>',
 };
 const tipAttrHtml = (txt) => esc(txt).replace(/\n/g, '&#10;');
+// Мягкие переносы в длинных русских словах (по слогам: гласная|согласная+гласная, согласная|согласная):
+// узкий слот снаряжения переносит «Тринадцатого» как «Три-над-ца-то-го», а не по букве
+const HY_V = 'аеёиоуыэюяАЕЁИОУЫЭЮЯ', HY_NOSTART = 'ьъйЬЪЙ';
+function hyph(s) {
+  return s.replace(/[А-Яа-яЁё]{8,}/g, w => {
+    let out = '';
+    for (let i = 0; i < w.length; i++) {
+      out += w[i];
+      const rest = w.length - i - 1;
+      if (i < 1 || rest < 2 || HY_NOSTART.includes(w[i + 1])) continue;
+      const v = c => HY_V.includes(c);
+      const cut = (v(w[i]) && !v(w[i + 1]) && v(w[i + 2])) // ма|ке
+        || (!v(w[i]) && v(w[i - 1]) && !v(w[i + 1]) && !HY_NOSTART.includes(w[i]) && w.slice(i + 1).split('').some(v)); // над|ца
+      if (cut) out += '\u00AD';
+    }
+    return out;
+  });
+}
 
 // ------------------------------------------------------------
 //  Справочник: разделы
@@ -830,7 +869,13 @@ function guideChapter(ch) {
     <h3>Бой меньшинством</h3>
     <p>На обычный бой арены 2 на 2 или 3 на 3 можно выйти на одного бойца меньше — отметьте это при выборе бойцов. Награда за победу (денарии и слава) — <b>×${SHORT_MULT}</b>. Учебный бой и бои с хозяевами арен — только поровну.</p>
     <h3>Ставки на бой дня</h3>
-    <p>Каждый день на арене проходит один бой 1 на 1 между чужими бойцами текущей арены. Их снаряжение, характеристики, школу и навыки можно посмотреть заранее. Устроитель игр прогоняет бой ${BET_SIMS} раз и по шансам назначает коэффициенты, оставляя себе ${Math.round(BET_MARGIN * 100)}%: у слабого бойца коэффициент выше. Ставка — от ${BET_MIN} с шагом ${BET_STEP}, предел растёт с ареной: ${BET_MAX.join(' / ')} денариев (Помпеи / Капуя / Рим / Колизей). Выигрыш — ставка × коэффициент. Одна ставка в день; если не посмотреть бой, он пройдёт без вас при завершении дня.</p>
+    <p>Каждый день на арене проходит один бой 1 на 1 между чужими бойцами текущей арены. Их снаряжение, характеристики, школу и навыки можно посмотреть заранее. Устроитель игр прогоняет бой ${BET_SIMS} раз и по шансам назначает коэффициенты, оставляя себе ${Math.round(BET_MARGIN * 100)}%: у слабого бойца коэффициент выше. Ставка — от ${BET_MIN} с шагом ${BET_STEP}, предел растёт с ареной: ${BET_MAX.join(' / ')} денариев (Помпеи / Капуя / Рим / Колизей). Выигрыш — ставка × коэффициент. Устроитель подбирает бойцов почти равных по силе: шансы обычно от ${Math.round((0.5 - BET_BAND) * 100)} до ${Math.round((0.5 + BET_BAND) * 100)}%. Одна ставка в день.</p>
+    <ul>
+      <li>Ставка играет, только если посмотреть бой: кнопка «Смотреть бой» на арене.</li>
+      <li>Пока бой не начался, ставку можно отменить — деньги вернутся, и можно поставить заново.</li>
+      <li>Если завершить день, не посмотрев бой, ставка вернётся в казну, будто её и не было.</li>
+      <li>Начатый бой ставку уже не отпустит: если его прервать, он доиграется без вас при завершении дня.</li>
+    </ul>
     <h3>Достижения и реликвии</h3>
     <p>Достижения дают денарии и славу, самые трудные — реликвии. Прогресс виден на вкладке «Достижения».</p>
     <h3>Финал</h3>
@@ -842,9 +887,15 @@ function guideChapter(ch) {
     <ul>
       <li>Рабов на рынке продают <b>без школы и без снаряжения</b>. Школу можно выбрать в окне бойца, когда он достигнет <b>${SCHOOL_LEVEL}-го уровня</b>; звёзды подсказывают, к какой школе он пригоден. До этого он сражается как новобранец — без умения школы. Противники ниже ${SCHOOL_LEVEL}-го уровня — тоже новобранцы.</li>
       <li>Школа не даёт снаряжения: его нужно купить у кузнеца, в лавке редкостей или снять с побеждённых.</li>
-      <li>Школы: ${CLASS_KEYS.map(c => `<b>${CLASSES[c].name}</b> — ${CLASSES[c].desc}`).join('<br>')}</li>
       <li>Сменить школу можно за плату — навыки при этом сбрасываются.</li>
     </ul>
+    <h3>Какие характеристики нужны школам</h3>
+    <p>Звёзды пригодности считаются по этим же приоритетам: чем больше очков в главных характеристиках школы, тем лучше боец к ней подходит. В окне бойца главные характеристики его школы отмечены знаком ◆.</p>
+    <table class="gtable">
+      <tr><th>Школа</th><th>Главное</th><th>Полезно</th><th>Почти не нужно</th></tr>
+      ${CLASS_KEYS.map(c => { const b = classBuild(c); return `<tr><td><b>${CLASSES[c].name}</b></td><td>${attrNames(b.main)}</td><td>${attrNames(b.useful) || '—'}</td><td>${attrNames(b.low) || '—'}</td></tr>`; }).join('')}
+    </table>
+    <ul>${CLASS_KEYS.map(c => `<li><b>${CLASSES[c].name}</b> — ${CLASSES[c].desc} ${CLASSES[c].build}</li>`).join('')}</ul>
     <h3>Развитие</h3>
     <ul>
       <li>За каждый уровень — 3 очка атрибутов, а с 5-го уровня — ещё 1 очко специализации: на 5-м уровне у бойца 1 очко, на 6-м — 2 и так далее. Если школу выбрать позже, накопленные с 5-го уровня очки достанутся ей сразу.</li>
@@ -1854,6 +1905,12 @@ const ACTIONS = {
     const { amt } = betAmount();
     if (!placeBet(+d.i, amt)) return toast('Ставку сделать нельзя.', true);
     save(); const y = window.scrollY; render(); window.scrollTo(0, y);
+  },
+  betCancel: () => {
+    const back = cancelBet();
+    if (!back) return toast('Ставку уже не отменить.', true);
+    save(); toast(`Ставка отменена: ${back} денариев вернулись в казну.`);
+    const y = window.scrollY; render(); window.scrollTo(0, y);
   },
   betInspect: d => { const bet = STATE.bet; if (bet) showFighterInfo([bet.a, bet.b][+d.i]); },
   betWatch: () => startBetBattle(),

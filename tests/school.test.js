@@ -35,4 +35,13 @@ module.exports = [
     assert.equal(ev(ctx, 'JSON.stringify(g.perks)'), '{"mur_wall":1}');
     assert.equal(ev(ctx, 'g.freeSpec'), 2);
   } },
+  { name: 'школы: у каждой — главные, полезные и лишние характеристики и совет по развитию', fn: ctx => {
+    assert.equal(ev(ctx, 'JSON.stringify(classBuild("murmillo"))'), '{"main":["end","str"],"useful":["skl","wil"],"low":["agi"]}');
+    assert.equal(ev(ctx, 'JSON.stringify(classBuild("retiarius").main)'), '["agi","skl"]');
+    assert.equal(ev(ctx, 'JSON.stringify(classBuild("gallus").main)'), '["str","end"]');
+    for (const c of ev(ctx, 'CLASS_KEYS')) {
+      assert.ok(ev(ctx, `classBuild("${c}").main.length`) >= 2, c);
+      assert.ok(ev(ctx, `CLASSES.${c}.build.length`) > 20, c);
+    }
+  } },
 ];

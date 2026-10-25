@@ -175,6 +175,12 @@ function classAptitude(g, cls) {
   const lo = Math.min(...all), hi = Math.max(...all);
   return hi - lo < 1e-6 ? 0.6 : 0.2 + 0.8 * (rawAptitude(g, cls) - lo) / (hi - lo);
 }
+// Какие характеристики нужны школе — по приоритету роста: главные, полезные и почти лишние
+function classBuild(cls) {
+  const w = CLASSES[cls].weights;
+  const by = f => ATTR_KEYS.filter(k => f(w[k])).sort((a, b) => w[b] - w[a]);
+  return { main: by(v => v >= 3), useful: by(v => v === 2), low: by(v => v <= 1) };
+}
 function bestClasses(g, n = 3) {
   return CLASS_KEYS.map(c => ({ c, a: classAptitude(g, c) })).sort((x, y) => y.a - x.a).slice(0, n);
 }

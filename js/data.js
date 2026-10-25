@@ -17,14 +17,15 @@ const MAX_LEVEL = 20;
 
 // ------------------------------------------------------------
 //  Школы (специализации) гладиаторов
-//  Каждая школа: базовые характеристики, приоритет роста (для ИИ),
-//  фирменное оружие, активное умение и древо мастерства.
+//  Каждая школа: базовые характеристики, приоритет роста (для ИИ и подсказок
+//  игроку), совет по развитию, фирменное оружие, активное умение и древо мастерства.
 //  Перк: tier — ступень, max — рангов, v/v2 — значения по рангам.
 // ------------------------------------------------------------
 const CLASSES = {
   murmillo: {
     name: 'Мурмиллон', latin: 'Murmillo',
     desc: 'Тяжёлый пехотинец с гладиусом и скутумом. Принимает удары на щит, бьёт в ответ и прикрывает соратников.',
+    build: 'Удары принимает щит, так что уклоняться ему почти незачем: выносливость даёт запас здоровья, сила — тяжёлый ответный удар.',
     base: { str: 6, agi: 3, end: 7, skl: 4, wil: 5 },
     weights: { str: 3, agi: 1, end: 4, skl: 2, wil: 2 },
     start: { weapon: 'gladius', offhand: 'scutum', helmet: 'galea', arms: 'manica', legs: 'ocrea', belt: 'balteus' },
@@ -51,6 +52,7 @@ const CLASSES = {
   retiarius: {
     name: 'Ретиарий', latin: 'Retiarius',
     desc: 'Лёгкий боец с трезубцем и сетью. Без шлема и щита, живёт за счёт подвижности и контроля.',
+    build: 'Без шлема и щита его броня — подвижность: ловкость даёт уклонение и первый ход, мастерство — точные удары трезубцем.',
     base: { str: 5, agi: 7, end: 6, skl: 6, wil: 4 },
     weights: { str: 2, agi: 4, end: 2, skl: 3, wil: 1 },
     start: { weapon: 'trident', offhand: 'rete', arms: 'galerus', legs: 'fasciae', belt: 'balteus' },
@@ -77,6 +79,7 @@ const CLASSES = {
   secutor: {
     name: 'Секутор', latin: 'Secutor',
     desc: 'Преследователь в гладком шлеме с большим скутумом. Тяжёлая броня, неумолимый натиск и добивание ослабших.',
+    build: 'Тяжёлая броня и большой щит держат удар, а выносливость и сила делают натиск неумолимым. Ловкость почти не нужна.',
     base: { str: 6, agi: 3, end: 7, skl: 4, wil: 4 },
     weights: { str: 3, agi: 1, end: 4, skl: 2, wil: 2 },
     start: { weapon: 'gladius', offhand: 'parma', helmet: 'galea', arms: 'manica', legs: 'ocrea', belt: 'balteus' },
@@ -103,6 +106,7 @@ const CLASSES = {
   thraex: {
     name: 'Фракиец', latin: 'Thraex',
     desc: 'Боец с изогнутой сикой и малым щитом. Ищет щели в броне, режет и пускает кровь.',
+    build: 'Ищет щели в броне: мастерство даёт точность и криты, ловкость — уклонение и первый ход. Силы и здоровья — сколько останется.',
     base: { str: 5, agi: 6, end: 6, skl: 6, wil: 3 },
     weights: { str: 2, agi: 3, end: 2, skl: 4, wil: 1 },
     start: { weapon: 'sica', offhand: 'parma', helmet: 'galea', arms: 'manica', legs: 'ocreaeHigh', belt: 'balteus' },
@@ -129,6 +133,7 @@ const CLASSES = {
   dimachaerus: {
     name: 'Димахер', latin: 'Dimachaerus',
     desc: 'Мастер двух клинков. Без щита, только сталь в обеих руках — серии ударов и ярость.',
+    build: 'Серии ударов двумя клинками: сила, ловкость и мастерство одинаково важны. Воля почти не нужна.',
     base: { str: 6, agi: 6, end: 6, skl: 5, wil: 3 },
     weights: { str: 3, agi: 3, end: 2, skl: 3, wil: 1 },
     start: { weapon: 'gladius', offhand: 'pugio', helmet: 'leatherHelm', armor: 'leather', arms: 'vambraces', legs: 'fasciae', belt: 'cingulum' },
@@ -155,6 +160,7 @@ const CLASSES = {
   hoplomachus: {
     name: 'Гопломах', latin: 'Hoplomachus',
     desc: 'Копейщик греческого образца: длинное копьё, малый круглый щит и высокие поножи. Держит врага на острие и бьёт первым.',
+    build: 'Встречает врага на острие копья: мастерство нужно для точности, сила — для урона, ловкость — чтобы ударить первым.',
     base: { str: 5, agi: 5, end: 6, skl: 7, wil: 4 },
     weights: { str: 3, agi: 2, end: 2, skl: 4, wil: 1 },
     start: { weapon: 'spear', offhand: 'parma', helmet: 'galea', arms: 'manica', legs: 'ocreaeHigh', belt: 'balteus' },
@@ -181,6 +187,7 @@ const CLASSES = {
   sagittarius: {
     name: 'Сагиттарий', latin: 'Sagittarius',
     desc: 'Лучник с Востока. Бьёт издалека и не подходит к противнику, поэтому его не достают контратаки. Лёгкая броня, мало здоровья.',
+    build: 'Стрелку главное — попасть: мастерство даёт точность и криты, ловкость — уклонение и дистанцию. Сила для лука значит меньше (0.8 урона за очко).',
     base: { str: 4, agi: 7, end: 5, skl: 7, wil: 3 },
     weights: { str: 2, agi: 3, end: 2, skl: 4, wil: 1 },
     start: { weapon: 'arcus', offhand: 'pharetra', helmet: 'conicHelm', armor: 'leather', arms: 'vambraces', legs: 'fasciae', belt: 'cingulum' },
@@ -207,6 +214,7 @@ const CLASSES = {
   gallus: {
     name: 'Галл', latin: 'Gallus',
     desc: 'Варвар с двуручным мечом или секирой. Без щита — обе руки на рукояти. Страшные удары, толстая шкура и ярость, растущая с ранами.',
+    build: 'Двуручный удар и толстая шкура: сила — главное, выносливость держит его на ногах, пока растёт ярость. Остальное — по остатку.',
     base: { str: 7, agi: 4, end: 7, skl: 4, wil: 4 },
     weights: { str: 4, agi: 1, end: 3, skl: 2, wil: 1 },
     start: { weapon: 'longsword', helmet: 'gallicHelm', arms: 'vambraces', legs: 'caligae', belt: 'cingulum' },

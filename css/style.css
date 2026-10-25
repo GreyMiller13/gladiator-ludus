@@ -343,7 +343,7 @@ button.sound.off { color: var(--dust); }
 .stashbox { flex: 1; min-height: 0; overflow-y: auto; padding-right: 4px; }
 .gscroll { min-height: 0; overflow-y: auto; }
 .stash h3 button { margin-left: 8px; vertical-align: 3px; }
-.stashgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 6px; }
+.stashgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr)); gap: 6px; }
 .modal .item .iicon { width: 40px; height: 40px; }
 .modal .item { gap: 8px; padding: 6px 8px; }
 @media (max-width: 1250px), (max-height: 640px) {
@@ -355,7 +355,8 @@ button.sound.off { color: var(--dust); }
 @media (max-width: 760px) { .gmain { grid-template-columns: 1fr; } }
 
 /* «кукла»: фигура и слоты */
-.doll { display: grid; grid-template-columns: 1fr 236px 1fr; gap: 10px; align-items: center; }
+.dollpanel { container-type: inline-size; }
+.doll { display: grid; grid-template-columns: minmax(0, 1fr) 236px minmax(0, 1fr); gap: 10px; align-items: center; }
 .dcol { display: flex; flex-direction: column; gap: 8px; }
 .dfig { display: flex; flex-direction: column; gap: 6px; align-items: center; }
 .dfig canvas { width: 230px; height: 310px; border: 1px solid #0a0605; outline: 1px solid var(--bronze); outline-offset: -4px; box-shadow: 0 10px 28px rgba(0,0,0,.6); background: #0d0907; }
@@ -370,17 +371,40 @@ button.sound.off { color: var(--dust); }
 .dslot img { width: 52px; height: 52px; flex: none; }
 .dslot .dtx { display: flex; flex-direction: column; min-width: 0; line-height: 1.2; }
 .dslot label { font-size: 12px; font-style: italic; color: var(--dust); cursor: pointer; }
-.dslot .iname { font-family: var(--font-head); font-size: 17px; }
+.dslot .iname { font-family: var(--font-head); font-size: 17px; overflow-wrap: break-word; hyphens: manual; }
 .dslot .fitbadge { align-self: flex-start; margin: 3px 0 0; }
 .dslot.empty { border-style: dashed; background: rgba(0,0,0,.18); }
 .dslot .dph { width: 52px; height: 52px; flex: none; display: grid; place-items: center; border: 1px dashed var(--seam2); color: var(--dust); font-size: 20px; }
 .dslot .dcount { font-size: 12px; color: var(--bronze); }
 .dslot .dx { position: absolute; top: 3px; right: 3px; padding: 0 5px; font-size: 11px; line-height: 16px; opacity: 0; }
 .dslot:hover .dx, .dslot .dx:focus-visible { opacity: 1; }
+/* узкое окно бойца: фигура меньше, слоты плотнее; на телефоне фигура сверху, слоты в две колонки */
+@container (max-width: 660px) {
+  .doll { grid-template-columns: minmax(0, 1fr) 176px minmax(0, 1fr); gap: 8px; }
+  .dfig canvas { width: 170px; height: 229px; }
+  .pv-btns { max-width: 176px; }
+  .dslot { gap: 6px; padding: 4px 5px; }
+  .dslot img, .dslot .dph { width: 44px; height: 44px; }
+  .dslot .iname { font-size: 15px; }
+}
+@container (max-width: 440px) {
+  .doll { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .dfig { grid-column: 1 / -1; order: -1; }
+  .dfig canvas { width: 196px; height: 264px; }
+  .pv-btns { max-width: none; }
+  .dslot img, .dslot .dph { width: 38px; height: 38px; }
+  .dslot .iname { font-size: 14px; }
+}
+@media (hover: none) { .dslot .dx { opacity: 1; } }
 
 /* характеристики */
 .attr { display: grid; grid-template-columns: 1fr auto 26px; align-items: center; gap: 8px; padding: 5px 0; border-bottom: 1px solid rgba(87,66,51,.35); }
 .attr .an { font-family: var(--font-head); font-size: 20px; }
+.attr .keymark { font-style: normal; font-size: 12px; color: var(--bronze-hi); margin-left: 6px; vertical-align: 3px; cursor: help; }
+.keynote { margin: 4px 0 2px; }
+.build { display: flex; flex-wrap: wrap; gap: 2px 12px; }
+.build > div { flex-basis: 100%; }
+.tipname { text-decoration: underline dotted rgba(168,129,74,.6); text-underline-offset: 3px; cursor: help; }
 .attr .av { font-family: var(--font-head); font-size: 23px; color: var(--bronze-hi); }
 .attr .av small { font-size: 14px; color: var(--q2); }
 .derived { display: grid; grid-template-columns: 1fr auto; gap: 3px 10px; font-size: 15px; margin-top: 10px; }

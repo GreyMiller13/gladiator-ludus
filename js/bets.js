@@ -1,12 +1,15 @@
 // ============================================================
 //  Ставки: каждый день один бой 1 на 1 между чужими бойцами.
 //  Шансы считаются прогоном боя BET_SIMS раз, коэффициент — от шанса
-//  с долей устроителя игр.
+//  с долей устроителя игр. Пару подбирают почти равной по силе.
 // ============================================================
 const BET_MIN = 50, BET_STEP = 50;
 const BET_MAX = [300, 600, 1200, 2500]; // предел ставки на арене Помпей, Капуи, Рима, Колизея
 const BET_MARGIN = 0.08;                // доля устроителя игр
 const BET_SIMS = 150;
+const BET_BAND = 0.1;                   // шанс первого бойца — в пределах 50% ± BET_BAND
+const BET_SCREEN = 30;                  // быстрый прогон: явно неравную пару дальше не считаем
+const BET_TRIES = 12;
 const BET_UNDERDOG = 2.5;               // «тёмная лошадка» — коэффициент не ниже этого
 
 const betTier = () => clamp(Math.max(...unlockedTiers()), 0, TIERS.length - 1);
@@ -73,34 +76,52 @@ function betFighter(tier, lvl, cls, used) {
   return g;
 }
 
-// Бой дня для ставок: пара бойцов текущей арены, без явного фаворита с шансом выше 90%
+const winShare = (a, b, ev, n) => { let w = 0; for (let i = 0; i < n; i++) if (simDuel(a, b, ev) === 'player') w++; return w / n; };
+
+// Бой дня для ставок: пара бойцов текущей арены, близких по силе, — исход угадать непросто.
+// Пары перебираются, пока шанс не окажется в пределах 50% ± BET_BAND; иначе берётся самая ровная
 function newBet() {
   const tier = betTier(), T = TIERS[tier];
-  const used = new Set(STATE.gladiators.map(g => g.name));
   const lvl = clamp(Math.round(ludusLevel()) + rnd(-1, 1), T.lvl[0], T.lvl[1]);
-  let bet = null;
-  for (let tries = 0; tries < 4; tries++) {
+  const ev = { id: uid(), kind: 'bet', tier, size: 1, title: 'Бой дня' };
+  ensureField(ev);
+  let best = null;
+  for (let tries = 0; tries < BET_TRIES; tries++) {
+    const used = new Set(STATE.gladiators.map(g => g.name));
     const ca = pick(CLASS_KEYS), cb = pick(CLASS_KEYS.filter(c => c !== ca));
     const a = betFighter(tier, lvl, ca, used), b = betFighter(tier, lvl, cb, used);
-    const ev = { id: uid(), kind: 'bet', tier, size: 1, title: 'Бой дня' };
-    ensureField(ev);
-    let wins = 0;
-    for (let i = 0; i < BET_SIMS; i++) if (simDuel(a, b, ev) === 'player') wins++;
-    const pa = wins / BET_SIMS;
-    bet = { day: STATE.day, tier, seed: rnd(1, 2 ** 31 - 1), a, b, ev, p: [pa, 1 - pa], odds: [betOdds(pa), betOdds(1 - pa)], pick: null, stake: 0, done: false, winner: null, payout: 0 };
-    if (pa >= 0.1 && pa <= 0.9) break;
+    if (best && Math.abs(winShare(a, b, ev, BET_SCREEN) - 0.5) > BET_BAND + 0.1) continue;
+    const pa = winShare(a, b, ev, BET_SIMS);
+    if (!best || Math.abs(pa - 0.5) < Math.abs(best.pa - 0.5)) best = { a, b, pa };
+    if (Math.abs(pa - 0.5) <= BET_BAND) break;
   }
-  return bet;
+  const { a, b, pa } = best;
+  return { day: STATE.day, tier, seed: rnd(1, 2 ** 31 - 1), a, b, ev, p: [pa, 1 - pa], odds: [betOdds(pa), betOdds(1 - pa)], pick: null, stake: 0, done: false, winner: null, payout: 0 };
 }
 
 // Сделать ставку: side — 0 (первый боец) или 1 (второй)
 function placeBet(side, amount) {
   const bet = STATE.bet;
-  if (!bet || bet.done || bet.pick !== null || (side !== 0 && side !== 1)) return false;
+  if (!bet || bet.done || bet.watched || bet.pick !== null || (side !== 0 && side !== 1)) return false;
   if (!Number.isInteger(amount) || amount < BET_MIN || amount % BET_STEP || amount > betMax() || amount > STATE.gold) return false;
   STATE.gold -= amount;
   bet.pick = side; bet.stake = amount;
   return true;
+}
+
+// Отменить ставку, пока бой не начался. Возвращает возвращённую сумму (0 — отменять нечего)
+function cancelBet() {
+  const bet = STATE.bet;
+  if (!bet || bet.done || bet.watched || bet.pick === null) return 0;
+  const back = bet.stake;
+  STATE.gold += back;
+  bet.pick = null; bet.stake = 0;
+  return back;
+}
+
+// Бой начался на глазах у игрока: ставку уже не сделать и не отменить, а прерванный бой доиграется при конце дня
+function watchBet() {
+  if (STATE.bet && !STATE.bet.done) STATE.bet.watched = true;
 }
 
 // Итог боя: winner — 0 или 1. Возвращает выплату (0, если ставка не сыграла или её не было)
@@ -123,15 +144,21 @@ function ensureBet() {
   return STATE.bet;
 }
 
-// Новый день: несыгранная ставка решается боем без показа, затем — новый бой дня
+// Новый день: ставка на несмотренный бой возвращается в казну, будто её и не было.
+// Бой, начатый и прерванный (например, перезагрузкой), доигрывается без показа. Затем — новый бой дня
 function betOnNewDay() {
   const bet = STATE.bet;
   let note = null;
-  if (bet && !bet.done && bet.pick !== null) {
+  if (bet && !bet.done && bet.pick !== null && !bet.watched) {
+    const back = cancelBet();
+    bet.done = true;
+    note = `Бой дня прошёл без вас — ставка ${back} денариев вернулась в казну.`;
+    journal(note);
+  } else if (bet && !bet.done && bet.pick !== null) {
     if (!bet.seed) bet.seed = rnd(1, 2 ** 31 - 1);
     const w = runDuel(betBattle(bet)) === 'player' ? 0 : 1;
     const pay = settleBet(w);
-    note = `Бой дня прошёл без вас: победил ${[bet.a, bet.b][w].name}. ${pay ? `Ставка сыграла: +${pay} денариев.` : `Ставка ${bet.stake} денариев проиграна.`}`;
+    note = `Бой дня доигран без вас: победил ${[bet.a, bet.b][w].name}. ${pay ? `Ставка сыграла: +${pay} денариев.` : `Ставка ${bet.stake} денариев проиграна.`}`;
     journal(note);
   }
   STATE.bet = newBet();

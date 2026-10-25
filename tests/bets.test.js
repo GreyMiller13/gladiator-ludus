@@ -56,13 +56,50 @@ module.exports = [
     assert.equal(ev(ctx, 'STATE.bet.tier'), 3);
     assert.equal(ev(ctx, 'betMax()'), 2500);
   } },
-  { name: 'ставки: новый день решает несыгранную ставку и даёт новый бой', fn: () => {
+  { name: 'ставки: несмотренная ставка при новом дне возвращается в казну, бой дня — новый', fn: () => {
     const ctx = game();
-    ev(ctx, 'STATE.bet = newBet(); STATE.gold = 5000; placeBet(0, 100); var old = STATE.bet; nextDay()');
-    assert.equal(ev(ctx, 'old.done'), true);
+    ev(ctx, 'STATE.bet = newBet(); STATE.gold = 5000; placeBet(0, 100); var old = STATE.bet; var r = nextDay()');
+    assert.equal(ev(ctx, 'STATE.gold'), ev(ctx, '5000 - r.cost'));
+    assert.equal(ev(ctx, 'old.payout'), 0);
     assert.equal(ev(ctx, 'STATE.bet.day'), 2);
-    assert.equal(ev(ctx, 'STATE.bet.done'), false);
-    assert.ok(ev(ctx, 'STATE.journal.some(j => j.text.startsWith("Бой дня прошёл без вас"))'));
+    assert.equal(ev(ctx, 'STATE.bet.pick'), null);
+    assert.ok(ev(ctx, 'r.bet.includes("вернулась в казну")'), ev(ctx, 'r.bet'));
+    assert.ok(ev(ctx, 'STATE.journal.some(j => j.text.includes("вернулась в казну"))'));
+  } },
+  { name: 'ставки: ставку можно отменить, пока бой не начался', fn: () => {
+    const ctx = game();
+    ev(ctx, 'STATE.bet = newBet(); STATE.gold = 500; placeBet(1, 200)');
+    assert.equal(ev(ctx, 'cancelBet()'), 200);
+    assert.equal(ev(ctx, 'STATE.gold'), 500);
+    assert.equal(ev(ctx, 'STATE.bet.pick'), null);
+    assert.equal(ev(ctx, 'STATE.bet.stake'), 0);
+    assert.equal(ev(ctx, 'cancelBet()'), 0); // отменять уже нечего
+    // после отмены можно поставить снова, но не после начала боя
+    assert.equal(ev(ctx, 'placeBet(0, 100)'), true);
+    ev(ctx, 'watchBet()');
+    assert.equal(ev(ctx, 'cancelBet()'), 0);
+    assert.equal(ev(ctx, 'STATE.gold'), 400);
+  } },
+  { name: 'ставки: после начала боя без ставки поставить уже нельзя', fn: () => {
+    const ctx = game();
+    ev(ctx, 'STATE.bet = newBet(); STATE.gold = 500; watchBet()');
+    assert.equal(ev(ctx, 'placeBet(0, 100)'), false);
+    assert.equal(ev(ctx, 'STATE.gold'), 500);
+  } },
+  { name: 'ставки: начатый и прерванный бой при новом дне доигрывается, а не возвращается', fn: () => {
+    const ctx = game();
+    ev(ctx, 'STATE.bet = newBet(); STATE.bet.odds = [2, 1.8]; STATE.gold = 5000; placeBet(0, 100); watchBet(); runDuel = () => "player"; var r = nextDay()');
+    assert.equal(ev(ctx, 'STATE.gold'), ev(ctx, '4900 + 200 - r.cost'));
+    assert.ok(ev(ctx, 'STATE.journal.some(j => j.text.includes("Ставка сыграла"))'));
+  } },
+  { name: 'ставки: бойцы дня близки по силе — шансы в пределах 40–60%', fn: () => {
+    const ctx = game();
+    for (const fame of [0, 200]) {
+      ev(ctx, `STATE.fame = ${fame}`);
+      const ps = Array.from({ length: 5 }, () => ev(ctx, 'newBet().p[0]'));
+      const near = ps.filter(p => p >= 0.5 - ev(ctx, 'BET_BAND') && p <= 0.5 + ev(ctx, 'BET_BAND')).length;
+      assert.ok(near >= 4, `слава ${fame}: ${ps.map(p => Math.round(p * 100)).join(' ')}`);
+    }
   } },
   { name: 'ставки: достижения — первая ставка, тёмная лошадка, 5000 чистого выигрыша', fn: () => {
     const ctx = loadGame([...DEFAULT_FILES, 'combat', 'bets', 'meta']);
@@ -82,11 +119,11 @@ module.exports = [
     assert.ok(ev(ctx, 'STATE.meta.ach.bet10'));
     assert.ok(ev(ctx, 'STATE.meta.ach.bet5000'));
   } },
-  { name: 'ставки: выигрыш несмотренной ставки попадает в казну до платежа по долгу', fn: () => {
+  { name: 'ставки: несмотренная ставка возвращается в казну до платежа по долгу', fn: () => {
     const ctx = loadGame([...DEFAULT_FILES, 'combat', 'bets']);
-    ev(ctx, 'newGame("Т", { story: true }); STATE.day = DEBT_EVERY - 1; STATE.bet = newBet(); STATE.bet.odds = [3, 1.2]');
-    // в казне не хватает на первый платёж и содержание, но ставка на первого бойца закроет разницу
-    ev(ctx, 'STATE.gold = upkeepCost() + 100; placeBet(0, 50); runDuel = () => "player"; var r = nextDay()');
+    ev(ctx, 'newGame("Т", { story: true }); STATE.day = DEBT_EVERY - 1; STATE.bet = newBet()');
+    // ровно на содержание и платёж — но 50 из них стоят на бойце дня
+    ev(ctx, 'STATE.gold = upkeepCost() + DEBT_PLAN[0]; placeBet(0, 50); var r = nextDay()');
     assert.equal(ev(ctx, 'STATE.lost'), undefined);
     assert.equal(ev(ctx, 'r.debt.type'), 'paid');
     assert.equal(ev(ctx, 'STATE.debt.paid'), ev(ctx, 'DEBT_PLAN[0]'));
@@ -102,7 +139,7 @@ module.exports = [
     const first = shown();
     for (let i = 0; i < 5; i++) assert.equal(shown(), first);
     const w = first.split(':')[0] === 'player' ? 0 : 1;
-    ev(ctx, 'STATE.gold = 1000; placeBet(' + w + ', 100); nextDay()');
+    ev(ctx, 'STATE.gold = 1000; placeBet(' + w + ', 100); watchBet(); nextDay()');
     assert.ok(ev(ctx, 'STATE.journal.some(j => j.text.includes("Ставка сыграла"))'));
   } },
 ];
