@@ -1087,6 +1087,7 @@ function battleInfo(B) {
   const players = b.units.filter(u => u.side === 'player');
   return {
     kind: ev.kind || 'arena', win: b.winner === 'player', survived: !!B.survived, size: ev.size, tier: ev.tier, rounds: b.round,
+    eventId: ev.id, training: !!ev.training, boss: ev.boss || null, story: ev.story || null,
     mode: b.mode, surrendered: b.surrendered, flawless: b.winner === 'player' && players.every(u => u.alive),
     playerFallen: players.filter(u => !u.alive).length,
     playerUnits: players.map(u => ({ g: u.g, alive: u.alive, kills: u.kills, crits: u.crits, dmgDealt: u.dmgDealt, abilityUses: u.abilityUses, hpLeftPct: Math.round(u.hp / u.maxHp * 100) })),

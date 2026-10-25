@@ -32,7 +32,7 @@ function debtOnNewDay() {
   if (n.daysLeft === 0) {
     if (STATE.gold < n.amount) {
       const short = n.amount - Math.max(0, STATE.gold);
-      STATE.lost = { day: STATE.day, reason: 'debt', amount: n.amount, holder: d.holder };
+      STATE.lost = { day: STATE.day, reason: 'debt', amount: n.amount, short, holder: d.holder };
       journal(`Срок платежа: ${n.amount} ден. ${debtHolderName()}, а в казне не хватает ${short}. Лудус отобран за долги.`);
       return { type: 'default', amount: n.amount, short };
     }

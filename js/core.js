@@ -357,6 +357,7 @@ function newGame(ludusName = 'Лудус', opts = {}) {
   refreshSmith(); refreshMarket(); generateEvents(); refreshRareShop(true);
   journal(`Вы приобрели лудус и единственного новобранца. Купите ему снаряжение или найдите второго бойца на рынке. С ${SCHOOL_LEVEL}-го уровня бойца можно посвятить в школу.`);
   if (typeof META !== 'undefined') META.init();
+  if (STATE.story) STORY.injectEvents();
   save();
 }
 
@@ -400,7 +401,9 @@ function journal(text) {
 }
 
 const MAX_GLADIATORS = 10;
-const unlockedTiers = () => TIERS.map((t, i) => i).filter(i => STATE.fame >= TIERS[i].fameReq);
+// В истории арены открываются главами (победой над хозяином арены), иначе — славой
+const tierOpen = i => (STATE.story && typeof STORY !== 'undefined' ? STORY.tierOpen(i) : STATE.fame >= TIERS[i].fameReq);
+const unlockedTiers = () => TIERS.map((t, i) => i).filter(tierOpen);
 const maxTier = () => Math.max(...unlockedTiers());
 const upkeepCost = () => STATE.gladiators.length * 4;
 const trainCost = g => 12 + g.level * 6;
@@ -525,6 +528,7 @@ function nextDay() {
   journal(`Наступил день ${STATE.day}. Содержание бойцов: −${cost} денариев.`);
   const debt = STATE.debt && typeof debtOnNewDay === 'function' ? debtOnNewDay() : null;
   if (typeof META !== 'undefined') META.onNewDay();
+  if (STATE.story && typeof STORY !== 'undefined') STORY.onNewDay();
   save();
   return { cost, debt };
 }
