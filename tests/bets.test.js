@@ -82,4 +82,13 @@ module.exports = [
     assert.ok(ev(ctx, 'STATE.meta.ach.bet10'));
     assert.ok(ev(ctx, 'STATE.meta.ach.bet5000'));
   } },
+  { name: 'ставки: выигрыш несмотренной ставки попадает в казну до платежа по долгу', fn: () => {
+    const ctx = loadGame([...DEFAULT_FILES, 'combat', 'bets']);
+    ev(ctx, 'newGame("Т", { story: true }); STATE.day = DEBT_EVERY - 1; STATE.bet = newBet(); STATE.bet.odds = [3, 1.2]');
+    // в казне не хватает на первый платёж и содержание, но ставка на первого бойца закроет разницу
+    ev(ctx, 'STATE.gold = upkeepCost() + 100; placeBet(0, 50); simDuel = () => "player"; var r = nextDay()');
+    assert.equal(ev(ctx, 'STATE.lost'), undefined);
+    assert.equal(ev(ctx, 'r.debt.type'), 'paid');
+    assert.equal(ev(ctx, 'STATE.debt.paid'), ev(ctx, 'DEBT_PLAN[0]'));
+  } },
 ];
