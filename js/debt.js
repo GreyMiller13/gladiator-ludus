@@ -70,5 +70,6 @@ function debtCancel() {
 
 function debtUrgent() {
   const n = debtNext();
-  return !!n && n.daysLeft <= 2 && STATE.gold < n.amount;
+  // до срока ещё спишут содержание бойцов
+  return !!n && n.daysLeft <= 2 && STATE.gold - upkeepCost() * n.daysLeft < n.amount;
 }

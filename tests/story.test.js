@@ -157,6 +157,14 @@ module.exports = [
     ev(ctx, 'newGame("Т"); STORY.init()');
     assert.equal(ev(ctx, 'STATE.story'), undefined);
   } },
+  { name: 'финал в истории открывается только в главе IV', fn: ctx => {
+    story(ctx);
+    toChapter(ctx, 1);
+    ev(ctx, 'STATE.fame = 1000');
+    assert.equal(ev(ctx, 'finalUnlocked()'), false);
+    toChapter(ctx, 3);
+    assert.equal(ev(ctx, 'finalUnlocked()'), true);
+  } },
   { name: 'свободный режим: арены открываются славой', fn: ctx => {
     ev(ctx, 'newGame("Т")');
     ev(ctx, 'STATE.fame = 40');

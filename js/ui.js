@@ -118,7 +118,7 @@ function showDebtLost() {
 
 function debtToast(r) {
   const holder = debtHolderName();
-  if (r.type === 'warn') toast(`Через ${r.daysLeft} ${r.daysLeft === 1 ? 'день' : 'дня'} платёж по долгу: ${r.amount} ден. (${holder}).`, STATE.gold < r.amount);
+  if (r.type === 'warn') toast(`Через ${r.daysLeft} ${r.daysLeft === 1 ? 'день' : 'дня'} платёж по долгу: ${r.amount} ден. (${holder}).`, STATE.gold - upkeepCost() * r.daysLeft < r.amount);
   if (r.type === 'paid') toast(`<img class="toast-face" src="${PORTRAIT.url(STATE.debt.holder, 'pleased', 28)}" alt="">Платёж ${r.amount} ден. внесён. Осталось ${r.left}.`);
   if (r.type === 'cleared') toast('Последний платёж внесён — долг отца уплачен!');
 }
@@ -434,7 +434,7 @@ function screenArena() {
 // Финал игры: открывается при славе FINAL_FAME
 function finalCard() {
   if (STATE.finalWon) return `<div class="panel finalcard won mt"><h3>Рудис свободы получен</h3><p class="small">Ваш лудус победил чемпионов Рима в Колизее (день ${STATE.finalDay}). Игра продолжается — слава не бывает лишней.</p></div>`;
-  if (!finalUnlocked()) return `<div class="locked-tier mt finallock">Финал — «Игры за рудис свободы» в Колизее против трёх легендарных чемпионов — откроется при славе лудуса ${FINAL_FAME} (сейчас ${STATE.fame}).</div>`;
+  if (!finalUnlocked()) return `<div class="locked-tier mt finallock">Финал — «Игры за рудис свободы» в Колизее против трёх легендарных чемпионов — откроется ${STATE.story && STATE.story.chapter < 3 ? 'в главе IV, когда лудус попадёт на игры Императора, и ' : ''}при славе лудуса ${FINAL_FAME} (сейчас ${STATE.fame}).</div>`;
   const ev = finalEvent();
   const sel = ev.id === UI.eventId;
   return `<div class="panel event finalcard ${sel ? 'sel' : ''} ${ev.done ? 'done' : ''}" data-act="${ev.done ? '' : 'pickEvent'}" data-id="${ev.id}">
@@ -810,7 +810,9 @@ function showNewGameDialog() {
 function startNewGame(name, tour, lanista = { portrait: 'm1', sex: 'm' }) {
   try { localStorage.removeItem(SAVE_KEY); localStorage.setItem(TOUR_PREF, tour ? '1' : '0'); } catch (e) { /* хранилище недоступно */ }
   if (UI.battle) closeBattle();
+  if (typeof hideCoach === 'function') hideCoach(); // подсказка прошлой игры не должна остаться на экране
   newGame(name, { story: true, lanista });
+  if (tour) STATE.story.tutorWanted = true; // обучение начнётся и после перезагрузки во время пролога
   STATE.settings = { mode: 'auto' };
   UI.tab = 'ludus'; UI.gladId = null; UI.eventId = null; UI.picked = [];
   $('#modal').innerHTML = '';
@@ -1377,7 +1379,7 @@ function resultsPanel(B) {
       <div class="parts">${parts}</div>
       <div class="chance"><span>Шанс помилования</span><b>${m.total}%</b></div>
       ${m.raw > m.cap ? `<div class="capnote">Сумма факторов ${m.raw}%, но ${v.u.kills ? 'даже лучшим бойцам толпа не даёт гарантий: не более 90%.' : 'не повергнув ни одного противника, нельзя рассчитывать больше чем на 50%.'}</div>` : (!v.u.kills ? '<div class="capnote">Без поверженного противника шанс ограничен 50%.</div>' : '')}
-      <label class="bribe"><input type="checkbox" data-act="bBribe" data-i="${i}" ${v.bribed ? 'checked' : ''} ${canBribe ? '' : 'disabled'}> Подкупить распорядителя игр (${cost} ден., +15%)${useless ? ' — <span class="muted">бесполезно, шанс уже на пределе</span>' : ''}</label>
+      ${B.event.training ? '<div class="capnote">Учебный бой: толпа пощадит бойца в любом случае, подкуп не нужен.</div>' : `<label class="bribe"><input type="checkbox" data-act="bBribe" data-i="${i}" ${v.bribed ? 'checked' : ''} ${canBribe ? '' : 'disabled'}> Подкупить распорядителя игр (${cost} ден., +15%)${useless ? ' — <span class="muted">бесполезно, шанс уже на пределе</span>' : ''}</label>`}
       ${fate}
     </div>`;
   }).join('');

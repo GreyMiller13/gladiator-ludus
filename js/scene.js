@@ -174,6 +174,7 @@ const coachCanAttack = () => { const T = UI.battle && UI.battle.turn; return !!(
 function startTutorial() {
   if (!STATE || !STATE.story) return;
   STATE.story.tutor = { on: true, step: TUTOR_STEPS[0].id, hints: true };
+  delete STATE.story.tutorWanted;
   save();
   UI.gladId = null; renderModal();
   showCoach();
@@ -191,6 +192,7 @@ function endTutorial(done) {
 
 // После загрузки: шаг боя без боя не продолжить — вернуться к выбору учебного боя или к шагам после него
 function resumeTutorial() {
+  if (!tutorState() && STATE && STATE.story && STATE.story.tutorWanted) return startTutorial();
   if (!tutorOn()) return;
   const st = TUTOR_STEPS[coachStepIdx()];
   if (!st) return endTutorial(true);
@@ -198,6 +200,12 @@ function resumeTutorial() {
   // выбранное событие после перезагрузки не сохраняется — снова с перехода на арену
   if (st.id === 'pickTraining' || st.id === 'pickGlad') tutorState().step = 'toArena';
   showCoach();
+}
+
+// Продолжение сохранённой игры: незаконченный эпилог или обучение
+function resumeStory() {
+  if (STATE && STATE.story && STATE.finalWon && !STATE.story.flags.epilogue) return showEnding();
+  resumeTutorial();
 }
 
 // Событие игры: продвинуть обучение, если его ждёт текущий шаг или следующий шаг той же группы

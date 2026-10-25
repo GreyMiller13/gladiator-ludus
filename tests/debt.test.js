@@ -60,6 +60,14 @@ module.exports = [
     assert.deepEqual(plain(ev(ctx, 'nextDay()')), { cost: 0, debt: null });
     assert.equal(ev(ctx, 'STATE.day'), day);
   } },
+  { name: 'счётчик краснеет, если после содержания на платёж не хватит', fn: ctx => {
+    story(ctx);
+    toDay(ctx, 6);
+    ev(ctx, 'STATE.gold = 100 + upkeepCost() - 1');
+    assert.equal(ev(ctx, 'debtUrgent()'), true);
+    ev(ctx, 'STATE.gold = 100 + upkeepCost()');
+    assert.equal(ev(ctx, 'debtUrgent()'), false);
+  } },
   { name: 'повышение округляет до 10', fn: ctx => {
     story(ctx);
     ev(ctx, 'debtRaise(1.2)');

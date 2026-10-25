@@ -77,7 +77,7 @@ function paintMenuBg() {
 
 Object.assign(ACTIONS, {
   // непоказанные сцены из очереди (например, после перезагрузки), затем обучение с того же шага
-  menuContinue: () => { hideMenu(); render(); flushScenes(() => resumeTutorial()); },
+  menuContinue: () => { hideMenu(); render(); flushScenes(() => resumeStory()); },
   menuLost: () => { hideMenu(); render(); showDebtLost(); },
   menuGuide: () => { MENU.guide = true; renderMenu(); $('#menu').scrollTop = 0; },
   menuBack: () => { MENU.guide = false; renderMenu(); },

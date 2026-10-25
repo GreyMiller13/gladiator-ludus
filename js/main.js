@@ -13,7 +13,7 @@
   if (imported && STATE) {
     toast(`Сохранение загружено: ${saveSummary(STATE)}.`);
     if (STATE.lost) showDebtLost();
-    else flushScenes(() => resumeTutorial());
+    else flushScenes(() => resumeStory());
   } else showMenu();
 })();
 

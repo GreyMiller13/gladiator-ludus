@@ -549,7 +549,8 @@ const FINAL_CHAMPIONS = [
   { name: 'Карпофор', cls: 'sagittarius' },
   { name: 'Фламма', cls: 'secutor' },
 ];
-const finalUnlocked = () => STATE.fame >= FINAL_FAME && !STATE.finalWon;
+// в истории финал — часть главы IV: одной славы мало
+const finalUnlocked = () => STATE.fame >= FINAL_FAME && !STATE.finalWon && (!STATE.story || STATE.story.chapter >= 3);
 
 // Финальный бой: три легендарных чемпиона 18-го уровня в мастерском снаряжении с легендарным оружием
 function finalEvent() {
