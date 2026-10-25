@@ -29,6 +29,16 @@ module.exports = [
     ev(ctx, 'STATE.gold = 5000; nextDay()');
     assert.equal(ev(ctx, 'STATE.events.some(e => e.training)'), false);
   } },
+  { name: 'новости задач: выполненная и новая задача', fn: ctx => {
+    story(ctx);
+    assert.deepEqual(plain(ev(ctx, 'STORY.takeNews()')), []);
+    ev(ctx, 'STORY.onBattle({ training: true, win: true, kind: "arena", tier: 0 })');
+    assert.deepEqual(plain(ev(ctx, 'STORY.takeNews()')), [
+      { type: 'done', text: 'Выиграйте учебный бой' },
+      { type: 'new', text: 'Возьмите второго бойца' },
+    ]);
+    assert.deepEqual(plain(ev(ctx, 'STORY.takeNews()')), []);
+  } },
   { name: 'пролог не повторяется после просмотра', fn: ctx => {
     story(ctx);
     ev(ctx, 'STORY.markSeen("prologue"); STORY.queueScene("prologue")');

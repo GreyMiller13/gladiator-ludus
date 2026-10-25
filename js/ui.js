@@ -54,6 +54,7 @@ function render() {
   if (!STATE) return; // игра ещё не начата — на экране главное меню
   renderHeader();
   renderNav();
+  if (typeof renderTaskBar === 'function') renderTaskBar();
   const screens = {
     ludus: screenLudus, arena: screenArena, smith: screenSmith, bazaar: screenBazaar, market: screenMarket, armory: screenArmory, necro: screenNecro, rules: screenRules,
     contracts: () => (typeof META !== 'undefined' ? META.screenContracts() : ''),
@@ -122,6 +123,16 @@ function debtToast(r) {
   if (r.type === 'cleared') toast('Последний платёж внесён — долг отца уплачен!');
 }
 
+// История: отметить выполненные задачи, сообщить о новых, показать накопившиеся сцены
+function storyTick() {
+  if (!STATE || !STATE.story || typeof STORY === 'undefined') return;
+  STORY.update();
+  for (const n of STORY.takeNews()) toast(n.type === 'done' ? `Задача выполнена: ${n.text}` : `Новая задача: ${n.text}`);
+  save();
+  render();
+  flushScenes();
+}
+
 // Конец дня: содержание, платёж по долгу, сцены истории
 function endDay() {
   const { cost, debt } = nextDay();
@@ -133,7 +144,7 @@ function endDay() {
   if (STATE.story && debt) STORY.onDebt(debt);
   render();
   if (STATE.lost) { flushScenes(() => showDebtLost()); return; }
-  flushScenes();
+  storyTick();
   checkGameOver();
 }
 
@@ -1399,6 +1410,7 @@ function closeBattle() {
   UI.tab = 'ludus';
   render();
   checkGameOver();
+  storyTick();
 }
 
 
@@ -1664,6 +1676,7 @@ const ACTIONS = {
     track('recruit', { g });
     sfx('coin');
     toast(`${g.name} теперь в вашем лудусе.`); save(); render();
+    storyTick();
   },
 
   // бой

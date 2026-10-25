@@ -9,7 +9,7 @@ const STORY = (() => {
   const holderName = () => (typeof debtHolderName === 'function' ? debtHolderName() : 'Лукрион');
 
   function create() {
-    return { v: 1, chapter: 0, done: {}, seen: {}, hints: {}, bosses: {}, flags: {}, capuaWins: 0, queue: ['prologue'] };
+    return { v: 1, chapter: 0, done: {}, seen: {}, hints: {}, bosses: {}, flags: {}, capuaWins: 0, queue: ['prologue'], news: [], lastCur: 'train' };
   }
 
   // ------------------------------------------------------------
@@ -118,6 +118,7 @@ const STORY = (() => {
         if (t.check()) {
           st.done[t.id] = STATE.day;
           res.completed.push(view(t, 'done'));
+          news(st, 'done', t.text);
           journal(`Задача выполнена: ${t.text}.`);
         } else if (!t.parallel) blocked = true;
       }
@@ -130,8 +131,20 @@ const STORY = (() => {
       }
       break;
     }
+    const cur = current();
+    if (cur && cur.id !== st.lastCur) news(st, 'new', cur.text);
+    st.lastCur = cur ? cur.id : null;
     injectEvents();
     return res;
+  }
+
+  function news(st, type, text) { (st.news || (st.news = [])).push({ type, text }); }
+  function takeNews() {
+    const st = S();
+    if (!st || !st.news) return [];
+    const n = st.news;
+    st.news = [];
+    return n;
   }
 
   function enterChapter(n) {
@@ -326,7 +339,7 @@ const STORY = (() => {
     create, active, gx, holderName, CHAPTERS, BOSSES, SCENES, NAMES,
     current, tasks, update, enterChapter, tierOpen, lockText,
     bossEvent, trainingEvent, senatorContract, injectEvents, onNewDay, onBattle, onFinalWon, onDebt,
-    queueScene, takeScenes, markSeen, lines,
+    queueScene, takeScenes, markSeen, lines, takeNews,
   };
 })();
 const gx = (m, f) => STORY.gx(m, f);

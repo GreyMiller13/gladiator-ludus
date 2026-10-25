@@ -144,6 +144,24 @@ nav button {
   padding: 12px 14px 14px; color: var(--muted); font-size: 18px; white-space: nowrap;
 }
 nav button:hover:not(:disabled) { color: var(--text); }
+#taskbar { padding: 8px 22px; background: linear-gradient(#120d0a, #100b09); border-bottom: 1px solid var(--seam); }
+#taskbar[hidden] { display: none; }
+.taskline { display: flex; gap: 10px; align-items: baseline; width: 100%; padding: 2px 0; background: none; border: none; box-shadow: none; text-align: left; color: var(--text); font-family: var(--font-body); font-size: 15px; }
+.taskline .tl-ch { font-family: var(--font-head); font-size: 17px; color: var(--bronze-hi); white-space: nowrap; }
+.taskline .tl-t { flex: 1; min-width: 0; }
+.taskline .tl-t i { color: var(--muted); }
+.taskline .tl-more { font-size: 13px; color: var(--muted); text-decoration: underline; text-underline-offset: 3px; white-space: nowrap; }
+.taskline:hover .tl-more { color: var(--bronze-hi); }
+.tasklist { list-style: none; margin: 4px 0 10px; padding: 0; text-align: left; }
+.tasklist li { display: flex; gap: 10px; align-items: center; padding: 7px 4px; border-top: 1px solid var(--seam); }
+.tasklist .mk { width: 16px; text-align: center; color: var(--muted); }
+.tasklist .tx { flex: 1; }
+.tasklist .tx i { color: var(--muted); }
+.tasklist li.done .tx { color: var(--muted); text-decoration: line-through; text-decoration-color: rgba(156,140,120,.5); }
+.tasklist li.done .mk { color: var(--olive); }
+.tasklist li.current .mk, .tasklist li.current .tx { color: var(--bronze-hi); }
+.tasklist li.todo .tx { color: var(--dust); }
+@media (max-width: 560px) { #taskbar { padding: 6px 14px; } .taskline { flex-wrap: wrap; gap: 2px 8px; font-size: 14px; } .taskline .tl-t { flex-basis: 100%; order: 3; } }
 nav button.on { color: var(--bone); }
 nav button.on::after {
   content: ''; position: absolute; left: 6px; right: 6px; bottom: 3px; height: 8px;

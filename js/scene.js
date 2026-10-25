@@ -74,7 +74,39 @@ function sceneKey(e) {
   return true;
 }
 
+// ============================================================
+//  Задачи: строка под шапкой и список задач главы
+// ============================================================
+function renderTaskBar() {
+  const el = $('#taskbar');
+  if (!el) return;
+  if (!STATE || !STATE.story) { el.hidden = true; el.innerHTML = ''; return; }
+  const ch = STORY.CHAPTERS[STATE.story.chapter], t = STORY.current();
+  el.hidden = false;
+  el.innerHTML = `<button class="taskline" data-act="tasksOpen" title="Задачи главы">
+    <span class="tl-ch">${t ? ch.title : 'История завершена'}</span>
+    <span class="tl-t">${t ? `${esc(t.text)}${t.progress ? ` <i>(${esc(t.progress)})</i>` : ''}` : 'свободная игра'}</span>
+    <span class="tl-more">все задачи</span></button>`;
+}
+
+function showTasksDialog() {
+  if (!STATE || !STATE.story) return;
+  const ch = STORY.CHAPTERS[STATE.story.chapter];
+  const mark = { done: '✓', current: '▸', todo: '·' };
+  const rows = STORY.tasks().map(t => `<li class="${t.state}"><span class="mk">${mark[t.state]}</span>
+    <span class="tx">${esc(t.text)}${t.progress && t.state !== 'done' ? ` <i>(${esc(t.progress)})</i>` : ''}</span>
+    ${t.state === 'current' && t.tab ? `<button class="small" data-act="taskGo" data-tab="${t.tab}">Перейти</button>` : ''}</li>`).join('');
+  const n = typeof debtNext === 'function' ? debtNext() : null;
+  showDialog({
+    title: ch.title, cls: 'tasksdlg',
+    body: `<ul class="tasklist">${rows}</ul>${n ? `<p class="small muted">Ближайший платёж: ${n.amount} ден. на ${n.day}-й день (${debtHolderName()}).</p>` : ''}`,
+    ok: 'Закрыть', cancel: false,
+  });
+}
+
 Object.assign(ACTIONS, {
+  tasksOpen: () => showTasksDialog(),
+  taskGo: d => { closeDialog(); ACTIONS.tab(d); },
   sceneNext: () => { if (!sceneOpen()) return; SCENE.i++; if (SCENE.i >= SCENE.lines.length) nextScene(); else showSceneLine(); },
   sceneSkip: () => { if (sceneOpen()) nextScene(); },
 });
