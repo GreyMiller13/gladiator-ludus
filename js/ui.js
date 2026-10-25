@@ -580,12 +580,12 @@ function picker(ev) {
     <h3>Выбор бойцов: ${n} на ${ev.size} · ${ev.kind === 'contract' ? esc(ev.title) : ev.kind === 'final' ? 'Финал' : T.name} (противники ~${avgLvl.toFixed(0)} ур.)</h3>
     <p class="small muted">${note}</p>
     <div class="grid">${cards || '<p class="empty-note">Нет бойцов.</p>'}</div>
-    <div class="modesel">
+    ${ev.training ? '<div class="modesel"><span class="muted small">Учебный бой — только ручное управление: вы сами командуете бойцом.</span></div>' : `<div class="modesel">
       <span>Режим боя:</span>
       <button class="small ${mode === 'auto' ? 'active' : ''}" data-act="setMode" data-m="auto" title="Бойцы расставляются и сражаются сами">Автобой</button>
       <button class="small ${mode === 'manual' ? 'active' : ''}" data-act="setMode" data-m="manual" title="Вы расставляете бойцов и командуете каждым ходом">Ручное управление</button>
       <span class="muted small">${mode === 'manual' ? 'Вы расставите бойцов на поле и будете отдавать приказы каждому. Перейти на автобой можно в любой момент.' : 'Бойцы встанут в строй и будут сражаться сами.'}</span>
-    </div>
+    </div>`}
     ${canGoShort(ev) ? `<label class="modesel shortsel"><input type="checkbox" data-act="pickShort" ${ev.short ? 'checked' : ''}>
       <span>Выйти меньшинством: <b>${ev.size - 1} на ${ev.size}</b></span>
       <span class="muted small">Толпа любит смельчаков: за победу — <b>${winReward({ ...ev, short: true }).gold}</b> ден. и <b>+${winReward({ ...ev, short: true }).fame}</b> славы вместо ${ev.gold} и +${ev.fame}.</span></label>` : ''}
@@ -998,6 +998,8 @@ const findEvent = id => STATE.events.find(e => e.id === id)
   || (STATE.contracts || []).find(e => e.id === id)
   || (STATE.finalEvent && STATE.finalEvent.id === id ? STATE.finalEvent : null);
 const playerCount = ev => ev.playerSize ?? ev.size;
+// учебный бой под обучением: только ручное управление — без автобоя, пропуска и сдачи
+const tutorFight = ev => !!(ev && ev.training && typeof tutorOn === 'function' && tutorOn());
 const battleMode = () => (STATE.settings && STATE.settings.mode) || 'auto';
 const track = (type, data) => { if (typeof META !== 'undefined') META.track(type, data); };
 
@@ -1214,7 +1216,7 @@ function renderTact(B) {
       ${A ? `<button class="small ${T.aim ? 'active' : ''}" data-act="tAbility" ${!abReady || T.busy || u.acted ? 'disabled' : ''} title="${esc(A.desc)}">${A.name}${abReady ? '' : ` (${u.cd})`}</button>` : ''}
       <button class="small" data-act="tDefend" ${T.busy || u.acted ? 'disabled' : ''} title="Остаться на месте и закрыться: −40% урона, +15% уклонения, +20% блока до следующего хода. Клавиша D">Оборона <kbd>D</kbd></button>
       <button class="small ${u.acted || T.confirmEnd ? 'primary' : ''}" data-act="tWait" ${T.busy ? 'disabled' : ''} title="Закончить ход, не тратя оставшиеся шаги. Пробел">${T.confirmEnd ? 'Точно закончить?' : 'Конец хода'} <kbd>␣</kbd></button>
-      <button class="small" data-act="tAuto" ${T.busy ? 'disabled' : ''} title="Дальше бой проведёт ИИ">Автобой</button>
+      ${tutorFight(B.event) ? '' : `<button class="small" data-act="tAuto" ${T.busy ? 'disabled' : ''} title="Дальше бой проведёт ИИ">Автобой</button>`}
     </div>
   </div>`;
 }
@@ -1293,7 +1295,7 @@ function updateBattleHud() {
   const fighting = B.phase === 'fight' && !b.over;
   $('#bCtl').innerHTML = [1, 2, 4].map((s, i) => `<button class="small ${B.speed === s ? 'active' : ''}" data-act="bSpeed" data-s="${s}" title="Клавиша ${i + 1}">×${s} <kbd>${i + 1}</kbd></button>`).join('')
     + soundBtn()
-    + (fighting ? `<button class="small" data-act="bSkip" ${B.view.skip ? 'disabled' : ''}>Пропустить бой</button>${B.bet ? '' : `<button class="small danger" data-act="bSurrender" ${B.surrenderReq ? 'disabled' : ''}>Сдаться</button>`}` : '');
+    + (fighting && !tutorFight(B.event) ? `<button class="small" data-act="bSkip" ${B.view.skip ? 'disabled' : ''}>Пропустить бой</button>${B.bet ? '' : `<button class="small danger" data-act="bSurrender" ${B.surrenderReq ? 'disabled' : ''}>Сдаться</button>`}` : '');
   renderQueue(B);
 }
 
@@ -1897,6 +1899,7 @@ const ACTIONS = {
   },
   bSkip: () => {
     const B = UI.battle;
+    if (!B || tutorFight(B.event)) return;
     if (B.phase === 'deploy') deployDone(B);
     B.autoplay = true; B.view.skip = true;
     if (B.turn && !B.turn.busy) B.turn.run([() => { B.b.aiTurn(B.turn.u); return 'end'; }]);
@@ -1905,7 +1908,7 @@ const ACTIONS = {
   bSkipScenes: () => { const B = UI.battle; B.skipScenes = true; B.view.skip = true; },
   bSurrender: () => {
     const B = UI.battle;
-    if (B.b.over || B.surrenderReq) return;
+    if (!B || B.b.over || B.surrenderReq || tutorFight(B.event)) return;
     askConfirm('Сдаться?', 'Толпа решит судьбу всех ваших бойцов на арене. Стоящие на ногах получат небольшой бонус к помилованию.', () => {
       if (UI.battle !== B || B.b.over) return;
       B.surrenderReq = true;
@@ -1964,7 +1967,7 @@ const ACTIONS = {
   },
   tAuto: () => {
     const B = UI.battle, T = B && B.turn;
-    if (!T || T.busy) return;
+    if (!T || T.busy || tutorFight(B.event)) return;
     B.autoplay = true;
     T.run([() => { B.b.aiTurn(T.u); return 'end'; }]);
   },
