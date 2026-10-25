@@ -92,6 +92,8 @@ class ArenaView {
   // Что под курсором: живой боец (по силуэту) или клетка поля
   // Силуэты в соседних рядах перекрываются: из нескольких бойцов под курсором
   // выбираем доступную цель, затем того, на чьей клетке курсор, затем ближнего к зрителю.
+  // Если курсор над свободной клеткой, куда можно шагнуть (или поставить бойца при расстановке),
+  // а под ним лишь чужая для этой клетки фигура — побеждает клетка: так легко шагнуть на ряд выше.
   pickAt(x, y) {
     const cell = cellAt(x, y);
     const hits = this.fighters.filter(f => {
@@ -103,9 +105,20 @@ class ArenaView {
       const H = this.hl, aim = H.ability || H.targets;
       const rank = f => (aim && aim.has(f.uid) ? 4 : 0) + (cell && f.unit.c === cell.c && f.unit.r === cell.r ? 2 : 0) + f.y / 10000;
       const f = hits.reduce((a, b) => (rank(b) > rank(a) ? b : a));
+      const onOwnCell = cell && f.unit.c === cell.c && f.unit.r === cell.r;
+      if (cell && !onOwnCell && !(aim && aim.has(f.uid)) && this.freeCellFor(cell)) return { uid: null, ...cell };
       return { uid: f.uid, c: f.unit.c, r: f.unit.r };
     }
     return cell ? { uid: null, ...cell } : null;
+  }
+  // Клетка, на которую сейчас можно шагнуть или поставить выбранного бойца
+  freeCellFor(cell) {
+    const H = this.hl;
+    if (H.reach) { const n = H.reach.get(cellKey(cell.c, cell.r)); return !!(n && n.d > 0); }
+    if (H.zone && H.selected) {
+      return H.zone.includes(cell.c) && !this.b.isBlocked(cell.c, cell.r) && !this.b.units.some(u => u.alive && u.c === cell.c && u.r === cell.r);
+    }
+    return false;
   }
   // Переставить бойца (расстановка) — сразу, без анимации
   placeFighter(f, c, r) {
@@ -326,7 +339,8 @@ class ArenaView {
     ctx.save();
     ctx.font = '700 14px "PT Serif", Georgia, serif';
     const w = ctx.measureText(h.text).width + 16;
-    const x = clamp(h.x - w / 2, 6, AW - w - 6), y = h.y;
+    // у нижнего ряда подсказка не должна уходить за край поля
+    const x = clamp(h.x - w / 2, 6, AW - w - 6), y = clamp(h.y, 20, AH - 10);
     ctx.fillStyle = 'rgba(12,8,5,.85)'; ctx.fillRect(x, y - 15, w, 22);
     ctx.strokeStyle = h.color || '#c9a25e'; ctx.lineWidth = 1; ctx.strokeRect(x + 0.5, y - 14.5, w - 1, 21);
     ctx.fillStyle = h.color || '#f0d49c'; ctx.textAlign = 'left'; ctx.fillText(h.text, x + 8, y + 1);

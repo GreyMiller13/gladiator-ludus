@@ -501,16 +501,78 @@ table.gtable th { color: var(--muted); font-weight: 400; font-style: italic; }
 table.gtable.hitt td, table.gtable.hitt th { text-align: center; }
 @media (max-width: 760px) { .guide { grid-template-columns: 1fr; } .gnav { position: static; flex-direction: row; flex-wrap: wrap; } }
 
-/* ---------- Новая игра, эпилог ---------- */
-.modal.reset { max-width: 540px; text-align: center; }
-.modal.reset h2 { color: var(--blood-hi); font-size: 34px; margin-bottom: 8px; }
-.modal.reset input { margin-top: 6px; width: 100%; padding: 7px 10px; background: #120c09; border: 1px solid var(--seam2); color: var(--text); font: inherit; }
-.modal.savebox { max-width: 640px; }
-.savecols { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; text-align: left; }
+/* ---------- Перетаскивание снаряжения ---------- */
+[data-drag] { cursor: grab; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+body.drag-on, body.drag-on * { cursor: grabbing !important; user-select: none; }
+.drag-ghost { position: fixed; left: 0; top: 0; z-index: 1001; width: 60px; height: 60px; pointer-events: none; padding: 4px; background: rgba(18,12,9,.92); border: 1px solid var(--bronze-hi); border-radius: 2px; box-shadow: 0 10px 26px rgba(0,0,0,.7); }
+.drag-ghost img { width: 52px; height: 52px; display: block; }
+[data-drag].dragging { opacity: .45; }
+.drop-ok { outline: 2px dashed rgba(212,170,104,.65); outline-offset: 2px; }
+.drop-ok.drop-hover { outline: 2px solid var(--bronze-hi); background-color: rgba(212,170,104,.1); }
+.dfig.drop-ok canvas { outline-color: var(--bronze-hi); }
+body.drag-on #tip { display: none !important; }
+
+/* ---------- Диалоги: одно оформление для подтверждений, ввода имени, сохранения ---------- */
+#dialog .dlg-bg { z-index: 60; align-items: center; }
+.modal.dlg { max-width: 520px; text-align: center; padding: 24px 28px 22px; border-color: var(--bronze); }
+.modal.dlg::before { content: ''; position: absolute; inset: 5px; border: 1px solid rgba(168,129,74,.22); pointer-events: none; }
+.modal.dlg h2 { color: var(--blood-hi); font-size: 32px; line-height: 1.05; margin-bottom: 10px; text-shadow: 0 2px 0 rgba(0,0,0,.6); }
+.modal.dlg > p { margin: 0 auto 4px; max-width: 44ch; }
+.dlg-field { display: block; margin: 14px 0 0; text-align: left; }
+.dlg-field span { display: block; font-size: 14px; color: var(--muted); font-style: italic; margin-bottom: 5px; }
+.dlg-field input, .modal.dlg input[type="text"] { width: 100%; padding: 8px 11px; background: #120c09; border: 1px solid var(--seam2); border-radius: 2px; color: var(--text); font: inherit; font-size: 17px; }
+.dlg-field input:focus { outline: none; border-color: var(--bronze-hi); box-shadow: 0 0 0 1px var(--bronze-hi); }
+.dlg-check { display: flex; gap: 9px; align-items: center; justify-content: center; margin-top: 14px; font-size: 15px; color: var(--text); cursor: pointer; }
+.dlg-check input { width: 17px; height: 17px; accent-color: var(--blood-hi); }
+.dlg-btns { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 20px; }
+.modal.savebox { max-width: 660px; }
+.savecols { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px; text-align: left; }
 .savecols .panel { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
 .savecols .panel p { flex: 1; margin: 0; }
 .savebox .bad { color: #f08a6e; }
-@media (max-width: 560px) { .savecols { grid-template-columns: 1fr; } }
+@media (max-width: 560px) { .savecols { grid-template-columns: 1fr; } .modal.dlg { padding: 20px 16px 18px; } .modal.dlg h2 { font-size: 27px; } }
+
+/* ---------- Главное меню ---------- */
+#menu { position: fixed; inset: 0; z-index: 55; background: #0d0806; overflow-y: auto; }
+body.menu-on { overflow: hidden; }
+.menu-bg { position: fixed; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 70% 50%; }
+.menu-shade { position: fixed; inset: 0; background: linear-gradient(90deg, rgba(10,5,3,.96) 0%, rgba(10,5,3,.86) 34%, rgba(10,5,3,.25) 64%, rgba(10,5,3,.12) 100%), linear-gradient(0deg, rgba(10,5,3,.7), transparent 40%); }
+.menu-box { position: relative; min-height: 100%; width: min(470px, 100%); padding: 9vh 44px 32px; display: flex; flex-direction: column; align-items: flex-start; }
+.menu-crest .crest { width: 58px; height: 58px; color: var(--blood); }
+.menu-pre { margin-top: 10px; font-size: 18px; color: var(--muted); font-style: italic; }
+.menu-title { font-size: clamp(46px, 7vw, 74px); line-height: .95; color: var(--blood-hi); text-shadow: 0 0 1px #5a0c06, 0 3px 0 rgba(0,0,0,.7); position: relative; padding-bottom: 22px; }
+.menu-title::after { content: ''; position: absolute; left: 0; bottom: 0; width: 260px; height: 20px; background: var(--drips) left top / 220px 20px repeat-x; }
+.menu-sub { color: var(--muted); max-width: 36ch; margin: 18px 0 26px; font-size: 17px; }
+.menu-btns { display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 330px; }
+.menu-btns button { font-size: 21px; padding: 11px 20px; text-align: left; display: flex; flex-direction: column; }
+.menu-btns button small { font-family: var(--font-body); font-size: 13px; letter-spacing: 0; opacity: .8; margin-top: 2px; }
+.menu-foot { margin-top: auto; padding-top: 30px; display: flex; gap: 8px; }
+.menu-box.guide-mode { width: min(1200px, 100%); margin: 0 auto; padding: 24px 26px 40px; background: var(--grain), linear-gradient(170deg, rgba(33,24,19,.97), rgba(19,13,10,.97)); border-left: 1px solid var(--seam2); border-right: 1px solid var(--seam2); }
+.menu-guide-top { margin-bottom: 14px; }
+.menu-box.guide-mode .guide { width: 100%; }
+@media (max-width: 640px) {
+  .menu-box { padding: 7vh 20px 24px; }
+  .menu-bg { object-position: 72% 100%; }
+  .menu-shade { background: linear-gradient(180deg, rgba(10,5,3,.95) 0%, rgba(10,5,3,.86) 55%, rgba(10,5,3,.3) 100%); }
+  .menu-btns { max-width: none; }
+}
+
+/* ---------- Обучение ---------- */
+#tour { position: fixed; inset: 0; z-index: 58; }
+.tour-block { position: fixed; inset: 0; }
+.tour-hole { position: fixed; border-radius: 3px; box-shadow: 0 0 0 9999px rgba(8,4,2,.74); outline: 2px solid var(--bronze-hi); outline-offset: 0; pointer-events: none; transition: left .25s, top .25s, width .25s, height .25s; }
+.tour-hole.none { left: 50%; top: 50%; width: 0; height: 0; outline: none; }
+.tour-card { position: fixed; width: min(400px, calc(100vw - 24px)); padding: 16px 18px 14px; background: var(--grain), linear-gradient(170deg, #241a14, #150e0b); border: 1px solid var(--bronze); border-radius: 2px; box-shadow: 0 18px 50px rgba(0,0,0,.75); }
+.tour-n { font-size: 13px; color: var(--muted); font-style: italic; }
+.tour-card h3 { font-size: 26px; color: var(--blood-hi); margin: 2px 0 6px; }
+.tour-card p { margin: 0; }
+.tour-btns { display: flex; gap: 8px; align-items: center; margin-top: 14px; flex-wrap: wrap; }
+.tour-btns .sp { flex: 1; }
+button.linkish { background: none; border: none; box-shadow: none; padding: 4px 0; font-family: var(--font-body); font-size: 14px; color: var(--muted); text-decoration: underline; text-underline-offset: 3px; }
+button.linkish:hover:not(:disabled) { color: var(--bronze-hi); }
+@media (prefers-reduced-motion: reduce) { .tour-hole { transition: none; } }
+
+/* ---------- Эпилог ---------- */
 .modal.ending { max-width: 700px; text-align: center; border-color: var(--q4); }
 .modal.ending .lat { font-family: var(--font-head); letter-spacing: .25em; color: var(--q4); font-size: 16px; }
 .modal.ending h2 { color: var(--bronze-hi); font-size: 34px; margin: 6px 0 12px; }

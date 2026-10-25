@@ -50,6 +50,8 @@ const plural = (n, a, b, c) => {
 //  Главный рендер
 // ------------------------------------------------------------
 function render() {
+  if (typeof MENU !== 'undefined' && MENU.open) renderMenu();
+  if (!STATE) return; // игра ещё не начата — на экране главное меню
   renderHeader();
   renderNav();
   const screens = {
@@ -71,8 +73,7 @@ function renderHeader() {
       ${res('helm', 'бойцы', `${STATE.gladiators.length}/${MAX_GLADIATORS}`)}
       ${res('sun', 'день', STATE.day)}
       ${soundBtn()}
-      <button class="small" data-act="saveAsk" title="Скачать сохранение в файл или загрузить его на другом устройстве">Сохранение</button>
-      <button class="small" data-act="resetAsk" title="Удалить сохранение и начать сначала">Новая игра</button>
+      <button class="small" data-act="menu" title="Главное меню: сохранение, новая игра, справочник">Меню</button>
       <button class="primary" data-act="nextDay" title="Содержание бойцов: ${upkeepCost()} денариев">Завершить день</button>
     </div>`;
 }
@@ -190,17 +191,17 @@ function renderModal() {
     const it = g.equip[slot];
     const lock = slot === 'offhand' && !it && s.twoHanded && !s.ranged;
     const n = STATE.armory.filter(i => i.slot === slot).length;
-    if (!it) return `<div class="dslot empty ${sel === slot ? 'on' : ''}" data-act="slotSel" data-slot="${slot}" data-tip="${lock ? 'Обе руки заняты двуручным оружием' : `${SLOTS[slot]}: пусто. Нажмите, чтобы выбрать вещь со склада.`}">
+    if (!it) return `<div class="dslot empty ${sel === slot ? 'on' : ''}" data-act="slotSel" data-slot="${slot}" data-drop="slot" data-tip="${lock ? 'Обе руки заняты двуручным оружием' : `${SLOTS[slot]}: пусто. Перетащите сюда вещь со склада или нажмите, чтобы отобрать подходящие.`}">
       <div class="dph">${SLOT_GLYPH[slot]}</div><div class="dtx"><label>${SLOTS[slot]}</label><span class="muted">${lock ? 'двуручное оружие' : 'пусто'}</span>${n ? `<span class="dcount">на складе: ${n}</span>` : ''}</div></div>`;
     const B = ITEM_BASES[it.base];
     const tipTxt = `${it.name} — ${B.artifact ? 'реликвия' : B.rare ? 'редкость' : QUALITIES[it.q].name.toLowerCase()}\n${itemStatsText(it, g.cls)}${itemFits(it, g.cls) ? '\nШкольная выучка: +25%' : ''}\nДля школ: ${B.classes.map(c => CLASSES[c].name).join(', ')}`;
-    return `<div class="dslot ${QUALITIES[it.q].cls} ${B.artifact ? 'relic' : B.rare ? 'rare' : ''} ${sel === slot ? 'on' : ''}" data-act="slotSel" data-slot="${slot}" data-tip="${tipAttrHtml(tipTxt)}">
+    return `<div class="dslot ${QUALITIES[it.q].cls} ${B.artifact ? 'relic' : B.rare ? 'rare' : ''} ${sel === slot ? 'on' : ''}" data-act="slotSel" data-slot="${slot}" data-drag="eq" data-drop="slot" data-tip="${tipAttrHtml(`${tipTxt}\nПеретащите на склад, чтобы снять`)}">
       <img src="${itemIcon(it, 52)}" alt=""><div class="dtx"><label>${SLOTS[slot]}</label><span class="iname ${QUALITIES[it.q].cls}">${esc(it.name)}</span>${itemFits(it, g.cls) ? '<span class="fitbadge">школа</span>' : ''}</div>
       <button class="dx" data-act="unequip" data-slot="${slot}" title="Снять">✕</button></div>`;
   };
   const doll = `<div class="doll">
     <div class="dcol">${['helmet', 'armor', 'arms', 'belt'].map(tile).join('')}</div>
-    <div class="dfig"><canvas id="glPreview" width="230" height="310"></canvas>
+    <div class="dfig" data-drop="fig"><canvas id="glPreview" width="230" height="310"></canvas>
       <div class="pv-btns">
         <button class="small" data-act="pvPlay" data-clips="attack">Удар</button>
         ${C.ability ? `<button class="small" data-act="pvPlay" data-clips="ability">${C.ability.name}</button>` : ''}
@@ -214,7 +215,7 @@ function renderModal() {
   const stash = STATE.armory.filter(i => !sel || i.slot === sel)
     .sort((a, b) => SLOT_KEYS.indexOf(a.slot) - SLOT_KEYS.indexOf(b.slot) || itemFits(b, g.cls) - itemFits(a, g.cls) || b.q - a.q);
   const stashHtml = stash.length
-    ? `<div class="stashgrid">${stash.map(it => itemRow(it, `<button class="small" data-act="equip" data-item="${it.id}">Надеть</button>`, true, g)).join('')}</div>`
+    ? `<div class="stashgrid">${stash.map(it => itemRow(it, `<button class="small" data-act="equip" data-item="${it.id}">Надеть</button>`, true, g, false, `data-drag="st" data-item="${it.id}" data-slot="${it.slot}"`)).join('')}</div>`
     : `<p class="empty-note small">${sel ? `На складе нет вещей для слота «${SLOTS[sel]}».` : 'Склад пуст.'} Снаряжение можно купить у кузнеца или снять с поверженных врагов.</p>`;
   const ab = C.ability;
 
@@ -241,7 +242,7 @@ function renderModal() {
       <div class="gmain">
         <div class="gcolA">
           <div class="panel"><h3>Снаряжение</h3>${doll}</div>
-          <div class="panel stash"><h3>Склад лудуса${sel ? `: ${SLOTS[sel].toLowerCase()} <button class="small" data-act="slotSel" data-slot="">Все слоты</button>` : ' <span class="muted small">нажмите на слот, чтобы отобрать вещи</span>'}</h3><div class="stashbox">${stashHtml}</div></div>
+          <div class="panel stash" data-drop="stash"><h3>Склад лудуса${sel ? `: ${SLOTS[sel].toLowerCase()} <button class="small" data-act="slotSel" data-slot="">Все слоты</button>` : ' <span class="muted small">перетащите вещь на бойца или нажмите на слот, чтобы отобрать подходящие</span>'}</h3><div class="stashbox">${stashHtml}</div></div>
         </div>
         <div class="panel gscroll"><h3>Характеристики</h3>
           ${g.freeAttr ? `<div class="points">Свободных очков: ${g.freeAttr}</div>` : ''}
@@ -263,13 +264,13 @@ function renderModal() {
 }
 
 // Строка предмета. g — боец, для которого показывается выучка (если задан)
-function itemRow(it, actionHtml = '', showSlot = false, g = null, showDesc = false) {
+function itemRow(it, actionHtml = '', showSlot = false, g = null, showDesc = false, attrs = '') {
   const B = ITEM_BASES[it.base];
   const fit = g && itemFits(it, g.cls);
   const qname = B.artifact ? '<span class="relic">Реликвия</span>' : B.rare ? '<span class="rarity">Редкость</span>' : QUALITIES[it.q].name;
   const who = B.classes.map(c => `<span class="${g && g.cls === c ? 'fitname' : ''}">${CLASSES[c].name}</span>`).join(', ');
   const notes = [B.twoHanded ? (B.ranged ? 'двуручное, стрелковое' : 'двуручное') : '', B.needsBow ? 'только с луком' : ''].filter(Boolean).join(', ');
-  return `<div class="item ${QUALITIES[it.q].cls} ${fit ? 'fit' : ''} ${B.artifact ? 'relic' : ''} ${B.rare ? 'rare' : ''}" ${B.desc && !showDesc ? `data-tip="${tipAttrHtml(B.desc)}"` : ''}>
+  return `<div class="item ${QUALITIES[it.q].cls} ${fit ? 'fit' : ''} ${B.artifact ? 'relic' : ''} ${B.rare ? 'rare' : ''}" ${B.desc && !showDesc ? `data-tip="${tipAttrHtml(B.desc)}"` : ''} ${attrs}>
     <img class="iicon" src="${itemIcon(it, 52)}" alt="">
     <div class="ibody"><div class="iname ${QUALITIES[it.q].cls}">${esc(it.name)}${fit ? ' <span class="fitbadge" title="Подходит школе бойца: +25% к характеристикам предмета">школа</span>' : ''}</div>
       <div class="istats">${showSlot ? `${SLOTS[it.slot]} · ` : ''}${qname}${notes ? ` · ${notes}` : ''}. ${itemStatsText(it)}</div>
@@ -580,7 +581,7 @@ function guideChapter(ch) {
     <h3>Ход</h3>
     <ul>
       <li>Порядок ходов — по инициативе (очередь видна над ареной). На своём ходу боец может переместиться (до 2–5 клеток) и совершить одно действие: удар, умение, оборону или ожидание.</li>
-      <li>Шаги можно тратить до действия и после него: подойти на 2 клетки, ударить и отступить на оставшуюся. Тратить шаги не обязательно — «Конец хода» (пробел) оставляет бойца на месте. Клик по своему бойцу ничего не делает, так что промах мимо врага не съест ход. Если боец ещё может ударить, «Конец хода» нужно нажать дважды.</li>
+      <li>Шаги можно тратить до действия и после него: подойти на 2 клетки, ударить и отступить на оставшуюся. Тратить шаги не обязательно — «Конец хода» (пробел) оставляет бойца на месте. Клик по своему бойцу ничего не делает, так что промах мимо врага не съест ход, а если силуэт бойца закрывает клетку позади него, клик по ней всё равно ведёт на эту клетку. Если боец ещё может ударить, «Конец хода» нужно нажать дважды.</li>
       <li><b>Оборона</b> (клавиша D): боец остаётся на месте и до следующего хода получает −40% урона, +15% уклонения и +20% блока.</li>
       <li>Лучнику нужна линия выстрела без высоких препятствий. Стрельба в упор: −20% к точности. Сеть летит на 3 клетки.</li>
       <li><b>Сеть и оглушение</b> отнимают у цели её следующий ход. Если цель уже ходила в этом раунде, она пропустит ход в следующем. Пока боец в сети или оглушён, он не уклоняется, не блокирует и не контратакует.</li>
@@ -597,6 +598,7 @@ function guideChapter(ch) {
     <ul>
       <li>Семь слотов: оружие, вторая рука, шлем, доспех, руки и плечи, поножи и обувь, пояс.</li>
       <li>Качество: ${QUALITIES.map(q => `<span class="${q.cls}">${q.name.toLowerCase()}</span>`).join(', ')}. Характеристики зависят только от вида и качества — два одинаковых предмета всегда равны. С добротного качества появляются дополнительные свойства, у каждого вида свои.</li>
+      <li>Вещи надевают и снимают в окне бойца кнопками или перетаскиванием: со склада на слот или на фигуру бойца — надеть, со слота на склад — снять. На телефоне вещь берут долгим нажатием.</li>
       <li>Любой предмет можно надеть на любого бойца, но <b>школьная выучка</b> (+25% к характеристикам предмета, оружию ещё +5% точности) достаётся только бойцу школы, указанной у предмета.</li>
       <li>Двуручное оружие (галльский меч, секира, луки) занимает обе руки. К луку можно взять колчан.</li>
     </ul>
@@ -660,15 +662,60 @@ function screenBazaar() {
 }
 
 // ------------------------------------------------------------
-//  Начать заново
+//  Диалоги в стиле игры вместо браузерных confirm/prompt.
+//  Живут в #dialog поверх всего (и боя, и окна бойца) — перерисовка экранов их не трогает.
 // ------------------------------------------------------------
-function showResetDialog() {
-  $('#modal').innerHTML = `<div class="modal-bg" data-act="closeModalBg"><div class="modal reset">
-    <h2>Начать новую игру?</h2>
-    <p>Весь текущий прогресс — бойцы, снаряжение, денарии, слава, достижения и некрополь — будет <b>удалён без возможности восстановления</b>.</p>
-    <label class="small muted">Название нового лудуса<br><input id="resetName" type="text" maxlength="28" value="Лудус Батиата"></label>
-    <div class="center mt"><button class="danger" data-act="resetConfirm">Удалить прогресс и начать заново</button> <button data-act="resetCancel">Отмена</button></div>
+function showDialog(o) {
+  UI.dlg = o;
+  const btns = [
+    o.ok !== false ? `<button class="${o.danger ? 'danger' : 'primary'}" data-act="dlgOk">${o.ok || 'Да'}</button>` : '',
+    o.cancel !== false ? `<button data-act="dlgCancel">${o.cancel || 'Отмена'}</button>` : '',
+  ].join('');
+  $('#dialog').innerHTML = `<div class="modal-bg dlg-bg" data-act="dlgBg"><div class="modal dlg ${o.cls || ''}" role="dialog" aria-modal="true" aria-labelledby="dlgTitle">
+    <h2 id="dlgTitle">${o.title}</h2>
+    ${o.text ? `<p>${o.text}</p>` : ''}${o.body || ''}
+    ${o.input ? `<label class="dlg-field"><span>${o.input.label || ''}</span><input id="dlgInput" type="text" maxlength="${o.input.max || 28}" value="${esc(o.input.value || '')}" autocomplete="off"></label>` : ''}
+    ${o.after || ''}
+    <div class="dlg-btns">${btns}</div>
   </div></div>`;
+  // у опасного действия по умолчанию в фокусе «Отмена», чтобы случайный Enter ничего не сломал
+  const f = $('#dlgInput') || (o.danger && $('#dialog [data-act="dlgCancel"]')) || $('#dialog [data-act="dlgOk"]') || $('#dialog [data-act="dlgCancel"]');
+  if (f) { f.focus(); if (f.select) f.select(); }
+  if (o.onShow) o.onShow();
+}
+function closeDialog() { UI.dlg = null; $('#dialog').innerHTML = ''; }
+const askConfirm = (title, text, onOk, opts = {}) => showDialog({ title, text, onOk, ...opts });
+
+// ------------------------------------------------------------
+//  Новая игра
+// ------------------------------------------------------------
+const TOUR_PREF = 'ludus_tutorial';
+function showNewGameDialog() {
+  let tourOn = true;
+  try { tourOn = localStorage.getItem(TOUR_PREF) !== '0'; } catch (e) { /* хранилище недоступно */ }
+  showDialog({
+    title: 'Новая игра',
+    text: STATE
+      ? 'Весь текущий прогресс — бойцы, снаряжение, денарии, слава, достижения и некрополь — будет <b>удалён без возможности восстановления</b>. Чтобы вернуться к нему позже, сначала скачайте файл в «Сохранении».'
+      : 'Вы покупаете захудалую школу гладиаторов. Как назовёте свой лудус?',
+    input: { label: 'Название лудуса', value: 'Лудус Батиата', max: 28 },
+    after: `<label class="dlg-check"><input id="dlgTour" type="checkbox" ${tourOn ? 'checked' : ''}> Пройти обучение — покажем, где что находится</label>`,
+    ok: STATE ? 'Удалить прогресс и начать' : 'Начать игру', danger: !!STATE,
+    onOk: name => startNewGame((name || '').trim().slice(0, 28) || 'Лудус', $('#dlgTour').checked),
+  });
+}
+function startNewGame(name, tour) {
+  try { localStorage.removeItem(SAVE_KEY); localStorage.setItem(TOUR_PREF, tour ? '1' : '0'); } catch (e) { /* хранилище недоступно */ }
+  if (UI.battle) closeBattle();
+  newGame(name);
+  STATE.settings = { mode: 'auto' };
+  UI.tab = 'ludus'; UI.gladId = null; UI.eventId = null; UI.picked = [];
+  $('#modal').innerHTML = '';
+  save();
+  if (typeof hideMenu === 'function') hideMenu();
+  render();
+  if (tour && typeof startTour === 'function') setTimeout(startTour, 60);
+  else toast('Начата новая игра.');
 }
 
 // ------------------------------------------------------------
@@ -679,22 +726,21 @@ const saveSummary = st => `«${esc(st.ludusName || 'Лудус')}», день ${
 
 function showSaveDialog() {
   UI.importState = null;
-  $('#modal').innerHTML = `<div class="modal-bg" data-act="closeModalBg"><div class="modal reset savebox">
-    <h2>Сохранение</h2>
-    <p>Прогресс хранится только в этом браузере. Чтобы играть на другом устройстве или в другом браузере, скачайте файл и загрузите его там.</p>
-    <div class="savecols">
+  showDialog({
+    title: 'Сохранение', cls: 'savebox', ok: false, cancel: 'Закрыть',
+    text: 'Прогресс хранится только в этом браузере. Чтобы играть на другом устройстве или в другом браузере, скачайте файл и загрузите его там.',
+    body: `<div class="savecols">
       <div class="panel"><h3>Скачать</h3>
-        <p class="small muted">Сейчас: ${saveSummary(STATE)}.</p>
-        <button class="primary" data-act="saveExport">Скачать файл сохранения</button></div>
+        <p class="small muted">${STATE ? `Сейчас: ${saveSummary(STATE)}.` : 'Игра ещё не начата — скачивать пока нечего.'}</p>
+        <button class="primary" data-act="saveExport" ${STATE ? '' : 'disabled'}>Скачать файл сохранения</button></div>
       <div class="panel"><h3>Загрузить</h3>
-        <p class="small muted">Прогресс из файла заменит текущий прогресс в этом браузере.</p>
+        <p class="small muted">${STATE ? 'Прогресс из файла заменит текущий прогресс в этом браузере.' : 'Продолжите игру, начатую на другом устройстве.'}</p>
         <button data-act="saveImportPick">Выбрать файл…</button>
         <input id="importFile" type="file" accept=".json,application/json" hidden></div>
     </div>
-    <div id="importPreview"></div>
-    <div class="center mt"><button data-act="resetCancel">Закрыть</button></div>
-  </div></div>`;
-  $('#importFile').addEventListener('change', e => { const f = e.target.files[0]; if (f) readSaveFile(f); e.target.value = ''; });
+    <div id="importPreview"></div>`,
+    onShow: () => $('#importFile').addEventListener('change', e => { const f = e.target.files[0]; if (f) readSaveFile(f); e.target.value = ''; }),
+  });
 }
 
 // Проверка, что в файле действительно сохранение лудуса
@@ -1346,10 +1392,11 @@ const ACTIONS = {
     const g = glad(UI.gladId);
     const cost = respecCost(g);
     if (STATE.gold < cost) return toast('Недостаточно денариев.', true);
-    if (!confirm(`Сбросить специализацию ${g.name} за ${cost} денариев?`)) return;
-    STATE.gold -= cost;
-    g.freeSpec += Object.values(g.perks).reduce((s, r) => s + r, 0);
-    g.perks = {}; save(); render();
+    askConfirm('Сбросить специализацию?', `Навыки школы ${esc(g.name)} будут сброшены, очки специализации вернутся. Цена — ${cost} денариев.`, () => {
+      STATE.gold -= cost;
+      g.freeSpec += Object.values(g.perks).reduce((s, r) => s + r, 0);
+      g.perks = {}; save(); render();
+    }, { ok: `Сбросить за ${cost}` });
   },
   equip: d => {
     const g = glad(UI.gladId);
@@ -1376,12 +1423,13 @@ const ACTIONS = {
     const g = glad(UI.gladId);
     const cost = changeClassCost(g);
     if (STATE.gold < cost) return toast('Недостаточно денариев.', true);
-    if (!confirm(`Сменить школу ${g.name} за ${cost} денариев? Навыки школы будут сброшены, очки специализации вернутся. Снаряжение останется на бойце.`)) return;
-    STATE.gold -= cost;
-    g.freeSpec += Object.values(g.perks).reduce((s, r) => s + r, 0);
-    g.perks = {}; g.cls = null;
-    if (!g.talent) { g.talent = {}; for (const k of ATTR_KEYS) g.talent[k] = 3; }
-    save(); render();
+    askConfirm('Сменить школу?', `${esc(g.name)} покинет свою школу: навыки будут сброшены, очки специализации вернутся, снаряжение останется на бойце. Цена — ${cost} денариев.`, () => {
+      STATE.gold -= cost;
+      g.freeSpec += Object.values(g.perks).reduce((s, r) => s + r, 0);
+      g.perks = {}; g.cls = null;
+      if (!g.talent) { g.talent = {}; for (const k of ATTR_KEYS) g.talent[k] = 3; }
+      save(); render();
+    }, { ok: `Сменить за ${cost}` });
   },
   smithFilter: d => { UI.smithFilter = d.f; render(); },
   slotSel: (d, el, e) => {
@@ -1389,7 +1437,7 @@ const ACTIONS = {
     UI.slotSel = d.slot && UI.slotSel !== d.slot ? d.slot : null;
     renderModal();
   },
-  guide: d => { UI.guide = d.ch; render(); },
+  guide: d => { UI.guide = d.ch; if (typeof MENU !== 'undefined' && MENU.guide) renderMenu(); else render(); },
   openGuide: (d, el, e) => { e.preventDefault(); UI.gladId = null; UI.tab = 'rules'; UI.guide = d.ch; render(); window.scrollTo(0, 0); },
   buyRare: d => {
     const shop = STATE.rareShop;
@@ -1404,8 +1452,18 @@ const ACTIONS = {
     toast(`Куплено: ${it.name}. Предмет на складе.`);
     save(); render();
   },
-  resetAsk: () => showResetDialog(),
+  menu: () => showMenu(),
+  newGameAsk: () => showNewGameDialog(),
   saveAsk: () => showSaveDialog(),
+  dlgOk: () => {
+    const o = UI.dlg;
+    if (!o) return;
+    const inp = $('#dlgInput');
+    if (o.onOk && o.onOk(inp ? inp.value : undefined) === false) { if (inp) inp.focus(); return; }
+    if (UI.dlg === o) closeDialog(); // onOk мог открыть следующий диалог
+  },
+  dlgCancel: () => { const o = UI.dlg; closeDialog(); if (o && o.onCancel) o.onCancel(); },
+  dlgBg: (d, el, e) => { if (e.target === el) ACTIONS.dlgCancel(); },
   saveExport: () => {
     save();
     const data = { game: SAVE_FILE_TAG, version: 1, exported: new Date().toISOString(), state: STATE };
@@ -1426,18 +1484,6 @@ const ACTIONS = {
     // перезагрузка проведёт сохранение через обычную загрузку и миграцию
     try { sessionStorage.setItem('ludus_imported', '1'); } catch (e) { /* не страшно */ }
     location.reload();
-  },
-  resetCancel: () => { $('#modal').innerHTML = ''; UI.gladId = null; },
-  resetConfirm: () => {
-    const name = ($('#resetName')?.value || '').trim().slice(0, 28) || 'Лудус';
-    try { localStorage.removeItem(SAVE_KEY); } catch (e) { /* хранилище недоступно */ }
-    if (UI.battle) closeBattle();
-    newGame(name);
-    STATE.settings = { mode: 'auto' };
-    UI.tab = 'ludus'; UI.gladId = null; UI.eventId = null; UI.picked = [];
-    $('#modal').innerHTML = '';
-    save(); render();
-    toast('Начата новая игра.');
   },
   toggleMusic: () => {
     if (typeof SFX === 'undefined' || !SFX.toggleMusic) return;
@@ -1472,18 +1518,21 @@ const ACTIONS = {
   },
   rename: () => {
     const g = glad(UI.gladId);
-    const n = prompt('Новое имя гладиатора:', g.name);
-    if (n && n.trim()) { g.name = n.trim().slice(0, 24); save(); render(); }
+    showDialog({
+      title: 'Имя гладиатора', input: { label: 'Под этим именем его будет выкликать толпа', value: g.name, max: 24 }, ok: 'Сохранить',
+      onOk: n => { if (!n || !n.trim()) return false; g.name = n.trim().slice(0, 24); save(); render(); },
+    });
   },
   dismiss: () => {
     const g = glad(UI.gladId);
     const price = sellGladPrice(g);
-    if (!confirm(`Продать ${g.name} за ${price} денариев? Снаряжение останется на складе.`)) return;
-    for (const it of Object.values(g.equip)) if (it) STATE.armory.push(it);
-    STATE.gladiators = STATE.gladiators.filter(x => x.id !== g.id);
-    STATE.gold += price;
-    journal(`${g.name} продан работорговцу за ${price} денариев.`);
-    UI.gladId = null; save(); render();
+    askConfirm('Продать бойца?', `${esc(g.name)} покинет лудус, работорговец даст за него ${price} денариев. Снаряжение бойца останется на складе.`, () => {
+      for (const it of Object.values(g.equip)) if (it) STATE.armory.push(it);
+      STATE.gladiators = STATE.gladiators.filter(x => x.id !== g.id);
+      STATE.gold += price;
+      journal(`${g.name} продан работорговцу за ${price} денариев.`);
+      UI.gladId = null; save(); render();
+    }, { ok: `Продать за ${price}`, danger: true });
   },
 
   pickEvent: d => { UI.eventId = +d.id; UI.picked = []; render(); setTimeout(() => $('.picker')?.scrollIntoView({ behavior: 'smooth' }), 30); },
@@ -1551,9 +1600,13 @@ const ACTIONS = {
   bSurrender: () => {
     const B = UI.battle;
     if (B.b.over || B.surrenderReq) return;
-    if (!confirm('Сдаться? Толпа решит судьбу всех ваших бойцов на арене. Стоящие на ногах получат небольшой бонус к помилованию.')) return;
-    B.surrenderReq = true;
-    updateBattleHud();
+    askConfirm('Сдаться?', 'Толпа решит судьбу всех ваших бойцов на арене. Стоящие на ногах получат небольшой бонус к помилованию.', () => {
+      if (UI.battle !== B || B.b.over) return;
+      B.surrenderReq = true;
+      // в ручном бою сдача не ждёт, пока игрок закончит ход
+      if (B.turn && !B.turn.busy) B.turn.finish();
+      updateBattleHud();
+    }, { ok: 'Сдаться', danger: true, cancel: 'Продолжить бой' });
   },
   bBribe: (d, el) => { UI.battle.verdicts[+d.i].bribed = el.checked; renderResults(); },
   bVerdict: () => revealVerdicts(),
@@ -1603,13 +1656,7 @@ const ACTIONS = {
     P.play({ attack, ability: ability ? [ability] : attack, block: [shield ? 'block' : 'parry'], dodge: ['dodge', 'dodgeDuck'], salute: ['salute'] }[d.clips]);
   },
 
-  newGame: () => {
-    const name = prompt('Название вашего лудуса:', 'Лудус Батиата') || 'Лудус';
-    newGame(name.trim().slice(0, 28) || 'Лудус');
-    UI.tab = 'ludus'; UI.gladId = null;
-    $('#modal').innerHTML = '';
-    render();
-  },
+  newGame: () => showNewGameDialog(),
 };
 
 // Всплывающая подсказка для элементов с data-tip
@@ -1637,8 +1684,75 @@ function bindTips() {
   document.addEventListener('click', () => { tip.hidden = true; cur = null; });
 }
 
+// ------------------------------------------------------------
+//  Перетаскивание снаряжения в окне бойца: со склада на бойца и обратно.
+//  Мышью — после сдвига на несколько пикселей, пальцем — после короткого удержания.
+// ------------------------------------------------------------
+function bindDrag() {
+  let D = null;
+  const targetsFor = d => [...document.querySelectorAll(d.kind === 'st'
+    ? `#modal .dslot[data-slot="${d.slot}"], #modal .dfig` : '#modal .panel.stash')];
+  const begin = () => {
+    D.on = true;
+    D.ghost = document.createElement('div'); D.ghost.className = 'drag-ghost';
+    const img = D.el.querySelector('img');
+    if (img) D.ghost.appendChild(img.cloneNode());
+    D.ghost.style.transform = `translate(${D.x - 30}px, ${D.y - 30}px)`;
+    document.body.appendChild(D.ghost);
+    D.el.classList.add('dragging');
+    D.targets = targetsFor(D); D.targets.forEach(t => t.classList.add('drop-ok'));
+    document.body.classList.add('drag-on');
+    const tip = $('#tip'); if (tip) tip.hidden = true;
+  };
+  const targetAt = (d, x, y) => { const el = document.elementFromPoint(x, y); return el && d.targets.find(t => t.contains(el)); };
+  const finish = (d, t) => {
+    d.ghost.remove(); d.el.classList.remove('dragging'); document.body.classList.remove('drag-on');
+    d.targets.forEach(x => x.classList.remove('drop-ok', 'drop-hover'));
+    // клик, который браузер пришлёт после отпускания, не должен сработать по слоту или кнопке
+    const eat = ev => { ev.stopPropagation(); ev.preventDefault(); };
+    window.addEventListener('click', eat, { capture: true, once: true });
+    setTimeout(() => window.removeEventListener('click', eat, { capture: true }), 0);
+    if (!t) return;
+    if (d.kind === 'st') ACTIONS.equip({ item: d.item });
+    else ACTIONS.unequip({ slot: d.slot });
+  };
+  document.addEventListener('pointerdown', e => {
+    if (e.button !== 0 || D) return;
+    const el = e.target.closest('#modal [data-drag]');
+    if (!el || e.target.closest('button')) return;
+    D = { el, id: e.pointerId, x: e.clientX, y: e.clientY, kind: el.dataset.drag, slot: el.dataset.slot, item: el.dataset.item, touch: e.pointerType !== 'mouse', on: false };
+    if (D.touch) D.timer = setTimeout(() => { if (D && !D.on) begin(); }, 280);
+  });
+  document.addEventListener('pointermove', e => {
+    if (!D || e.pointerId !== D.id) return;
+    if (!D.on) {
+      const dist = Math.hypot(e.clientX - D.x, e.clientY - D.y);
+      if (D.touch) { if (dist > 10) { clearTimeout(D.timer); D = null; } return; } // палец повёл — это прокрутка
+      if (dist < 6) return;
+      begin();
+    }
+    e.preventDefault();
+    D.ghost.style.transform = `translate(${e.clientX - 30}px, ${e.clientY - 30}px)`;
+    const t = targetAt(D, e.clientX, e.clientY);
+    D.targets.forEach(x => x.classList.toggle('drop-hover', x === t));
+  }, { passive: false });
+  const end = e => {
+    if (!D || e.pointerId !== D.id) return;
+    clearTimeout(D.timer);
+    const d = D; D = null;
+    if (d.on) finish(d, e.type === 'pointerup' && targetAt(d, e.clientX, e.clientY));
+  };
+  document.addEventListener('pointerup', end);
+  document.addEventListener('pointercancel', end);
+  // пока палец тащит вещь, страница не прокручивается
+  document.addEventListener('touchmove', e => { if (D && D.on) e.preventDefault(); }, { passive: false });
+  document.addEventListener('dragstart', e => { if (e.target.closest && e.target.closest('#modal')) e.preventDefault(); });
+  document.addEventListener('contextmenu', e => { if (D || e.target.closest('#modal [data-drag]')) e.preventDefault(); });
+}
+
 function bindEvents() {
   bindTips();
+  bindDrag();
   document.addEventListener('click', e => {
     const el = e.target.closest('[data-act]');
     if (!el || !el.dataset.act) return;
@@ -1652,6 +1766,13 @@ function bindEvents() {
     if (el && ACTIONS[el.dataset.act]) ACTIONS[el.dataset.act](el.dataset, el, e);
   });
   document.addEventListener('keydown', e => {
+    // открытый диалог перехватывает клавиатуру: Enter — подтвердить, Esc — отмена
+    if (UI.dlg) {
+      if (e.key === 'Escape') { e.preventDefault(); ACTIONS.dlgCancel(); }
+      else if (e.key === 'Enter' && e.target.tagName !== 'BUTTON') { e.preventDefault(); ACTIONS.dlgOk(); }
+      return;
+    }
+    if (typeof tourKey === 'function' && tourKey(e)) return;
     if (e.key === 'Escape' && UI.gladId) ACTIONS.closeModal();
     if (e.key === 'Escape' && UI.battle && UI.battle.turn && UI.battle.turn.aim) { UI.battle.turn.aim = false; UI.battle.turn.refresh(); }
     // ручной бой: пробел — конец хода, D — оборона
