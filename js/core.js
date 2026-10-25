@@ -115,7 +115,7 @@ function createGladiator(cls, level = 1, opts = {}) {
   const g = {
     id: uid(), name: opts.name || randomName(), origin: pick(ORIGINS), cls: CLASSES[cls] ? cls : null, level: 1, xp: 0,
     look: typeof randomLook === 'function' ? randomLook() : null,
-    attrs: {}, freeAttr: 0, freeSpec: 1, perks: {},
+    attrs: {}, freeAttr: 0, freeSpec: 0, perks: {},
     equip: emptyEquip(),
     wounded: 0, foughtToday: false, trainedToday: false,
     fame: 0, record: { wins: 0, losses: 0, kills: 0, fights: 0, spared: 0 },
@@ -182,7 +182,8 @@ function bestClasses(g, n = 3) {
 function levelUp(g, silent = false) {
   g.level++;
   g.freeAttr += 3;
-  g.freeSpec += 1;
+  // очки школы — только с уровня посвящения: на 5-м уровне 1, на 6-м 2 и т. д.
+  if (g.level >= SCHOOL_LEVEL) g.freeSpec += 1;
 }
 
 function addXp(g, amount) {
@@ -384,6 +385,8 @@ function migrateGladiator(g, spare = null) {
   }
   if (g.cls && !CLASSES[g.cls]) g.cls = null;
   if (!g.cls && !g.talent) { g.talent = {}; for (const k of ATTR_KEYS) g.talent[k] = 3; }
+  // раньше очки школы копились с 1-го уровня; у бойца без школы оставляем только заработанные с 5-го
+  if (!g.cls) g.freeSpec = Math.min(g.freeSpec || 0, Math.max(0, g.level - SCHOOL_LEVEL + 1));
 }
 function migrateState() {
   for (const g of STATE.gladiators) migrateGladiator(g, STATE.armory);
