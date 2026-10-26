@@ -61,6 +61,7 @@ function render() {
     glory: () => (typeof META !== 'undefined' ? META.screenAchievements() : ''),
   };
   $('main').innerHTML = screens[UI.tab]();
+  if (UI.tab === 'ludus') paintLudusHero();
   renderModal();
 }
 
@@ -167,6 +168,24 @@ const soundBtn = () => {
 };
 const music = track => { if (typeof SFX !== 'undefined' && SFX.music) SFX.music(track); };
 
+// ------------------------------------------------------------
+//  Масштаб интерфейса: на большом мониторе игра крупнее (zoom корня).
+//  «Авто» подбирает масштаб по размеру окна; выбор хранится в браузере.
+//  Координаты мыши и getBoundingClientRect — в экранных пикселях, а left/top
+//  внутри масштабированной страницы — в пикселях страницы: делим на uiZoom().
+// ------------------------------------------------------------
+const ZOOM_KEY = 'gladiator_ludus_zoom';
+const ZOOM_STEPS = ['auto', '1', '1.25', '1.5', '1.75'];
+const zoomPref = () => { try { return localStorage.getItem(ZOOM_KEY) || 'auto'; } catch (e) { return 'auto'; } };
+const autoZoom = () => clamp(Math.floor(Math.min(window.innerWidth / 1600, window.innerHeight / 900) * 20) / 20, 1, 1.75);
+const uiZoom = () => parseFloat(document.documentElement.style.zoom) || 1;
+function applyZoom() {
+  const p = zoomPref(), z = p === 'auto' ? autoZoom() : +p || 1;
+  document.documentElement.style.zoom = z === 1 ? '' : String(z);
+  document.documentElement.style.setProperty('--z', String(z));
+}
+const zoomBtn = () => `<button class="small sound" data-act="toggleZoom" title="Масштаб интерфейса. «Авто» — по размеру окна">Масштаб: ${zoomPref() === 'auto' ? `авто (${Math.round(uiZoom() * 100)}%)` : `${Math.round(+zoomPref() * 100)}%`}</button>`;
+
 function renderNav() {
   const pts = STATE.gladiators.filter(g => g.freeAttr > 0 || (g.cls && g.freeSpec > 0) || (!g.cls && g.level >= SCHOOL_LEVEL)).length;
   const evs = STATE.events.filter(e => !e.done).length + (finalUnlocked() ? 1 : 0);
@@ -184,6 +203,17 @@ function renderNav() {
 // ------------------------------------------------------------
 //  Лудус
 // ------------------------------------------------------------
+// Мощь: значок у бойца и строка расклада сил у боя
+const POWER_TIP = 'Мощь — оценка силы в бою: сколько урона боец наносит за ход и сколько выдержит, с учётом снаряжения, навыков школы и шагов. У команды мощь складывается. Перевес в 1.25 раза — примерно 3 победы из 4, в 1.5 раза — почти наверняка.';
+const pwBadge = p => `<span class="pw" data-tip="${tipAttrHtml(POWER_TIP)}">мощь <b>${p}</b></span>`;
+function pwLine(ev, team) {
+  if (!STATE.gladiators.length || !ev.enemies || !ev.enemies.length) return '';
+  const n = playerCount(ev), mine = team && team.length ? team : bestTeam(n);
+  const my = teamPower(mine), en = teamPower(ev.enemies), v = powerVerdict(my / Math.max(1, en));
+  const who = team && team.length ? 'выбранные бойцы' : mine.length < n ? `у вас бойцов ${mine.length} из ${n}` : n === 1 ? 'ваш сильнейший' : `ваши ${n} сильнейших`;
+  return `<div class="pwline ${v.cls}" data-tip="${tipAttrHtml(POWER_TIP)}">Мощь: ${who} <b>${my}</b> против <b>${en}</b> — ${v.text}</div>`;
+}
+
 function gladCard(g, opts = {}) {
   const C = clsOf(g);
   const s = computeStats(g);
@@ -198,7 +228,7 @@ function gladCard(g, opts = {}) {
     <div>
       <div class="gname">${esc(g.name)}</div>
       <div class="gsub">${C.name} · ур. ${g.level} · ${esc(g.origin)}</div>
-      <div style="margin-top:4px"><span class="st ${st.key}">${st.text}</span></div>
+      <div style="margin-top:4px"><span class="st ${st.key}">${st.text}</span> ${pwBadge(combatPower(g))}</div>
     </div>
     <div class="gbody">
       <div class="bar" title="Опыт ${g.xp}/${xpToNext(g.level)}"><div style="width:${g.level >= MAX_LEVEL ? 100 : g.xp / xpToNext(g.level) * 100}%"></div></div>
@@ -211,18 +241,95 @@ function gladCard(g, opts = {}) {
 }
 
 function screenLudus() {
-  const list = STATE.gladiators.length
-    ? `<div class="grid">${STATE.gladiators.map(g => gladCard(g)).join('')}</div>`
-    : '<p class="empty-note">В казармах пусто. Купите бойцов на невольничьем рынке.</p>';
+  const gs = STATE.gladiators;
+  // пустые койки: пока бойцов мало, казармы не выглядят пустыми, а подсказывают, где взять новых
+  const free = Math.max(0, Math.min(MAX_GLADIATORS, Math.max(3, gs.length + 1)) - gs.length);
+  const beds = Array.from({ length: free }, () => `<div class="gcard bed" data-act="tab" data-tab="market">
+      <div class="bed-ico">${ICON.helm}</div><div><div class="gname">Свободная койка</div><div class="gsub">Купить бойца на невольничьем рынке</div></div></div>`).join('');
+  const list = `<div class="grid">${gs.map(g => gladCard(g)).join('')}${beds}</div>`;
+  const power = teamPower(bestTeam(3));
   return `
-  <div class="screen-title"><h2>Казармы</h2><p>Нажмите на бойца, чтобы распределить очки, сменить снаряжение или тренировать его.</p></div>
+  <div class="ludus-hero">
+    <canvas class="ludus-bg" aria-hidden="true"></canvas>
+    <div class="lh-text">
+      <span class="lh-pre">лудус</span><h2>${esc(STATE.ludusName)}</h2>
+      <p>День ${STATE.day} · бойцов ${gs.length} из ${MAX_GLADIATORS} · слава ${STATE.fame}${gs.length ? ` · <span data-tip="${tipAttrHtml(`Сумма мощи трёх сильнейших бойцов. ${POWER_TIP}`)}">мощь тройки <b>${power}</b></span>` : ''}</p>
+    </div>
+  </div>
   <div class="two-col">
-    <div>${list}</div>
-    <div class="panel"><h3>Хроника лудуса</h3>
-      <div class="journal">${STATE.journal.map(j => `<p><span class="d">День ${j.day}</span>${j.text}</p>`).join('')}</div>
+    <div>
+      <div class="sec-head"><h3>Казармы</h3><span class="muted small">Нажмите на бойца, чтобы распределить очки, сменить снаряжение или тренировать его.</span></div>
+      ${list}
+    </div>
+    <div class="side-col">
+      ${todayPanel()}
+      <div class="panel"><h3>Хроника лудуса</h3>
+        <div class="journal">${STATE.journal.map(j => `<p><span class="d">День ${j.day}</span>${j.text}</p>`).join('')}</div>
+      </div>
     </div>
   </div>`;
 }
+
+// Дела дня: что можно сделать сегодня — с переходом на нужную вкладку
+function todayPanel() {
+  const gs = STATE.gladiators, ready = gs.filter(canFight);
+  const evs = STATE.events.filter(e => !e.done);
+  const easy = evs.find(e => e.size <= ready.length && teamPower(bestTeam(e.size)) >= 1.25 * teamPower(e.enemies));
+  const cons = (STATE.contracts || []).filter(e => !e.done).length;
+  const train = gs.filter(canTrain);
+  const pts = gs.filter(g => g.freeAttr || (g.cls && g.freeSpec) || (!g.cls && g.level >= SCHOOL_LEVEL));
+  const bet = STATE.bet && STATE.bet.day === STATE.day ? STATE.bet : null;
+  const dn = typeof debtNext === 'function' ? debtNext() : null;
+  const go = (tab, label) => `<button class="small" data-act="tab" data-tab="${tab}">${label}</button>`;
+  const row = (ok, text, btn = '') => `<li class="${ok ? 'ok' : ''}"><span>${text}</span>${btn}</li>`;
+  const rows = [
+    row(ready.length, ready.length ? `Готовы к бою: <b>${ready.length}</b> из ${gs.length}` : gs.length ? 'Сегодня никто не может выйти на бой' : 'В казармах пусто', gs.length ? '' : go('market', 'На рынок')),
+    evs.length ? row(!!easy, `Боёв на арене: <b>${evs.length}</b>${easy ? ' — есть посильный' : ''}`, go('arena', 'На арену')) : '',
+    cons ? row(false, `Заказов: <b>${cons}</b>`, go('contracts', 'К заказам')) : '',
+    bet && !bet.done ? row(bet.pick !== null, bet.pick !== null ? `Ставка на бой дня: <b>${bet.stake}</b>` : 'Бой дня: ставка не сделана', go('arena', 'К ставкам')) : '',
+    pts.length ? row(false, `Есть очки или выбор школы: ${pts.map(g => esc(g.name)).join(', ')}`) : '',
+    train.length ? row(false, `Можно тренировать: ${train.map(g => esc(g.name)).join(', ')}`) : '',
+    dn ? row(STATE.gold >= dn.amount, `Платёж по долгу <b>${dn.amount}</b> ${dn.daysLeft > 0 ? `через ${dn.daysLeft} ${plural(dn.daysLeft, 'день', 'дня', 'дней')}` : 'сегодня'}, в казне ${STATE.gold}`) : '',
+  ].filter(Boolean).join('');
+  return `<div class="panel today"><h3>Дела дня</h3><ul class="today-list">${rows}</ul></div>`;
+}
+
+// Картина над казармами: песок арены и бойцы лудуса. Рисуется один раз на состав и арену, дальше копируется
+const LUDUS_ART = { key: '', cv: null };
+function paintLudusHero() {
+  const cv = $('main canvas.ludus-bg');
+  if (!cv || typeof paintArena !== 'function' || typeof drawFigure !== 'function') return;
+  const tier = clamp(Math.max(...unlockedTiers()), 0, TIERS.length - 1);
+  const team = STATE.gladiators.slice(0, 6);
+  const key = `${tier}|${team.map(g => `${g.id}:${g.cls}:${SLOT_KEYS.map(k => (g.equip[k] ? g.equip[k].base : '')).join(',')}`).join(';')}`;
+  if (LUDUS_ART.key !== key) {
+    // арена целиком, из неё — полоса от нижних трибун до песка; бойцы — в правой части, слева текст
+    const full = document.createElement('canvas');
+    full.width = AW; full.height = AH;
+    const fctx = full.getContext('2d');
+    const crowd = paintArena(fctx, tier);
+    for (const p of crowd) {
+      fctx.fillStyle = CROWD_CLOTH[p.c]; fctx.fillRect(p.x - 2.1 * p.s, p.y - 6.5 * p.s, 4.2 * p.s, 6.5 * p.s);
+      fctx.fillStyle = CROWD_SKIN[p.k]; fctx.fillRect(p.x - 1.5 * p.s, p.y - 9.6 * p.s, 3 * p.s, 3 * p.s);
+    }
+    const off = document.createElement('canvas');
+    off.width = HERO_W; off.height = HERO_H;
+    const ctx = off.getContext('2d');
+    ctx.drawImage(full, 0, 250, AW, HERO_H, 0, 0, HERO_W, HERO_H);
+    const n = team.length, gap = 150, cx = HERO_W * 0.64;
+    team.forEach((g, i) => {
+      ensureLook(g);
+      const x = cx + (i - (n - 1) / 2) * gap, y = HERO_H - 22;
+      ctx.fillStyle = 'rgba(40,22,8,.35)';
+      ctx.beginPath(); ctx.ellipse(x, y, 40, 8, 0, 0, Math.PI * 2); ctx.fill();
+      drawFigure(ctx, figureSpec(g), { ...stancePose(g.cls), ...GUARD }, x, y, { scale: 0.95, facing: x < cx ? 1 : -1 });
+    });
+    LUDUS_ART.key = key; LUDUS_ART.cv = off;
+  }
+  cv.width = HERO_W; cv.height = HERO_H;
+  cv.getContext('2d').drawImage(LUDUS_ART.cv, 0, 0);
+}
+const HERO_W = 1280, HERO_H = 300;
 
 // ------------------------------------------------------------
 //  Модальное окно гладиатора
@@ -305,7 +412,7 @@ function renderModal() {
         <img class="portrait" src="${portrait(g, 64, 80, { bust: true })}" alt="">
         <div>
           <h2>${esc(g.name)}</h2>
-          <div class="muted">${C.name} (${C.latin}) · уровень ${g.level} · ${esc(g.origin)} · <span class="st ${st.key}">${st.text}</span></div>
+          <div class="muted">${C.name} (${C.latin}) · уровень ${g.level} · ${esc(g.origin)} · <span class="st ${st.key}">${st.text}</span> ${pwBadge(combatPower(g))}</div>
           <div class="small muted" style="margin-top:4px;max-width:520px">${C.desc}</div>
           <div style="margin-top:6px;width:260px" title="Опыт"><div class="bar"><div style="width:${g.level >= MAX_LEVEL ? 100 : g.xp / xpToNext(g.level) * 100}%"></div></div>
           <span class="tiny muted">Опыт: ${g.xp} / ${xpToNext(g.level)}</span></div>
@@ -372,25 +479,27 @@ function buildTip(c) {
 }
 
 // Выбор школы для новобранца
+// Выбор школы: подробно — самая подходящая, остальные — короткими строками под кнопкой
 function schoolPicker(g) {
   const ranked = CLASS_KEYS.map(c => ({ c, a: classAptitude(g, c) })).sort((x, y) => y.a - x.a);
   const open = g.level >= SCHOOL_LEVEL;
-  const cards = ranked.map(({ c, a }) => {
-    const C = CLASSES[c];
-    const kit = Object.values(C.start).filter(Boolean).map(b => ITEM_BASES[b].name).join(', ');
-    return `<div class="school ${open ? '' : 'locked'}">
-      <div class="sh">${emblem(c)}<div><b>${C.name}</b> <span class="muted tiny">${C.latin}</span><div class="apt" title="Насколько характеристики бойца подходят школе">${stars(a)}</div></div>
-        ${open ? `<button class="small primary" data-act="chooseClass" data-cls="${c}">Посвятить</button>` : ''}</div>
+  const dedicate = c => (open ? `<button class="small primary" data-act="chooseClass" data-cls="${c}">Посвятить</button>` : '');
+  const best = ranked[0].c, C = CLASSES[best];
+  const kit = Object.values(C.start).filter(Boolean).map(b => ITEM_BASES[b].name).join(', ');
+  const rest = ranked.slice(1).map(({ c, a }) => `<div class="school-row" data-tip="${tipAttrHtml(`${buildTip(c)}\n\n${CLASSES[c].ability.name}: ${CLASSES[c].ability.desc}`)}">
+      ${emblem(c)}<div><b>${CLASSES[c].name}</b> <span class="apt">${stars(a)}</span><div class="tiny muted">Главное: ${attrNames(classBuild(c).main)}</div></div>${dedicate(c)}</div>`).join('');
+  return `${open ? '' : `<div class="points">Школу можно выбрать с ${SCHOOL_LEVEL}-го уровня (сейчас ${g.level}-й). Распределяйте очки с прицелом на неё.</div>`}
+    <div class="tiny muted">Лучше всего подходит по характеристикам:</div>
+    <div class="school ${open ? '' : 'locked'}">
+      <div class="sh">${emblem(best)}<div><b>${C.name}</b> <span class="muted tiny">${C.latin}</span><div class="apt" data-tip="Насколько характеристики бойца подходят школе">${stars(ranked[0].a)}</div></div>${dedicate(best)}</div>
       <div class="small">${C.desc}</div>
-      ${buildHtml(c)}
+      ${buildHtml(best)}
       <div class="tiny"><b>${C.ability.name}:</b> ${C.ability.desc}</div>
       <div class="tiny muted">Снаряжение школы (покупается у кузнеца): ${kit}</div>
-    </div>`;
-  }).join('');
-  return `<p class="small">${TIRO.desc}</p>
-    ${open ? '' : `<div class="points">Школу можно выбрать с ${SCHOOL_LEVEL}-го уровня (сейчас ${g.level}-й). Пока боец сражается тем оружием, что у него есть.</div>`}
-    <p class="small muted">Звёзды показывают, насколько нынешние характеристики бойца подходят школе — распределяйте очки с прицелом на будущую школу. Накоплено очков специализации: <b>${g.freeSpec}</b> — их можно будет вложить сразу после выбора. Снаряжение школа не даёт: его нужно купить или добыть.</p>
-    <div class="schools">${cards}</div>`;
+    </div>
+    <button class="small more-schools" data-act="toggleSchools" aria-expanded="${UI.allSchools ? 'true' : 'false'}">${UI.allSchools ? '▾ Скрыть другие школы' : `▸ Другие школы (${ranked.length - 1})`}</button>
+    ${UI.allSchools ? `<div class="school-rows">${rest}</div>` : ''}
+    <p class="tiny muted">Накоплено очков специализации: <b>${g.freeSpec}</b> — их можно вложить сразу после посвящения. Снаряжение школа не даёт. Все школы подробно — <a href="#" data-act="openGuide" data-ch="ludus">в справочнике</a>.</p>`;
 }
 
 function specTree(g) {
@@ -472,15 +581,14 @@ function betPanel() {
   const { amt, top } = betAmount();
   const canBet = open && top >= BET_MIN;
   const side = i => {
-    const g = F[i], s = computeStats(g), fav = bet.p[i] > bet.p[1 - i];
+    const g = F[i], s = computeStats(g), fav = bet.odds[i] < bet.odds[1 - i];
     return `<div class="bet-side ${bet.pick === i ? 'picked' : ''} ${bet.done && bet.winner === i ? 'won' : ''}">
-      <img class="portrait" src="${portrait(g, 64, 80, { bust: true, enemy: i === 1 })}" alt="">
+      <button class="pbtn" data-act="betInspect" data-i="${i}" data-tip="Подробнее о бойце" aria-label="Подробнее: ${esc(g.name)}"><img class="portrait" src="${portrait(g, 64, 80, { bust: true, enemy: i === 1 })}" alt=""></button>
       <div class="bet-who">
         <b>${esc(g.name)}</b> <span class="muted small">${clsOf(g).name}, ур. ${g.level}</span>
         <div class="tiny muted">Здоровье ${s.maxHp} · урон ${s.dmgMin}–${s.dmgMax} · броня ${s.armor} · уклонение ${s.dodge}%</div>
-        <div class="bet-odds"><span class="bet-pct ${fav ? 'fav' : ''}">${pct(bet.p[i])}</span><span>коэффициент <b>${xOdds(bet.odds[i])}</b></span></div>
+        <div class="bet-odds"><span class="bet-pct ${fav ? 'fav' : ''}">${xOdds(bet.odds[i])}</span><span class="muted small">коэффициент</span></div>
         <div class="bet-btns">
-          <button class="small" data-act="betInspect" data-i="${i}">Подробнее</button>
           ${canBet ? `<button class="small primary" data-act="betPlace" data-i="${i}">Поставить ${amt} → ${Math.round(amt * bet.odds[i])}</button>` : ''}
           ${bet.pick === i ? `<span class="bet-tag">ваша ставка ${bet.stake}</span>` : ''}
           ${bet.done && bet.winner === i ? '<span class="bet-tag won">победитель</span>' : ''}
@@ -506,7 +614,7 @@ function betPanel() {
   }
   return `<div class="panel betpanel mt">
     <div class="eh"><h3>Бой дня: ставки</h3><span class="fmt">1 на 1</span></div>
-    <p class="small muted">Устроитель игр прогнал этот бой ${BET_SIMS} раз и назначил коэффициенты по шансам бойцов, оставив себе свою долю. Одна ставка в день. Ставка играет, только если посмотреть бой: до начала боя её можно отменить, а если завершить день без просмотра — она вернётся в казну.</p>
+    <p class="small muted">Устроитель игр прогнал этот бой ${BET_SIMS} раз и назначил коэффициенты по шансам бойцов, оставив себе свою долю. Нажмите на портрет, чтобы рассмотреть бойца. Одна ставка в день. Ставка играет, только если посмотреть бой: до начала боя её можно отменить, а если завершить день без просмотра — она вернётся в казну.</p>
     <div class="bet-sides">${side(0)}<div class="bet-vs">vs</div>${side(1)}</div>
     ${foot}
   </div>`;
@@ -524,8 +632,9 @@ function showFighterInfo(g) {
     .map(([id, r]) => `<li><b>${PERKS[id].name}</b> ${r}/${PERKS[id].max}</li>`).join('');
   showDialog({
     title: esc(g.name), cls: 'fighter-info', ok: false, cancel: 'Закрыть',
-    body: `<div class="fi-head"><img class="portrait" src="${portrait(g, 64, 80, { bust: true })}" alt=""><div><b>${C.name}</b>${g.cls ? ` <span class="muted tiny">${C.latin}</span>` : ''} · уровень ${g.level} · ${esc(g.origin)}
-        ${C.ability ? `<div class="small"><b>${C.ability.name}:</b> ${C.ability.desc}</div>` : '<div class="small muted">Без школы: ни особого приёма, ни навыков.</div>'}</div></div>
+    body: `<div class="fi-head"><img class="portrait" src="${portrait(g, 64, 80, { bust: true })}" alt=""><div><b>${C.name}</b>${g.cls ? ` <span class="muted tiny">${C.latin}</span>` : ''} · уровень ${g.level} · ${esc(g.origin)} · ${pwBadge(combatPower(g))}
+        ${C.ability ? `<div class="small"><b>${C.ability.name}:</b> ${C.ability.desc}</div>` : '<div class="small muted">Без школы: ни особого приёма, ни навыков.</div>'}
+        ${g.cls ? buildHtml(g.cls) : ''}</div></div>
       <div class="fi-cols">
         <div><h4>Характеристики</h4><div class="fi-kv">${attrs}</div><div class="fi-kv mt">${derived}</div></div>
         <div><h4>Снаряжение</h4>${items.length ? `<div class="list">${items.map(it => itemRow(it, '', true, g)).join('')}</div>` : '<p class="small muted">Без снаряжения.</p>'}
@@ -568,10 +677,14 @@ function finalCard() {
   return `<div class="panel event finalcard ${sel ? 'sel' : ''} ${ev.done ? 'done' : ''}" data-act="${ev.done ? '' : 'pickEvent'}" data-id="${ev.id}">
     <div class="eh"><h3>${ev.done ? 'Финал проигран — чемпионы ждут завтра' : 'Финал: Игры за рудис свободы'}</h3><span class="fmt">3 на 3</span></div>
     <p class="small">Император выставляет трёх величайших гладиаторов Рима. Победа принесёт лудусу вечную славу и завершит историю. Бой смертельный — проигравших судит толпа.</p>
-    <div class="foes">${ev.enemies.map(e => `<div class="foe"><img class="portrait sm" src="${portrait(e, 44, 55, { bust: true, enemy: true })}" alt=""><span><b class="enemy">${esc(e.name)}</b><br><span class="muted small">${clsOf(e).name}, ур. ${e.level}</span></span></div>`).join('')}</div>
+    <div class="foes">${foeRows(ev)}</div>
+    ${ev.done ? '' : pwLine(ev)}
     <div class="reward"><span>Награда <b>${ev.gold}</b> ден.</span><span>Слава <b>+${ev.fame}</b></span></div>
   </div>`;
 }
+
+// Противники боя: нажатие на портрет открывает карточку бойца
+const foeRows = ev => ev.enemies.map((e, i) => `<div class="foe"><button class="pbtn" data-act="foeInfo" data-ev="${ev.id}" data-i="${i}" data-tip="Подробнее о бойце" aria-label="Подробнее: ${esc(e.name)}"><img class="portrait sm" src="${portrait(e, 44, 55, { bust: true, enemy: true })}" alt=""></button><span><b class="enemy">${esc(e.name)}</b><br><span class="muted small">${clsOf(e).name}, ур. ${e.level} · мощь ${combatPower(e)}</span></span></div>`).join('');
 
 function eventCard(ev) {
   const sel = ev.id === UI.eventId;
@@ -580,7 +693,8 @@ function eventCard(ev) {
     <div class="eh"><h3>${title}</h3><span class="fmt">${ev.size} на ${ev.size}</span></div>
     ${ev.training ? '<div class="small ev-note">Без смертей · ручное управление · наставник подскажет</div>' : ''}
     ${ev.boss && !ev.done ? '<div class="small ev-note">Победа откроет следующую арену. Проигранный бой можно повторить завтра.</div>' : ''}
-    <div class="foes">${ev.enemies.map(e => `<div class="foe"><img class="portrait sm" src="${portrait(e, 44, 55, { bust: true, enemy: true })}" alt=""><span><b class="enemy">${esc(e.name)}</b><br><span class="muted small">${clsOf(e).name}, ур. ${e.level}</span></span></div>`).join('')}</div>
+    <div class="foes">${foeRows(ev)}</div>
+    ${ev.done ? '' : pwLine(ev)}
     <div class="reward"><span>Награда <b>${ev.gold}</b> ден.</span><span>Слава <b>+${ev.fame}</b></span></div>
   </div>`;
 }
@@ -601,6 +715,7 @@ function picker(ev) {
   return `<div class="panel picker">
     <h3>Выбор бойцов: ${n} на ${ev.size} · ${ev.kind === 'contract' ? esc(ev.title) : ev.kind === 'final' ? 'Финал' : T.name} (противники ~${avgLvl.toFixed(0)} ур.)</h3>
     <p class="small muted">${note}</p>
+    ${pwLine(ev, UI.picked.map(glad).filter(Boolean))}
     <div class="grid">${cards || '<p class="empty-note">Нет бойцов.</p>'}</div>
     ${ev.training ? '<div class="modesel"><span class="muted small">Учебный бой — только ручное управление: вы сами командуете бойцом.</span></div>' : `<div class="modesel">
       <span>Режим боя:</span>
@@ -706,7 +821,7 @@ const tipStat = {
   crit: s => `Шанс критического удара.\n3% + 0.8 × Мастерство + снаряжение и навыки.`,
   critMult: s => `Во сколько раз крит сильнее обычного удара. Базово ×1.6, больше — от навыков фракийца.`,
   block: s => `Шанс принять удар на щит: урон −60%.\nДаёт щит и навыки. В обороне +20%.\nНе работает, если боец в сети или оглушён. Некоторые удары (выпад, рассекающий удар, прицельный выстрел) не блокируются.`,
-  init: s => `Инициатива: кто ходит раньше в раунде (к ней добавляется случай 0–6) и сколько клеток боец проходит за ход: 2 + инициатива / 5, от 2 до 5.\nСейчас шагов: ${s.move}.`,
+  init: s => `Инициатива: кто ходит раньше в раунде (к ней добавляется случай 0–6) и сколько клеток боец проходит за ход: 1 + инициатива / 4, от 2 до 5 (инициатива 8 — 3 шага, 12 — 4, 16 — 5).\nСейчас шагов: ${s.move}.`,
   resist: s => `Сопротивление: на столько процентов меньше шанс попасть в сеть или под оглушение.\n3% за очко Воли + снаряжение («Стойкость») и навыки. 100% — полная неуязвимость.`,
   reach: s => `Дальность удара в клетках. Обычное оружие — 1 (соседняя клетка, в том числе по диагонали), копьё и трезубец — 2, лук — 6.\nВысокие препятствия закрывают линию выстрела.`,
   stun: s => `Шанс оглушить цель при каждом попадании (булава, секира). Цель пропустит свой следующий ход.`,
@@ -794,7 +909,7 @@ function guideChapter(ch) {
       <tr><td><b>Броня</b></td><td>Сумма брони снаряжения и навыков. Урон × 25 / (25 + броня): 10 брони — −29%, 25 — −50%.</td></tr>
       <tr><td><b>Шанс крита</b></td><td>3% + 0.8 × Мастерство + снаряжение и навыки. Крит: урон × 1.6 (больше с навыками фракийца).</td></tr>
       <tr><td><b>Блок щитом</b></td><td>От щита и навыков. Удар, принятый на щит, наносит лишь 40% урона.</td></tr>
-      <tr><td><b>Инициатива</b></td><td>Ловкость + снаряжение и навыки. Определяет порядок ходов и число шагов: 2 + инициатива / 5 (2–5).</td></tr>
+      <tr><td><b>Инициатива</b></td><td>Ловкость + снаряжение и навыки. Определяет порядок ходов и число шагов: 1 + инициатива / 4, от 2 до 5.</td></tr>
       <tr><td><b>Сопротивление</b></td><td>3 × Воля + «Стойкость» снаряжения + навыки: снижает шанс попасть в сеть или под оглушение.</td></tr>
       <tr><td><b>Дальность</b></td><td>1 клетка — обычное оружие, 2 — копьё и трезубец, 6 — лук.</td></tr>
     </table>
@@ -823,9 +938,11 @@ function guideChapter(ch) {
     <h3>Ход</h3>
     <ul>
       <li>Порядок ходов — по инициативе (очередь видна над ареной). На своём ходу боец может переместиться (до 2–5 клеток) и совершить одно действие: удар, умение, оборону или ожидание.</li>
-      <li>Шаги можно тратить до действия и после него: подойти на 2 клетки, ударить и отступить на оставшуюся. Тратить шаги не обязательно — «Конец хода» (пробел) оставляет бойца на месте. Клик по своему бойцу ничего не делает, так что промах мимо врага не съест ход, а если силуэт бойца закрывает клетку позади него, клик по ней всё равно ведёт на эту клетку. Если боец ещё может ударить, «Конец хода» нужно нажать дважды.</li>
+      <li>Шаги можно тратить до действия и после него: подойти на клетку, ударить и отступить на оставшиеся. Быстрый боец так уходит туда, где медленный его не достанет, — поэтому ловкость решает, кто диктует дистанцию.</li>
+      <li><b>Удар вдогонку.</b> Кто уходит из клетки рядом с противником, получает от него удар в ${Math.round(PARTING_MULT * 100)}% урона (без крита; от него можно уклониться). Не бьют вдогонку стрелки, оглушённые и опутанные сетью. Шаг вдоль противника, когда боец остаётся рядом, удара не вызывает. Подсказка над клеткой предупреждает об ударе вдогонку.</li>
+      <li> Тратить шаги не обязательно — «Конец хода» (пробел) оставляет бойца на месте. Клик по своему бойцу ничего не делает, так что промах мимо врага не съест ход, а если силуэт бойца закрывает клетку позади него, клик по ней всё равно ведёт на эту клетку. Если боец ещё может ударить, «Конец хода» нужно нажать дважды.</li>
       <li><b>Оборона</b> (клавиша D): боец остаётся на месте и до следующего хода получает −40% урона, +15% уклонения и +20% блока.</li>
-      <li>Лучнику нужна линия выстрела без высоких препятствий. Стрельба в упор: −20% к точности. Сеть летит на 3 клетки.</li>
+      <li>Лучнику нужна линия выстрела без высоких препятствий. Стрельба в упор: −20% к точности. Сагиттарий бьёт из лука на ${Math.round(SAG_BONUS * 100)}% сильнее прочих стрелков. Сеть летит на 3 клетки.</li>
       <li><b>Сеть и оглушение</b> отнимают у цели её следующий ход. Если цель уже ходила в этом раунде, она пропустит ход в следующем. Пока боец в сети или оглушён, он не уклоняется, не блокирует и не контратакует.</li>
       <li>Сагиттария не достают встречные удары и контратаки. Гопломах встречает подходящих врагов ударом копья раньше, чем они ударят.</li>
     </ul>
@@ -869,7 +986,7 @@ function guideChapter(ch) {
     <h3>Бой меньшинством</h3>
     <p>На обычный бой арены 2 на 2 или 3 на 3 можно выйти на одного бойца меньше — отметьте это при выборе бойцов. Награда за победу (денарии и слава) — <b>×${SHORT_MULT}</b>. Учебный бой и бои с хозяевами арен — только поровну.</p>
     <h3>Ставки на бой дня</h3>
-    <p>Каждый день на арене проходит один бой 1 на 1 между чужими бойцами текущей арены. Их снаряжение, характеристики, школу и навыки можно посмотреть заранее. Устроитель игр прогоняет бой ${BET_SIMS} раз и по шансам назначает коэффициенты, оставляя себе ${Math.round(BET_MARGIN * 100)}%: у слабого бойца коэффициент выше. Ставка — от ${BET_MIN} с шагом ${BET_STEP}, предел растёт с ареной: ${BET_MAX.join(' / ')} денариев (Помпеи / Капуя / Рим / Колизей). Выигрыш — ставка × коэффициент. Устроитель подбирает бойцов почти равных по силе: шансы обычно от ${Math.round((0.5 - BET_BAND) * 100)} до ${Math.round((0.5 + BET_BAND) * 100)}%. Одна ставка в день.</p>
+    <p>Каждый день на арене проходит один бой 1 на 1 между чужими бойцами текущей арены. Их снаряжение, характеристики, школу и навыки можно посмотреть заранее. Устроитель игр прогоняет бой ${BET_SIMS} раз и по шансам назначает коэффициенты, оставляя себе ${Math.round(BET_MARGIN * 100)}%: у слабого бойца коэффициент выше. Ставка — от ${BET_MIN} с шагом ${BET_STEP}, предел растёт с ареной: ${BET_MAX.join(' / ')} денариев (Помпеи / Капуя / Рим / Колизей). Выигрыш — ставка × коэффициент. Устроитель подбирает бойцов почти равных по силе, так что исход угадать непросто; шансы не показываются — только коэффициенты. Одна ставка в день.</p>
     <ul>
       <li>Ставка играет, только если посмотреть бой: кнопка «Смотреть бой» на арене.</li>
       <li>Пока бой не начался, ставку можно отменить — деньги вернутся, и можно поставить заново.</li>
@@ -896,6 +1013,12 @@ function guideChapter(ch) {
       ${CLASS_KEYS.map(c => { const b = classBuild(c); return `<tr><td><b>${CLASSES[c].name}</b></td><td>${attrNames(b.main)}</td><td>${attrNames(b.useful) || '—'}</td><td>${attrNames(b.low) || '—'}</td></tr>`; }).join('')}
     </table>
     <ul>${CLASS_KEYS.map(c => `<li><b>${CLASSES[c].name}</b> — ${CLASSES[c].desc} ${CLASSES[c].build}</li>`).join('')}</ul>
+    <h3>Мощь и расклад сил</h3>
+    <ul>
+      <li><b>Мощь</b> — оценка силы бойца в бою: сколько урона он наносит за ход и сколько выдержит, с учётом снаряжения, навыков школы, шагов и длинного оружия. Новобранец 1-го уровня — около 100, чемпионы Колизея — больше тысячи. Мощь видна на карточках бойцов, у противников и в окне бойца.</li>
+      <li>У команды мощь складывается. У каждого боя показано, как ваши сильнейшие (а при выборе — выбранные) бойцы соотносятся с противниками: «перевес за вами» — от 1.25 раза, «силы равны» — около 1, «почти без шансов» — меньше 0.8. Перевес в 1.25 раза — примерно 3 победы из 4, в 1.5 раза — почти наверняка. Это оценка, а не приговор: удача и тактика решают многое.</li>
+      <li><b>Посильный бой.</b> Каждый день на младшей из открытых арен есть хотя бы один бой, где ваши сильнейшие бойцы мощнее противников в ${EASY_RATIO} раза: противники там младше и хуже снаряжены.</li>
+    </ul>
     <h3>Развитие</h3>
     <ul>
       <li>За каждый уровень — 3 очка атрибутов, а с 5-го уровня — ещё 1 очко специализации: на 5-м уровне у бойца 1 очко, на 6-м — 2 и так далее. Если школу выбрать позже, накопленные с 5-го уровня очки достанутся ей сразу.</li>
@@ -1230,7 +1353,12 @@ function playerTurn(B, u) {
       }
       if (!f && u.mpLeft > 0 && T.o.reach) {
         const n = T.o.reach.get(cellKey(hv.c, hv.r));
-        if (n && n.d > 0) { const p = cellPos(n.c, n.r); return { text: `Шагов: ${n.d}`, x: p.x, y: p.y + 24, color: '#bcd6ee' }; }
+        if (n && n.d > 0) {
+          const p = cellPos(n.c, n.r);
+          // уход от соседнего противника: он ударит вдогонку
+          const parting = b.enemiesOf(u).filter(e => cheb(u, e) === 1 && cheb(n, e) > 1 && b.free(e) && !e.s.ranged).length;
+          return { text: `Шагов: ${n.d}${parting ? ` · удар вдогонку${parting > 1 ? ` ×${parting}` : ''}` : ''}`, x: p.x, y: p.y + 24, color: parting ? '#f0c08a' : '#bcd6ee' };
+        }
       }
       return null;
     };
@@ -1832,6 +1960,12 @@ const ACTIONS = {
     SFX.toggleMusic();
     render(); if (UI.battle) updateBattleHud();
   },
+  toggleZoom: () => {
+    const next = ZOOM_STEPS[(ZOOM_STEPS.indexOf(zoomPref()) + 1) % ZOOM_STEPS.length];
+    try { if (next === 'auto') localStorage.removeItem(ZOOM_KEY); else localStorage.setItem(ZOOM_KEY, next); } catch (e) { /* хранилище недоступно */ }
+    applyZoom();
+    if (typeof MENU !== 'undefined' && MENU.open) renderMenu();
+  },
   toggleSound: () => {
     if (typeof SFX === 'undefined') return;
     SFX.toggleMute();
@@ -1912,7 +2046,13 @@ const ACTIONS = {
     save(); toast(`Ставка отменена: ${back} денариев вернулись в казну.`);
     const y = window.scrollY; render(); window.scrollTo(0, y);
   },
+  toggleSchools: () => { UI.allSchools = !UI.allSchools; renderModal(); },
   betInspect: d => { const bet = STATE.bet; if (bet) showFighterInfo([bet.a, bet.b][+d.i]); },
+  foeInfo: d => {
+    const ev = findEvent(+d.ev) || (typeof STORY !== 'undefined' && STATE.events.find(e => e.id === +d.ev));
+    const g = ev && ev.enemies[+d.i];
+    if (g) { ensureLook(g); showFighterInfo(g); }
+  },
   betWatch: () => startBetBattle(),
 
   buyItem: d => {
@@ -1924,6 +2064,7 @@ const ACTIONS = {
     sfx('coin');
     toast(`Куплено: ${it.name} (${QUALITIES[it.q].name.toLowerCase()}). Предмет на складе.`);
     save(); render();
+    coach('boughtItem', it);
   },
   sellItem: d => {
     const idx = STATE.armory.findIndex(i => i.id === +d.item);
@@ -1943,6 +2084,7 @@ const ACTIONS = {
     track('recruit', { g });
     sfx('coin');
     toast(`${g.name} теперь в вашем лудусе.`); save(); render();
+    coach('boughtGlad', g);
     storyTick();
   },
 
@@ -2053,7 +2195,8 @@ function bindTips() {
     let x = e.clientX + 14, y = e.clientY + 16;
     if (x + r.width > window.innerWidth - 8) x = e.clientX - r.width - 14;
     if (y + r.height > window.innerHeight - 8) y = e.clientY - r.height - 12;
-    tip.style.left = x + 'px'; tip.style.top = y + 'px';
+    const z = uiZoom();
+    tip.style.left = x / z + 'px'; tip.style.top = y / z + 'px';
   };
   document.addEventListener('mouseover', e => {
     const el = e.target.closest('[data-tip]');
@@ -2080,7 +2223,7 @@ function bindDrag() {
     D.ghost = document.createElement('div'); D.ghost.className = 'drag-ghost';
     const img = D.el.querySelector('img');
     if (img) D.ghost.appendChild(img.cloneNode());
-    D.ghost.style.transform = `translate(${D.x - 30}px, ${D.y - 30}px)`;
+    D.ghost.style.transform = `translate(${D.x / uiZoom() - 30}px, ${D.y / uiZoom() - 30}px)`;
     document.body.appendChild(D.ghost);
     D.el.classList.add('dragging');
     D.targets = targetsFor(D); D.targets.forEach(t => t.classList.add('drop-ok'));
@@ -2115,7 +2258,7 @@ function bindDrag() {
       begin();
     }
     e.preventDefault();
-    D.ghost.style.transform = `translate(${e.clientX - 30}px, ${e.clientY - 30}px)`;
+    D.ghost.style.transform = `translate(${e.clientX / uiZoom() - 30}px, ${e.clientY / uiZoom() - 30}px)`;
     const t = targetAt(D, e.clientX, e.clientY);
     D.targets.forEach(x => x.classList.toggle('drop-hover', x === t));
   }, { passive: false });

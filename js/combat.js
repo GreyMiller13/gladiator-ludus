@@ -45,8 +45,9 @@ const cheb = (a, b) => Math.max(Math.abs(a.c - b.c), Math.abs(a.r - b.r));
 const DIRS8 = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]];
 const isHigh = type => !!(OBSTACLES[type] && OBSTACLES[type].high);
 
-// Шаги по полю и дальность удара
-const moveOf = s => clamp(2 + Math.floor(s.init / 5), 2, 5);
+const PARTING_MULT = 0.5; // удар вдогонку тому, кто выходит из ближнего боя
+
+// Дальность удара (шаги по полю — moveOf в core.js)
 function reachOf(g) {
   const w = g.equip && g.equip.weapon;
   if (!w) return 1;
@@ -368,9 +369,21 @@ class Battle {
     const node = this.reachable(u).get(cellKey(c, r));
     if (!node || (c === u.c && r === u.r)) return false;
     const path = this.pathOf(node);
+    this.parting(u, node);
+    if (!u.alive || this.over) { u.mpLeft = 0; this.checkEnd(); return true; }
     u.c = c; u.r = r; u.mpLeft -= node.d;
     this.ev({ t: 'move', u: u.uid, path });
     return true;
+  }
+  // Удар вдогонку: кто уходит от соседнего противника, получает от него удар в полсилы
+  // (если тот бьёт врукопашную и не обездвижен). Остаться рядом — без удара
+  parting(u, dest) {
+    for (const f of this.enemiesOf(u)) {
+      if (!u.alive) return;
+      if (cheb(u, f) !== 1 || cheb(dest, f) <= 1 || !this.free(f) || f.s.ranged) continue;
+      this.say(`${this.nm(f)} бьёт вдогонку отходящему ${this.nm(u)}.`, 'skill');
+      this.strike(f, u, { mult: PARTING_MULT, noCounter: true, noCrit: true, kind: 'counter' });
+    }
   }
   finishAct() { this.checkEnd(); }
   cmdAttack(u, t) {
@@ -486,6 +499,12 @@ class Battle {
       if (best.type === 'ability') this.doAbility(u, best.f);
       else this.doAttack(u, best.f);
       this.checkEnd();
+      // боец ближнего боя после удара отходит, если на оставшиеся шаги можно уйти туда, где его не достанут
+      if (!ranged && u.alive && !this.over && u.mpLeft > 0 && this.danger(u, u) > 0) {
+        let safe = null;
+        for (const n of this.reachable(u).values()) if (!this.danger(u, n) && (!safe || n.d < safe.d)) safe = n;
+        if (safe) this.moveTo(u, safe);
+      }
       // лучник отходит на оставшиеся шаги подальше от бойцов ближнего боя
       if (ranged && u.alive && !this.over && u.mpLeft > 0 && this.danger(u, u) > 0) {
         let safe = null;
@@ -513,6 +532,8 @@ class Battle {
   moveTo(u, node) {
     if (node.c === u.c && node.r === u.r) return;
     const path = this.pathOf(node);
+    this.parting(u, node);
+    if (!u.alive || this.over) { u.mpLeft = 0; this.checkEnd(); return; }
     u.c = node.c; u.r = node.r; u.mpLeft = Math.max(0, u.mpLeft - node.d);
     this.ev({ t: 'move', u: u.uid, path });
   }

@@ -626,10 +626,7 @@ const META = (() => {
     const D = DIFFICULTY[c.difficulty] || DIFFICULTY[0];
     const art = c.artifact && ITEM_BASES[c.artifact];
     const sel = typeof UI !== 'undefined' && UI && UI.eventId === c.id;
-    const foes = (c.enemies || []).map(e => {
-      const img = typeof portrait === 'function' ? `<img class="portrait sm" src="${portrait(e, 44, 55, { bust: true, enemy: true })}" alt="">` : '';
-      return `<div class="foe">${img}<span><b class="enemy">${escH(e.name)}</b><br><span class="muted small">${clsOf(e).name}, ур. ${e.level}</span></span></div>`;
-    }).join('');
+    const foes = typeof foeRows === 'function' ? foeRows({ ...c, enemies: c.enemies || [] }) : '';
     const outcome = c.done
       ? `<div class="m-outcome ${c.success ? 'ok' : 'fail'}">${c.success ? 'Выполнен' : 'Провален'}${c.result ? ` · ${c.result.gold} ден.` : ''}</div>` : '';
     return `<div class="panel event contract ${c.story ? 'storyc' : ''} ${art ? 'legend' : ''} ${sel ? 'sel' : ''} ${c.done ? 'done' : ''}" data-act="${c.done ? '' : 'pickEvent'}" data-id="${c.id}">
@@ -638,6 +635,7 @@ const META = (() => {
       <div class="small m-desc">${escH(c.desc)}</div>
       <div class="m-cond"><span class="m-lbl">Условие</span>${escH(c.cond ? c.cond.text : 'Победить')}</div>
       <div class="foes">${foes}</div>
+      ${!c.done && typeof pwLine === 'function' ? pwLine(c) : ''}
       <div class="small muted m-heads">Ваших бойцов: <b>${c.playerSize}</b>${c.playerSize < c.size ? ' — в меньшинстве' : ''} · бой не насмерть</div>
       <div class="reward"><span>Плата <b>${c.gold}</b> ден.</span>${c.fame ? `<span>Слава <b>+${c.fame}</b></span>` : ''}<span>Опыт <b>×${c.xpMult}</b></span></div>
       ${art ? `<div class="m-artline">Реликвия: <b class="q4">${escH(art.name)}</b> <span class="tiny muted">(${SLOTS[art.slot].toLowerCase()})</span></div>` : ''}

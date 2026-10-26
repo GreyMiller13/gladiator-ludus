@@ -157,21 +157,39 @@ const TUTOR_STEPS = [
   { id: 'attrs', g: 'after', lock: true, back: 'lvlGlad', sel: '#modal .attrs-panel', wait: 'attrSpent', accept: d => d === 0, skip: () => !(tutorGlad() && tutorGlad().freeAttr),
     text: 'Каждый уровень даёт 3 очка характеристик. Раздай их кнопками «+». Сила — урон, ловкость — уклонение, выносливость — здоровье, мастерство — точность, воля — милость толпы. Знак ◆ отмечает главные для будущей школы. Наведи на название, чтобы узнать больше.' },
   { id: 'school', g: 'after', modal: true, back: 'lvlGlad', sel: '#modal .school-panel', wait: 'next',
-    text: () => `С ${SCHOOL_LEVEL}-го уровня бойца посвящают в школу: мирмиллон, ретиарий и другие. Звёзды показывают, к какой он годится лучше, а под каждой школой написано, какие характеристики ей нужны, — раздавай очки с прицелом на неё. После посвящения каждый уровень даёт очко на умения школы: первая ступень открыта сразу, следующие — на ${TIER_LEVEL[2]}, ${TIER_LEVEL[3]} и ${TIER_LEVEL[4]}-м уровнях.` },
+    text: () => `С ${SCHOOL_LEVEL}-го уровня бойца посвящают в школу: мирмиллон, ретиарий и другие. Здесь показана школа, к которой он годится лучше всего, и какие характеристики ей нужны; остальные — под кнопкой «Другие школы». Раздавай очки с прицелом на выбранную школу. После посвящения каждый уровень даёт очко на умения школы: первая ступень открыта сразу, следующие — на ${TIER_LEVEL[2]}, ${TIER_LEVEL[3]} и ${TIER_LEVEL[4]}-м уровнях.` },
   { id: 'closeGlad2', g: 'after', lock: true, back: 'lvlGlad', sel: '#modal [data-act="closeModal"]', wait: 'modalClosed',
     text: 'Закрой окно бойца.' },
   { id: 'toSmith', g: 'after', lock: true, sel: 'nav [data-tab="smith"]', wait: 'tab:smith',
-    text: 'Гладиус отца стар и туп. Загляни к кузнецу.' },
-  { id: 'smith', g: 'after', modal: true, sel: 'main .screen-title', wait: 'next',
+    text: 'Одного бойца мало, а рабов на рынке продают безоружными. Сначала — к кузнецу.' },
+  { id: 'smith', g: 'after', modal: true, tab: 'smith', sel: 'main .screen-title', wait: 'next', enter: () => tutorFund(),
     text: 'Оружие и доспехи. Вещь своей школы даёт бойцу +25% к её характеристикам. Купленное ложится на склад — надень в окне бойца или перетащи на него.' },
+  { id: 'buyItem', g: 'after', lock: true, scroll: true, tab: 'smith', wait: 'boughtItem', skip: () => tutorHas('item') || !tutorPicks().item,
+    sel: () => `main [data-act="buyItem"][data-item="${(tutorPicks().item || {}).id}"]`,
+    accept: d => { tutorState().item = d.id; return true; },
+    text: () => { const it = tutorPicks().item; return it ? `Купи «${it.name}» за ${it.price} — им вооружим нового бойца.` : 'Купи что-нибудь.'; } },
   { id: 'toMarket', g: 'after', lock: true, sel: 'nav [data-tab="market"]', wait: 'tab:market',
-    text: 'Одного бойца мало. Загляни на невольничий рынок.' },
-  { id: 'market', g: 'after', modal: true, sel: 'main .screen-title', wait: 'next',
-    text: 'Смотри на склонности: от них зависит, к какой школе новобранец подойдёт лучше. Второй боец — твоя следующая задача.' },
+    text: 'Теперь — сам боец. Загляни на невольничий рынок.' },
+  { id: 'market', g: 'after', modal: true, tab: 'market', sel: 'main .screen-title', wait: 'next',
+    text: 'Смотри на склонности: от них зависит, к какой школе новобранец подойдёт лучше. Наведи на название школы под рабом — увидишь, какие характеристики ей нужны.' },
+  { id: 'buyGlad', g: 'after', lock: true, scroll: true, tab: 'market', wait: 'boughtGlad', skip: () => tutorHas('glad') || !tutorPicks().glad,
+    sel: () => `main [data-act="buyGlad"][data-id="${(tutorPicks().glad || {}).id}"]`,
+    accept: d => { tutorState().glad = d.id; return true; },
+    text: () => { const g = tutorPicks().glad; return g ? `Для начала хватит и самого дешёвого: купи ${g.name} за ${g.price}.` : 'Купи бойца.'; } },
+  { id: 'toLudus', g: 'after', lock: true, sel: 'nav [data-tab="ludus"]', wait: 'tab:ludus', skip: () => !tutorHas('glad'),
+    text: 'Новичок уже в казармах. Вернись в лудус.' },
+  { id: 'newGlad', g: 'after', lock: true, tab: 'ludus', wait: 'openGlad', skip: () => !tutorHas('glad'),
+    sel: () => `main .gcard[data-id="${tutorState().glad}"]`,
+    text: 'Открой карточку нового бойца.' },
+  { id: 'equipNew', g: 'after', lock: true, back: 'newGlad', wait: 'equipped', skip: () => !tutorNewItem() || tutorNewItemOn(),
+    sel: () => { const it = tutorNewItem(); return it ? `#modal .stash [data-item="${it.id}"], #modal .dslot[data-slot="${it.slot}"]` : '#modal .doll'; },
+    text: () => { const it = tutorNewItem(); return `Купленное лежит на складе лудуса. Перетащи «${it ? it.name : 'вещь'}» на бойца или нажми «Надеть».`; } },
+  { id: 'closeGlad3', g: 'after', lock: true, back: 'newGlad', sel: '#modal [data-act="closeModal"]', wait: 'modalClosed', skip: () => !tutorHas('glad'),
+    text: 'Теперь у тебя двое, и оба вооружены. Закрой окно бойца.' },
   { id: 'toBets', g: 'after', lock: true, sel: 'nav [data-tab="arena"]', wait: 'tab:arena',
     text: 'Напоследок — трибуны. Вернись на арену.' },
   { id: 'bets', g: 'after', modal: true, tab: 'arena', sel: 'main .betpanel', wait: 'next',
-    text: `Бой дня: два чужих бойца, почти равных по силе. «Подробнее» покажет их снаряжение и навыки. Выбери сумму — от ${BET_MIN} с шагом ${BET_STEP} — и нажми «Поставить» у своего бойца; выигрыш — ставка × коэффициент. Ставка играет, только если посмотреть бой. До начала боя её можно отменить кнопкой «Отменить ставку», а если завершить день без просмотра — деньги вернутся в казну.` },
+    text: `Бой дня: два чужих бойца, почти равных по силе. Нажми на портрет — увидишь снаряжение, характеристики и школу бойца. Выбери сумму — от ${BET_MIN} с шагом ${BET_STEP} — и нажми «Поставить» у своего бойца; выигрыш — ставка × коэффициент. Ставка играет, только если посмотреть бой. До начала боя её можно отменить кнопкой «Отменить ставку», а если завершить день без просмотра — деньги вернутся в казну.` },
   { id: 'endDay', g: 'after', modal: true, sel: 'header [data-act="nextDay"]', wait: 'next', last: true,
     text: 'Когда дела дня сделаны — заверши день: бойцы отдохнут, появятся новые бои и товары. И отложи денег к платежу: ростовщик ждать не станет. Дальше — сам. Ave!' },
 ];
@@ -193,6 +211,29 @@ const tutorGlad = () => (STATE && STATE.gladiators[0]) || null;
 // модальный шаг и шаг «нажми сюда» затемняют всё вокруг цели, остальные — только мерцающая рамка
 const holeCls = s => (s.modal || s.lock ? '' : 'soft');
 const coachText = s => (typeof s.text === 'function' ? s.text() : s.text);
+const coachSel = s => (typeof s.sel === 'function' ? s.sel() : s.sel);
+
+// Покупки в обучении: самое дешёвое одноручное оружие у кузнеца и самый дешёвый раб на рынке
+function tutorPicks() {
+  const cheap = (a, b) => a.price - b.price;
+  const weapons = STATE.smith.filter(i => i.slot === 'weapon' && !isRanged(i) && !isTwoHanded(i)).sort(cheap);
+  return { item: weapons[0] || STATE.smith.slice().sort(cheap)[0] || null, glad: STATE.market.slice().sort(cheap)[0] || null };
+}
+const tutorHas = k => !!(tutorState() && tutorState()[k]);
+const tutorNewItem = () => STATE.armory.find(i => i.id === (tutorState() || {}).item) || null;
+const tutorNewItemOn = () => { const g = glad((tutorState() || {}).glad); return !!(g && Object.values(g.equip).some(i => i && i.id === (tutorState() || {}).item)); };
+// Денег на обе покупки может не хватить — наставник добавляет из отцовских сбережений
+function tutorFund() {
+  UI.smithFilter = 'all';
+  const { item, glad: g } = tutorPicks();
+  const need = (tutorHas('item') || !item ? 0 : item.price) + (tutorHas('glad') || !g ? 0 : g.price) + 30;
+  if (STATE.gold >= need) return;
+  const add = need - STATE.gold;
+  STATE.gold += add;
+  journal(`Ферокс отдал ${add} денариев из отцовских сбережений — на оружие и второго бойца.`);
+  toast(`Ферокс: «Отец откладывал на чёрный день. Держи ${add} денариев».`);
+  save(); render();
+}
 const coachCanAttack = () => { const T = UI.battle && UI.battle.turn; return !!(T && T.o && T.o.attackNow.length); };
 
 function startTutorial() {
@@ -266,6 +307,7 @@ function coachGo(j) {
   const s = TUTOR_STEPS[j];
   if (!s) return endTutorial(true);
   tutorState().step = s.id;
+  if (s.enter) s.enter();
   save();
   showCoach();
 }
@@ -303,9 +345,10 @@ function coachCard(s) {
     </div>`;
   TUTOR.step = s;
   const target = s.sel && coachTargets(s)[0];
-  if (target && s.modal) {
-    target.scrollIntoView({ block: 'nearest', inline: 'center' });
-    if (s.sel.startsWith('nav') || s.sel.startsWith('header') || s.sel.startsWith('#taskbar')) window.scrollTo(0, 0);
+  if (target && (s.modal || s.scroll)) {
+    target.scrollIntoView({ block: s.scroll ? 'center' : 'nearest', inline: 'center' });
+    const sel = coachSel(s);
+    if (sel.startsWith('nav') || sel.startsWith('header') || sel.startsWith('#taskbar')) window.scrollTo(0, 0);
   }
   coachPlace();
   window.removeEventListener('resize', coachPlace);
@@ -317,7 +360,7 @@ function coachCard(s) {
   if (nb && s.modal) nb.focus();
 }
 
-const coachTargets = s => (s.sel ? [...document.querySelectorAll(s.sel)].filter(e => e.offsetParent || e.getClientRects().length) : []);
+const coachTargets = s => (s.sel ? [...document.querySelectorAll(coachSel(s))].filter(e => e.offsetParent || e.getClientRects().length) : []);
 
 function hideCoach() {
   clearInterval(TUTOR.timer);
@@ -333,11 +376,12 @@ function coachPlace() {
   const hole = $('#coach .tour-hole'), card = $('#coach .tour-card');
   if (!s || !hole || !card) return;
   const found = coachTargets(s), els = s.one ? found.slice(0, 1) : found;
-  const vw = window.innerWidth, vh = window.innerHeight, pad = 8;
+  const z = typeof uiZoom === 'function' ? uiZoom() : 1;
+  const vw = window.innerWidth / z, vh = window.innerHeight / z, pad = 8;
   if (!els.length) { hole.className = `tour-hole none ${holeCls(s)}`; hole.removeAttribute('style'); }
   let r = null;
   if (els.length) {
-    const rs = els.map(x => x.getBoundingClientRect());
+    const rs = els.map(x => { const b = x.getBoundingClientRect(); return { left: b.left / z, top: b.top / z, right: b.right / z, bottom: b.bottom / z }; });
     r = { l: Math.min(...rs.map(x => x.left)) - pad, t: Math.min(...rs.map(x => x.top)) - pad, rt: Math.max(...rs.map(x => x.right)) + pad, b: Math.max(...rs.map(x => x.bottom)) + pad };
     r.l = Math.max(4, r.l); r.t = Math.max(4, r.t); r.rt = Math.min(vw - 4, r.rt); r.b = Math.min(vh - 4, r.b);
     hole.className = `tour-hole ${holeCls(s)}${hole.classList.contains('nudge') ? ' nudge' : ''}`;

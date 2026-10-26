@@ -2,6 +2,8 @@
 //  Точка входа
 // ============================================================
 (function init() {
+  applyZoom();
+  window.addEventListener('resize', applyZoom);
   bindEvents();
   if (load()) prepareState();
   // фоновая музыка лудуса; заиграет после первого клика или нажатия клавиши

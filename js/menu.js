@@ -44,7 +44,7 @@ function renderMenu() {
       <button data-act="saveAsk">Сохранение</button>
       <button data-act="menuGuide">Справочник</button>
     </div>
-    <div class="menu-foot">${soundBtn()}</div>`;
+    <div class="menu-foot">${soundBtn()}${zoomBtn()}</div>`;
 }
 
 // Фон меню: Колизей и двое бойцов друг против друга

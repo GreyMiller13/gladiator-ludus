@@ -31,7 +31,7 @@ class ArenaView {
   constructor(canvas, battle) {
     this.canvas = canvas;
     this.b = battle;
-    this.dpr = Math.min(2, window.devicePixelRatio || 1);
+    this.dpr = Math.min(2.5, (window.devicePixelRatio || 1) * (typeof uiZoom === 'function' ? uiZoom() : 1));
     canvas.width = AW * this.dpr; canvas.height = AH * this.dpr;
     this.ctx = canvas.getContext('2d');
     this.speed = 1; this.skip = false;
@@ -1360,7 +1360,7 @@ function renderFighter(ctx, f, s, x, y) {
 class FigurePreview {
   constructor(canvas, g) {
     this.canvas = canvas;
-    this.dpr = Math.min(2, window.devicePixelRatio || 1);
+    this.dpr = Math.min(2.5, (window.devicePixelRatio || 1) * (typeof uiZoom === 'function' ? uiZoom() : 1));
     this.w = canvas.width; this.h = canvas.height;
     canvas.width = this.w * this.dpr; canvas.height = this.h * this.dpr;
     this.ctx = canvas.getContext('2d');

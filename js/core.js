@@ -319,21 +319,58 @@ function computeStats(g) {
   s.acc += pv(g, 'sag_eye');
   s.dodge += pv(g, 'sag_light');
   s.dmgMult += pv(g, 'gal_heft') / 100;
+  // выучка сагиттария: лучник школы бьёт сильнее остальных стрелков
+  if (g.cls === 'sagittarius') s.dmgMult += SAG_BONUS;
 
   s.dmgMin = Math.round(s.dmgMin); s.dmgMax = Math.round(s.dmgMax);
   s.dodge = Math.round(s.dodge); s.acc = Math.round(s.acc); s.crit = Math.round(s.crit);
   s.dodge = Math.max(0, s.dodge); s.block = Math.max(0, s.block);
-  // тактическое поле: шаги за ход и дальность удара
-  s.move = clamp(2 + Math.floor(s.init / 5), 2, 5);
+  // тактическое поле: шаги за ход и дальность удара. Шагов мало, и они растут с инициативой:
+  // ловкий боец может ударить и отойти туда, где медленный его не достанет
+  s.move = moveOf(s.init);
   s.reach = typeof reachOf === 'function' ? reachOf(g) : 1;
   return s;
 }
+
+const SAG_BONUS = 0.15;
+const moveOf = init => clamp(1 + Math.floor(init / 4), 2, 5);
 
 // Шанс попасть: базовые 72% + точность атакующего − уклонение цели (10..97%)
 const BASE_HIT = 72;
 const hitChanceOf = (acc, dodge) => clamp(BASE_HIT + acc - dodge, 10, 97);
 
-// Грубая оценка силы бойца — для цены рекрута и подбора противников
+// Мощь бойца — оценка силы в бою для игрока: урон за ход × сколько урона он выдержит
+// (по среднему противнику), с поправкой на навыки школы, шаги и длинное оружие.
+// Отношение мощи двух бойцов r даёт шанс первого примерно r^4.5 / (1 + r^4.5):
+// перевес ×1.1 — около 60%, ×1.25 — 73%, ×1.5 — 86%. Новобранец 1-го уровня — около 100
+const POWER_K = 3.5;
+function combatPower(g) {
+  const s = computeStats(g);
+  const hit = hitChanceOf(s.acc, 12) / 100;
+  const crit = 1 + Math.min(s.crit, 100) / 100 * (s.critMult - 1);
+  const dmg = (s.dmgMin + s.dmgMax) / 2 * s.dmgMult * crit * hit * 25 / 31;
+  const taken = hitChanceOf(10, s.dodge) / 100 * (1 - Math.min(s.block, 80) / 100 * 0.6) * 25 / (25 + s.armor);
+  const ranks = Object.values(g.perks || {}).reduce((a, b) => a + b, 0);
+  const skill = (1 + 0.035 * ranks) * (g.cls ? 1.1 : 1) * (1 + 0.05 * (s.move - 2)) * (s.reach > 1 ? 1.08 : 1);
+  return Math.round(Math.sqrt(dmg * s.maxHp / taken) * skill * POWER_K);
+}
+const teamPower = gs => gs.reduce((s, g) => s + combatPower(g), 0);
+// Сильнейшие n бойцов лудуса, способных выйти на бой сегодня (если таких нет — сильнейшие вообще)
+function bestTeam(n) {
+  const ready = STATE.gladiators.filter(canFight);
+  const pool = ready.length ? ready : STATE.gladiators;
+  return pool.slice().sort((a, b) => combatPower(b) - combatPower(a)).slice(0, n);
+}
+// Расклад сил: r — отношение вашей мощи к мощи противника
+function powerVerdict(r) {
+  if (r >= 1.25) return { cls: 'pw-good', text: 'перевес за вами' };
+  if (r >= 1.08) return { cls: 'pw-fair', text: 'небольшой перевес за вами' };
+  if (r >= 0.93) return { cls: 'pw-even', text: 'силы равны' };
+  if (r >= 0.8) return { cls: 'pw-risk', text: 'противник сильнее' };
+  return { cls: 'pw-bad', text: 'почти без шансов' };
+}
+
+// Грубая оценка силы бойца — для цены рекрута
 function powerScore(g) {
   const s = computeStats(g);
   const avgDmg = (s.dmgMin + s.dmgMax) / 2 * s.dmgMult;
@@ -482,21 +519,24 @@ function ludusLevel() {
   return lv.length ? lv.reduce((a, b) => a + b, 0) / lv.length : 1;
 }
 
-function generateEnemyTeam(tierIdx, size) {
+// opts.lvlDrop — противники на столько уровней младше; opts.plain — все одного уровня,
+// с худшим снаряжением арены и без добавочной брони
+function generateEnemyTeam(tierIdx, size, opts = {}) {
   const T = TIERS[tierIdx];
   const team = [];
   const used = new Set(STATE.gladiators.map(g => g.name));
-  const lvl = clamp(Math.round(ludusLevel()) + rnd(-1, 1), T.lvl[0], T.lvl[1]);
-  const q = () => rnd(T.quality[0], T.quality[1]);
+  const drop = opts.lvlDrop || 0, lo = Math.max(1, T.lvl[0] - drop);
+  const lvl = clamp(Math.round(ludusLevel()) + rnd(-1, 1) - drop, lo, T.lvl[1]);
+  const q = () => (opts.plain ? T.quality[0] : rnd(T.quality[0], T.quality[1]));
   for (let i = 0; i < size; i++) {
-    const l = clamp(lvl + rnd(-1, 1), T.lvl[0], T.lvl[1]);
+    const l = opts.plain ? lvl : clamp(lvl + rnd(-1, 1), lo, T.lvl[1]);
     const free = NAMES.filter(n => !used.has(n));
     const name = pick(free.length ? free : NAMES);
     used.add(name);
     const g = createGladiator(pick(CLASS_KEYS), l, { name, autoSpend: true, quality: q });
     // иногда у противника есть дополнительная броня
-    if (!g.equip.helmet && chance(30)) g.equip.helmet = randomItem(q(), 'helmet');
-    if (tierIdx >= 1 && !g.equip.armor && chance(40)) g.equip.armor = randomItem(q(), 'armor');
+    if (!opts.plain && !g.equip.helmet && chance(30)) g.equip.helmet = randomItem(q(), 'helmet');
+    if (!opts.plain && tierIdx >= 1 && !g.equip.armor && chance(40)) g.equip.armor = randomItem(q(), 'armor');
     team.push(g);
   }
   return team;
@@ -522,8 +562,43 @@ function generateEvents() {
       done: false,
     });
   }
+  ensureEasyEvent(events);
   events.sort((a, b) => a.tier - b.tier || a.size - b.size);
   STATE.events = events;
+}
+
+// Посильный бой дня: на младшей арене хотя бы один бой, где сильнейшие бойцы лудуса сильнее
+// противников в EASY_RATIO раз (такой бой выигрывается примерно в 9 случаях из 10).
+// Противники для него — младше и хуже снаряжены; если и этого мало — без части доспехов
+const EASY_RATIO = 1.4;
+function ensureEasyEvent(events) {
+  const n = STATE.gladiators.length;
+  if (!n || !events.length) return;
+  const tier = Math.min(...events.map(e => e.tier));
+  const easy = e => teamPower(bestTeam(e.size)) >= EASY_RATIO * teamPower(e.enemies);
+  const fits = events.filter(e => e.tier === tier && e.size <= n);
+  if (fits.some(easy)) { fits.filter(easy).forEach(e => { e.easy = true; }); return; }
+  const ev = fits.sort((a, b) => a.size - b.size)[0] || events.filter(e => e.tier === tier).sort((a, b) => a.size - b.size)[0];
+  const target = teamPower(bestTeam(ev.size)) / EASY_RATIO;
+  let best = null;
+  for (let k = 0; k < 12 && !(best && best.p <= target); k++) {
+    const team = generateEnemyTeam(tier, ev.size, { lvlDrop: 1 + Math.floor(k / 3), plain: k >= 3 });
+    const p = teamPower(team);
+    if (!best || p < best.p) best = { team, p };
+  }
+  // всё ещё сильны: снимаем доспехи по одному, оружие меняем на грубую сику, а затем выпускаем
+  // заморенных невольников — каждый раз минус очко в самой высокой характеристике (не ниже 2)
+  const off = best.team.flatMap(g => SLOT_KEYS.filter(s => s !== 'weapon' && g.equip[s]).map(s => [g, s]));
+  while (teamPower(best.team) > target && off.length) { const [g, s] = off.shift(); g.equip[s] = null; }
+  for (const g of best.team) if (teamPower(best.team) > target) g.equip.weapon = makeItem('sica', 0);
+  for (let k = 0; k < 20 && teamPower(best.team) > target; k++) {
+    for (const g of best.team) {
+      const top = ATTR_KEYS.reduce((a, b) => (g.attrs[b] > g.attrs[a] ? b : a));
+      if (g.attrs[top] > 2) g.attrs[top]--;
+    }
+  }
+  ev.enemies = best.team;
+  ev.easy = true;
 }
 
 // Бой меньшинством: на обычный бой арены можно выйти на одного бойца меньше — награда за победу ×2
