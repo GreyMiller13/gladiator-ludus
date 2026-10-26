@@ -545,6 +545,7 @@ button.sound.off { color: var(--dust); }
 .arena-head h2 { font-size: 34px; color: var(--blood-hi); line-height: 1; }
 .atabs { display: flex; gap: 6px; flex: 1; flex-wrap: wrap; align-items: center; }
 .atabs .sp { flex: 1; }
+@media (max-width: 700px) { .arena-head { flex-direction: column; align-items: stretch; gap: 8px; } .atabs .sp { display: none; } }
 .atab { position: relative; }
 .atab.on { border-color: var(--bronze-hi); color: var(--bronze-hi); background: linear-gradient(#45341f, #2b2015); }
 .atab .badge { margin-left: 6px; }

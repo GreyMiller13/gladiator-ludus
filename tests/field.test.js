@@ -45,6 +45,12 @@ module.exports = [
     ev(ctx, 'u.acted = false; u.apLeft = 1');
     assert.equal(ev(ctx, 'B.cmdAttack(u, f)'), false, 'на удар не хватает ОД');
   } },
+  { name: 'поле: пропущенный ход (оглушение, сеть) уклонения не даёт', fn: () => {
+    const ctx = game();
+    setup(ctx);
+    ev(ctx, 'f.stun = 1; B.current = u; B.queue = [f, w]; B.beginTurn(); B.beginTurn()');
+    assert.equal(ev(ctx, 'f.evade'), 0);
+  } },
   { name: 'поле: боец смотрит на того, кого атаковал; удар с другой стороны — в спину', fn: () => {
     const ctx = game();
     setup(ctx);

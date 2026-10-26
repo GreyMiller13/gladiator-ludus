@@ -374,12 +374,14 @@ class Battle {
     }
     if (u.stun > 0) {
       u.stun--;
+      u.apLeft = 0; // пропущенный ход уклонения не даёт
       this.say(`${this.nm(u)} оглушён и пропускает ход.`, 'status skipturn');
       this.ev({ t: 'skip', u: u.uid, why: 'stun' });
       return { u, act: false };
     }
     if (u.net > 0) {
       u.net--;
+      u.apLeft = 0;
       this.say(`${this.nm(u)} бьётся в сети и пропускает ход.`, 'status skipturn');
       this.ev({ t: 'skip', u: u.uid, why: 'net' });
       return { u, act: false };
