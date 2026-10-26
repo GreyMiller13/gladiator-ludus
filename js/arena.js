@@ -124,14 +124,11 @@ class ArenaView {
   placeFighter(f, c, r) {
     f.home = cellPos(c, r); f.x = f.home.x; f.y = f.home.y; f.move = null;
   }
-  // Повернуть стоящих бойцов к ближайшему противнику
+  // Повернуть стоящих бойцов так, как они смотрят по правилам боя (спина — с другой стороны)
   faceFoes() {
     for (const f of this.fighters) {
       if (!f.unit.alive || f.state !== 'idle') continue;
-      const foes = this.fighters.filter(o => o.side !== f.side && o.unit.alive);
-      if (!foes.length) continue;
-      const n = foes.reduce((a, b) => (Math.abs(b.x - f.x) + Math.abs(b.y - f.y) * 2 < Math.abs(a.x - f.x) + Math.abs(a.y - f.y) * 2 ? b : a));
-      f.baseFacing = Math.sign(n.x - f.x) || f.baseFacing;
+      f.baseFacing = f.unit.face || f.baseFacing;
       if (!f.move && !f.clip) f.facing = f.baseFacing;
     }
   }

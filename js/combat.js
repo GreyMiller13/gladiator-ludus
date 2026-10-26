@@ -45,8 +45,6 @@ const cheb = (a, b) => Math.max(Math.abs(a.c - b.c), Math.abs(a.r - b.r));
 const DIRS8 = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]];
 const isHigh = type => !!(OBSTACLES[type] && OBSTACLES[type].high);
 
-const PARTING_MULT = 0.5; // удар вдогонку тому, кто выходит из ближнего боя
-
 // Дальность удара (шаги по полю — moveOf в core.js)
 function reachOf(g) {
   const w = g.equip && g.equip.weapon;
@@ -174,6 +172,7 @@ class Battle {
     this.surrendered = false;
     this.current = null;
     this.extraAction = false;
+    this.updateFacing();
     this.say(`${this.tier.place}. ${this.nonLethal ? 'Бой до сдачи — не на смерть.' : this.tier.mood}`, 'sys');
   }
 
@@ -181,7 +180,8 @@ class Battle {
     const s = computeStats(g);
     return {
       uid: side + slot, g, side, slot, s,
-      c: cell.c, r: cell.r, mp: s.move, mpLeft: s.move, acted: false, reach: s.reach,
+      c: cell.c, r: cell.r, ap: s.ap, apLeft: s.ap, acted: false, reach: s.reach,
+      face: side === 'player' ? 1 : -1, evade: 0, lastTarget: null, lastAttacker: null,
       hp: s.maxHp, maxHp: s.maxHp, alive: true,
       cd: 0, stun: 0, net: 0, bleeds: [], shred: 0, fury: 0,
       defending: false, spearWall: false, firstAttackDone: false, windUsed: false,
@@ -239,26 +239,62 @@ class Battle {
     return true;
   }
 
-  // Клетки, куда боец может дойти за ход: Map ключ → { c, r, d, prev }
-  reachable(u, mp = u.mpLeft) {
+  // Клетки, куда боец может дойти на ap очков: Map ключ → { c, r, d, prev }, d — цена пути в ОД.
+  // Шаг — 1 ОД; шаг прочь от соседнего противника (выход из ближнего боя) — ещё DISENGAGE_AP.
+  // Окружённый (противник перед ним и за спиной) не отходит ни от кого из них
+  reachable(u, ap = u.apLeft) {
     const start = { c: u.c, r: u.r, d: 0, prev: null };
     const map = new Map([[cellKey(u.c, u.r), start]]);
+    const holders = this.holders(u);
+    const foes = this.enemiesOf(u).filter(f => this.free(f));
     const q = [start];
     while (q.length) {
+      q.sort((a, b) => a.d - b.d);
       const p = q.shift();
-      if (p.d >= mp) continue;
+      if (map.get(cellKey(p.c, p.r)) !== p) continue;
       for (const [dc, dr] of DIRS8) {
-        const c = p.c + dc, r = p.r + dr, k = cellKey(c, r);
+        const c = p.c + dc, r = p.r + dr, k = cellKey(c, r), n = { c, r };
         // на клетке может стоять только один боец, и сквозь бойцов (даже своих) не пройти
-        if (map.has(k) || this.closed(c, r, u)) continue;
+        if (this.closed(c, r, u)) continue;
         // по диагонали нельзя протиснуться между двумя занятыми клетками
         if (dc && dr && this.closed(p.c + dc, p.r, u) && this.closed(p.c, p.r + dr, u)) continue;
-        const n = { c, r, d: p.d + 1, prev: p };
+        if (holders.some(h => cheb(n, h) > 1)) continue;
+        const leave = foes.some(f => cheb(p, f) === 1 && cheb(n, f) > 1);
+        const d = p.d + 1 + (leave ? DISENGAGE_AP : 0);
+        if (d > ap) continue;
+        const old = map.get(k);
+        if (old && old.d <= d) continue;
+        n.d = d; n.prev = p;
         map.set(k, n); q.push(n);
       }
     }
     return map;
   }
+  // Направление взгляда: к тому, кого боец атаковал последним; если сам ещё не бил — к тому,
+  // кто последним атаковал его; иначе к ближайшему противнику. Смотрят только влево или вправо
+  focusOf(u) {
+    for (const id of [u.lastTarget, u.lastAttacker]) { const x = id && this.unit(id); if (x && x.alive) return x; }
+    const foes = this.enemiesOf(u);
+    return foes.length ? foes.reduce((a, b) => (cheb(u, b) < cheb(u, a) ? b : a)) : null;
+  }
+  updateFacing() {
+    for (const u of this.units) {
+      if (!u.alive) continue;
+      const f = this.focusOf(u);
+      if (f && f.c !== u.c) u.face = Math.sign(f.c - u.c);
+    }
+  }
+  // Стоит ли a за спиной у t (по ту сторону, куда t не смотрит)
+  isBehind(t, a) { return a.c !== t.c && Math.sign(a.c - t.c) === -t.face; }
+  // Окружён: рядом противник перед бойцом и противник за спиной (оглушённые и в сети не держат).
+  // Возвращает тех, от кого он не может отойти, или пустой список
+  holders(u) {
+    const adj = this.enemiesOf(u).filter(f => cheb(u, f) === 1 && this.free(f));
+    const front = adj.filter(f => Math.sign(f.c - u.c) === u.face), back = adj.filter(f => this.isBehind(u, f));
+    return front.length && back.length ? front.concat(back) : [];
+  }
+  // Сколько клеток противник может пройти и ещё ударить в свой ход
+  threat(f) { return Math.max(0, f.ap - f.s.atkAp) + f.reach; }
   pathOf(node) {
     const path = [];
     for (let n = node; n && n.prev; n = n.prev) path.unshift({ c: n.c, r: n.r });
@@ -302,9 +338,13 @@ class Battle {
   beginTurn() {
     this.events = [];
     if (this.over) return { u: null, act: false };
+    // ход окончен: неистраченные ОД становятся уклонением до следующего хода бойца
+    const prev = this.current;
+    if (prev && prev.alive) prev.evade = prev.apLeft * AP_DODGE;
+    this.updateFacing();
     if (this.extraAction && this.current && this.current.alive) {
       this.extraAction = false;
-      this.current.mpLeft = this.current.mp; this.current.acted = false;
+      this.current.apLeft = this.current.ap; this.current.acted = false; this.current.evade = 0;
       this.ev({ t: 'turn', u: this.current.uid, extra: true });
       return { u: this.current, act: true };
     }
@@ -316,8 +356,8 @@ class Battle {
       if (c.alive) u = c;
     }
     this.current = u;
-    // очки движения тратятся до и после действия; действие одно за ход
-    u.mpLeft = u.mp; u.acted = false;
+    // ОД тратятся на шаги до и после действия; удар или умение — одно за ход
+    u.apLeft = u.ap; u.acted = false; u.evade = 0;
     this.ev({ t: 'turn', u: u.uid });
     u.defending = false; u.spearWall = false;
     if (u.cd > 0) u.cd--;
@@ -365,31 +405,17 @@ class Battle {
   // --------------------------------------------------------
   cmdMove(u, c, r) {
     this.events = [];
-    if (u.mpLeft <= 0 || this.over) return false;
+    if (u.apLeft <= 0 || this.over) return false;
     const node = this.reachable(u).get(cellKey(c, r));
     if (!node || (c === u.c && r === u.r)) return false;
-    const path = this.pathOf(node);
-    this.parting(u, node);
-    if (!u.alive || this.over) { u.mpLeft = 0; this.checkEnd(); return true; }
-    u.c = c; u.r = r; u.mpLeft -= node.d;
-    this.ev({ t: 'move', u: u.uid, path });
+    this.moveTo(u, node);
     return true;
-  }
-  // Удар вдогонку: кто уходит от соседнего противника, получает от него удар в полсилы
-  // (если тот бьёт врукопашную и не обездвижен). Остаться рядом — без удара
-  parting(u, dest) {
-    for (const f of this.enemiesOf(u)) {
-      if (!u.alive) return;
-      if (cheb(u, f) !== 1 || cheb(dest, f) <= 1 || !this.free(f) || f.s.ranged) continue;
-      this.say(`${this.nm(f)} бьёт вдогонку отходящему ${this.nm(u)}.`, 'skill');
-      this.strike(f, u, { mult: PARTING_MULT, noCounter: true, noCrit: true, kind: 'counter' });
-    }
   }
   finishAct() { this.checkEnd(); }
   cmdAttack(u, t) {
     this.events = [];
-    if (u.acted || !t || !t.alive || !this.canHit(u, u, t)) return false;
-    u.acted = true;
+    if (u.acted || u.apLeft < u.s.atkAp || !t || !t.alive || !this.canHit(u, u, t)) return false;
+    u.acted = true; u.apLeft -= u.s.atkAp;
     this.doAttack(u, t);
     this.finishAct();
     return true;
@@ -397,10 +423,10 @@ class Battle {
   cmdAbility(u, t) {
     this.events = [];
     const A = clsOf(u.g).ability;
-    if (!A || u.cd > 0 || u.acted) return false;
+    if (!A || u.cd > 0 || u.acted || u.apLeft < abilityAp(u.s)) return false;
     if (A.id === 'whirl') { if (!this.adjacentFoes(u).length) return false; }
     else if (!t || !this.abilityTargets(u, u).includes(t)) return false;
-    u.acted = true;
+    u.acted = true; u.apLeft -= abilityAp(u.s);
     this.doAbility(u, t);
     this.finishAct();
     return true;
@@ -415,16 +441,17 @@ class Battle {
 
   // Что может сделать боец из текущей клетки (для интерфейса ручного боя)
   options(u) {
-    const reach = u.mpLeft > 0 ? this.reachable(u) : new Map([[cellKey(u.c, u.r), { c: u.c, r: u.r, d: 0, prev: null }]]);
-    const foes = u.acted ? [] : this.enemiesOf(u);
+    const reach = u.apLeft > 0 ? this.reachable(u) : new Map([[cellKey(u.c, u.r), { c: u.c, r: u.r, d: 0, prev: null }]]);
+    const atk = u.s.atkAp;
+    const foes = u.acted || u.apLeft < atk ? [] : this.enemiesOf(u);
     const attackNow = foes.filter(f => this.canHit(u, u, f));
-    const abilityNow = u.acted ? [] : this.abilityTargets(u, u);
-    // подойти и ударить: лучшая клетка (ближайшая) для каждой цели
+    const abilityNow = u.acted || u.apLeft < abilityAp(u.s) ? [] : this.abilityTargets(u, u);
+    // подойти и ударить: лучшая клетка (ближайшая), откуда на удар ещё хватит ОД
     const approach = new Map();
     for (const f of foes) {
       if (attackNow.includes(f)) continue;
       let best = null;
-      for (const n of reach.values()) if (this.canHit(u, n, f) && (!best || n.d < best.d)) best = n;
+      for (const n of reach.values()) if (n.d <= u.apLeft - atk && this.canHit(u, n, f) && (!best || n.d < best.d)) best = n;
       if (best) approach.set(f.uid, best);
     }
     return { reach, attackNow, abilityNow, approach };
@@ -446,7 +473,7 @@ class Battle {
     let d = 0;
     for (const f of this.enemiesOf(u)) {
       if (f.s.ranged) continue;
-      if (cheb(f, cell) <= f.mp + f.reach) d += 1;
+      if (cheb(f, cell) <= this.threat(f)) d += 1;
     }
     return d;
   }
@@ -473,20 +500,25 @@ class Battle {
     const ready = A && u.cd === 0;
     const reach = this.reachable(u);
     const ranged = u.s.ranged;
+    const atk = u.s.atkAp, abC = abilityAp(u.s);
     let best = null;
     const consider = o => { if (!best || o.score > best.score) best = o; };
     for (const n of reach.values()) {
+      const left = u.apLeft - n.d;
+      // неистраченные ОД — уклонение: лишние шаги чуть хуже
       const dz = this.danger(u, n) * (ranged ? 0.9 : 0.12) + n.d * 0.03;
       for (const f of foes) {
-        if (this.canHit(u, n, f)) {
+        // удар в спину — вдвое больше шанс крита
+        const back = this.isBehind(f, n) ? 0.6 : 0;
+        if (left >= atk && this.canHit(u, n, f)) {
           const pb = ranged && cheb(n, f) === 1 ? 1.2 : 0;
-          consider({ cell: n, type: 'attack', f, score: this.targetValue(u, f) - pb - dz + Math.random() * 0.3 });
+          consider({ cell: n, type: 'attack', f, score: this.targetValue(u, f) + back - pb - dz + Math.random() * 0.3 });
         }
-        if (ready && A.id !== 'whirl' && this.canHit(u, n, f, this.abilityRange(u))) {
-          consider({ cell: n, type: 'ability', f, score: this.targetValue(u, f) + this.abilityScore(u, A, n, f) - dz + Math.random() * 0.3 });
+        if (ready && left >= abC && A.id !== 'whirl' && this.canHit(u, n, f, this.abilityRange(u))) {
+          consider({ cell: n, type: 'ability', f, score: this.targetValue(u, f) + back + this.abilityScore(u, A, n, f) - dz + Math.random() * 0.3 });
         }
       }
-      if (ready && A.id === 'whirl') {
+      if (ready && left >= abC && A.id === 'whirl') {
         const adj = foes.filter(f => cheb(n, f) === 1);
         if (adj.length) consider({ cell: n, type: 'ability', f: null, score: 1 + this.abilityScore(u, A, n, null) - dz });
       }
@@ -494,20 +526,22 @@ class Battle {
     const low = u.hp / u.maxHp < 0.25 && foes.length > 1;
     if (best) {
       this.moveTo(u, best.cell);
-      if (!u.alive || this.over) return; // пал от удара вдогонку
+      if (!u.alive || this.over) return;
       if (low && best.type === 'attack' && chance(20)) return this.doDefend(u);
       u.acted = true;
+      u.apLeft -= best.type === 'ability' ? abC : atk;
       if (best.type === 'ability') this.doAbility(u, best.f);
       else this.doAttack(u, best.f);
       this.checkEnd();
-      // боец ближнего боя после удара отходит, если на оставшиеся шаги можно уйти туда, где его не достанут
-      if (!ranged && u.alive && !this.over && u.mpLeft > 0 && this.danger(u, u) > 0) {
+      // боец ближнего боя после удара отходит, только если на оставшиеся ОД можно уйти туда,
+      // где его не достанут; иначе стоит — неистраченные ОД дадут уклонение
+      if (!ranged && u.alive && !this.over && u.apLeft > 0 && this.danger(u, u) > 0) {
         let safe = null;
         for (const n of this.reachable(u).values()) if (!this.danger(u, n) && (!safe || n.d < safe.d)) safe = n;
         if (safe) this.moveTo(u, safe);
       }
-      // лучник отходит на оставшиеся шаги подальше от бойцов ближнего боя
-      if (ranged && u.alive && !this.over && u.mpLeft > 0 && this.danger(u, u) > 0) {
+      // лучник отходит на оставшиеся ОД подальше от бойцов ближнего боя
+      if (ranged && u.alive && !this.over && u.apLeft > 0 && this.danger(u, u) > 0) {
         let safe = null;
         for (const n of this.reachable(u).values()) {
           const sc = this.danger(u, n) * 2 - Math.min(...this.enemiesOf(u).map(f => cheb(n, f))) * 0.3 + n.d * 0.05;
@@ -534,10 +568,9 @@ class Battle {
   moveTo(u, node) {
     if (node.c === u.c && node.r === u.r) return;
     const path = this.pathOf(node);
-    this.parting(u, node);
-    if (!u.alive || this.over) { u.mpLeft = 0; this.checkEnd(); return; }
-    u.c = node.c; u.r = node.r; u.mpLeft = Math.max(0, u.mpLeft - node.d);
+    u.c = node.c; u.r = node.r; u.apLeft = Math.max(0, u.apLeft - node.d);
     this.ev({ t: 'move', u: u.uid, path });
+    this.updateFacing();
   }
   // Расстояние (в шагах) от каждой клетки до ближайшей позиции, откуда можно ударить.
   // Сначала с учётом всех бойцов; если путь перекрыт своими — без учёта союзников
@@ -572,6 +605,7 @@ class Battle {
   // --------------------------------------------------------
   //  Действия
   // --------------------------------------------------------
+  // Оборона: −40% урона и +20% блока до следующего хода; неистраченные ОД дадут ещё и уклонение
   doDefend(u) {
     u.defending = true;
     this.say(`${this.nm(u)} закрывается в глухой обороне.`, 'status');
@@ -726,6 +760,9 @@ class Battle {
     const ranged = u.s.ranged && !['counter', 'intercept'].includes(kind);
     const melee = !ranged;
     const dist = cheb(u, t);
+    // удар в спину (по взгляду цели до удара), затем оба поворачиваются друг к другу
+    const back = t !== u && this.isBehind(t, u);
+    if (t !== u) { u.lastTarget = t.uid; t.lastAttacker = u.uid; this.updateFacing(); }
     // встречный удар копья: гопломах бьёт первым
     if (melee && !opts.noCounter && t !== u && this.free(t) && u.alive && dist <= t.reach) {
       const reach = this.pv(t, 'hop_reach');
@@ -736,7 +773,7 @@ class Battle {
         if (!u.alive) return { hit: false, aborted: true };
       }
     }
-    let dodge = t.s.dodge + (t.defending ? 15 : 0);
+    let dodge = t.s.dodge + (t.evade || 0);
     const helpless = t.net > 0 || t.stun > 0;
     if (helpless) dodge = 0;
     // стрельба в упор неудобна
@@ -767,7 +804,7 @@ class Battle {
     const cry = Math.max(0, ...this.alliesOf(u).filter(a => a !== u).map(a => this.pv(a, 'gal_cry')));
     if (cry) dmg *= 1 + cry / 100;
 
-    const crit = !opts.noCrit && (opts.forceCrit || chance(u.s.crit + (opts.critBonus || 0)));
+    const crit = !opts.noCrit && (opts.forceCrit || chance(Math.min(100, (u.s.crit + (opts.critBonus || 0)) * (back ? 2 : 1))));
     if (crit) { dmg *= u.s.critMult; u.crits++; u.flair += 1; }
 
     let blocked = false;
@@ -792,8 +829,8 @@ class Battle {
     dmg = Math.max(1, Math.round(dmg));
     const tag = crit ? ' <span class="crit">КРИТ!</span>' : '';
     const btag = blocked ? ' (блок щитом)' : '';
-    this.say(`${this.nm(u)} → ${this.nm(t)}: −${dmg}${tag}${btag}`, crit ? 'hit crit' : 'hit');
-    const e = this.ev({ t: 'strike', a: u.uid, d: t.uid, kind, res: blocked ? 'block' : 'hit', dmg, crit, ranged });
+    this.say(`${this.nm(u)} → ${this.nm(t)}${back ? ' в спину' : ''}: −${dmg}${tag}${btag}`, crit ? 'hit crit' : 'hit');
+    const e = this.ev({ t: 'strike', a: u.uid, d: t.uid, kind, res: blocked ? 'block' : 'hit', dmg, crit, ranged, back });
     this.damage(t, dmg, u, e);
 
     // эффекты при попадании

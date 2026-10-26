@@ -1,58 +1,89 @@
 const assert = require('node:assert/strict');
 const { loadGame, ev, DEFAULT_FILES } = require('./harness');
 
-// Тактическое поле: шаги, удар вдогонку, выучка лучника
+// Тактическое поле: очки действия, выход из боя, лицо и спина, окружение, выучка лучника
 const game = () => { const ctx = loadGame([...DEFAULT_FILES, 'combat']); ev(ctx, 'newGame("Т")'); return ctx; };
-// бой 1 на 1, бойцы стоят рядом в середине поля
-const duel = ctx => ev(ctx, `(() => {
-  const a = createGladiator('gallus', 6, { forceSchool: true, autoSpend: true, quality: 1 });
-  const b = createGladiator('murmillo', 6, { forceSchool: true, autoSpend: true, quality: 1 });
-  const e = { id: 1, kind: 'arena', tier: 0, size: 1 }; ensureField(e); e.field.obstacles = [];
-  const B = new Battle([a], [b], e, { mode: 'manual' });
-  const [u, f] = B.units;
-  u.c = 4; u.r = 2; f.c = 5; f.r = 2; u.mpLeft = 3;
-  globalThis.B = B; globalThis.u = u; globalThis.f = f;
+// бой без препятствий: u (галл, игрок) и f (мурмиллон, противник) стоят рядом в середине поля, w — второй противник
+const setup = ctx => ev(ctx, `(() => {
+  const mk = c => createGladiator(c, 6, { forceSchool: true, autoSpend: true, quality: 1 });
+  const e = { id: 1, kind: 'arena', tier: 0, size: 2 }; ensureField(e); e.field.obstacles = [];
+  const B = new Battle([mk('gallus')], [mk('murmillo'), mk('thraex')], e, { mode: 'manual' });
+  const [u, f, w] = B.units;
+  u.c = 4; u.r = 2; f.c = 5; f.r = 2; w.c = 8; w.r = 0;
+  B.updateFacing();
+  Object.assign(globalThis, { B, u, f, w });
 })()`);
 
 module.exports = [
-  { name: 'поле: шагов от 2 до 5, они растут с инициативой', fn: () => {
+  { name: 'поле: ОД — 5 + инициатива / 4, от 5 до 9; удар стоит по оружию', fn: () => {
     const ctx = game();
-    assert.deepEqual([3, 7, 8, 12, 16, 40].map(i => ev(ctx, `moveOf(${i})`)), [2, 2, 3, 4, 5, 5]);
+    assert.deepEqual([3, 7, 8, 16, 40].map(i => ev(ctx, `apOf(${i})`)), [5, 6, 7, 9, 9]);
+    assert.deepEqual(['sica', 'gladius', 'spear', 'arcus', 'longsword'].map(b => ev(ctx, `attackAp(makeItem("${b}", 1))`)), [2, 3, 3, 4, 4]);
+    assert.equal(ev(ctx, 'attackAp(null)'), 2);
+    assert.equal(ev(ctx, 'abilityAp({ atkAp: 3 })'), 4);
   } },
-  { name: 'поле: кто уходит от соседнего противника, получает удар вдогонку', fn: () => {
+  { name: 'поле: шаг прочь от соседнего противника стоит на 1 ОД дороже, шаг вдоль — нет', fn: () => {
     const ctx = game();
-    duel(ctx);
-    assert.equal(ev(ctx, 'B.cmdMove(u, 2, 2)'), true);
-    assert.ok(ev(ctx, 'B.log.some(l => l.text.includes("вдогонку"))'));
-    assert.ok(ev(ctx, 'B.events.some(e => e.t === "strike" && e.a === f.uid)'));
+    setup(ctx);
+    assert.equal(ev(ctx, 'B.reachable(u, 10).get(cellKey(3, 2)).d'), 2);
+    assert.equal(ev(ctx, 'B.reachable(u, 10).get(cellKey(4, 1)).d'), 1);
+    assert.equal(ev(ctx, 'B.reachable(u, 10).get(cellKey(2, 2)).d'), 3);
+    // от оглушённого отходят свободно
+    ev(ctx, 'f.stun = 1');
+    assert.equal(ev(ctx, 'B.reachable(u, 10).get(cellKey(3, 2)).d'), 1);
   } },
-  { name: 'поле: шаг вдоль противника и уход от обездвиженного — без удара вдогонку', fn: () => {
+  { name: 'поле: удар тратит ОД, удар один за ход, остаток ОД — уклонение до следующего хода', fn: () => {
     const ctx = game();
-    duel(ctx);
-    ev(ctx, 'B.cmdMove(u, 4, 1)'); // всё ещё рядом
-    assert.equal(ev(ctx, 'B.log.some(l => l.text.includes("вдогонку"))'), false);
-    ev(ctx, 'f.stun = 1; B.cmdMove(u, 2, 1)');
-    assert.equal(ev(ctx, 'B.log.some(l => l.text.includes("вдогонку"))'), false);
+    setup(ctx);
+    ev(ctx, 'u.apLeft = 7; f.hp = f.maxHp = 9999');
+    assert.equal(ev(ctx, 'B.cmdAttack(u, f)'), true);
+    assert.equal(ev(ctx, 'u.apLeft'), ev(ctx, '7 - u.s.atkAp'));
+    assert.equal(ev(ctx, 'B.cmdAttack(u, f)'), false);
+    ev(ctx, 'B.current = u; B.queue = [f]; B.beginTurn()');
+    assert.equal(ev(ctx, 'u.evade'), ev(ctx, 'u.apLeft * AP_DODGE'));
+    assert.ok(ev(ctx, 'u.evade') > 0);
+    ev(ctx, 'u.acted = false; u.apLeft = 1');
+    assert.equal(ev(ctx, 'B.cmdAttack(u, f)'), false, 'на удар не хватает ОД');
   } },
-  { name: 'поле: боец, павший от удара вдогонку, уже не бьёт', fn: () => {
+  { name: 'поле: боец смотрит на того, кого атаковал; удар с другой стороны — в спину', fn: () => {
     const ctx = game();
-    let deaths = 0;
-    for (let i = 0; i < 60; i++) {
-      const r = ev(ctx, `(() => {
-        const a = createGladiator('gallus', 8, { forceSchool: true, autoSpend: true, quality: 2 });
-        const b = createGladiator('sagittarius', 8, { forceSchool: true, autoSpend: true, quality: 2 });
-        const e = { id: 1, kind: 'arena', tier: 0, size: 1 }; ensureField(e); e.field.obstacles = [];
-        const B = new Battle([a], [b], e, { mode: 'auto' });
-        const [p, s] = B.units;
-        p.c = 4; p.r = 2; s.c = 5; s.r = 2; s.hp = 1; s.mpLeft = s.mp;
-        B.aiTurn(s);
-        // выстрелить до отхода можно; после своего падения — нет
-        const fell = B.events.findIndex(x => x.t === 'fall' && x.u === s.uid);
-        return { dead: !s.alive, shot: fell >= 0 && B.events.slice(fell).some(x => x.t === 'strike' && x.a === s.uid), both: !p.alive && !s.alive };
-      })()`);
-      if (r.dead) { deaths++; assert.equal(r.shot, false, 'павший лучник выстрелил'); assert.equal(r.both, false); }
-    }
-    assert.ok(deaths > 0, 'удар вдогонку ни разу не убил лучника — проверка ничего не проверила');
+    setup(ctx);
+    // f смотрит влево, на u; w справа от f — у него за спиной
+    assert.equal(ev(ctx, 'f.face'), -1);
+    ev(ctx, 'w.c = 6; w.r = 2');
+    assert.equal(ev(ctx, 'B.isBehind(f, w)'), true);
+    assert.equal(ev(ctx, 'B.isBehind(f, u)'), false);
+    // u бьёт f, а f разворачивается и бьёт... того, кто справа — теперь спиной к u стоит он сам
+    ev(ctx, 'w.side = "player"; w.hp = w.maxHp = 9999; f.apLeft = 9; B.cmdAttack(f, w)');
+    assert.equal(ev(ctx, 'f.face'), 1);
+    assert.equal(ev(ctx, 'B.isBehind(f, u)'), true);
+  } },
+  { name: 'поле: удар в спину вдвое чаще критический', fn: () => {
+    const ctx = game();
+    setup(ctx);
+    const crits = side => ev(ctx, `(() => {
+      f.hp = f.maxHp = 1e9; f.s.dodge = -999; f.s.block = 0; w.side = 'player'; w.s.acc = 999; w.s.crit = 25; w.crits = 0;
+      w.c = ${side === 'back' ? 6 : 4}; w.r = ${side === 'back' ? 2 : 1};
+      for (let i = 0; i < 1200; i++) { f.lastTarget = u.uid; f.face = -1; B.strike(w, f, { noCounter: true }); }
+      return w.crits;
+    })()`);
+    const front = crits('front'), back = crits('back');
+    assert.ok(front > 220 && front < 380, `спереди ${front}`);
+    assert.ok(back > 500 && back < 700, `в спину ${back}`);
+  } },
+  { name: 'поле: окружённый не может отойти, пока оба противника держат его', fn: () => {
+    const ctx = game();
+    setup(ctx);
+    // u смотрит вправо, на f; w заходит ему за спину
+    ev(ctx, 'w.c = 3; w.r = 2; B.updateFacing()');
+    assert.equal(ev(ctx, 'B.holders(u).length'), 2);
+    const cells = ev(ctx, '[...B.reachable(u, 10).values()].map(n => [n.c, n.r])');
+    for (const [c, r] of cells) assert.ok(Math.max(Math.abs(c - 5), Math.abs(r - 2)) <= 1 && Math.max(Math.abs(c - 3), Math.abs(r - 2)) <= 1, `${c},${r}`);
+    assert.ok(cells.length > 1, 'переступить можно');
+    // оглушённый не держит
+    ev(ctx, 'w.stun = 1');
+    assert.equal(ev(ctx, 'B.holders(u).length'), 0);
+    assert.ok(ev(ctx, 'B.reachable(u, 10).has(cellKey(4, 4))'));
   } },
   { name: 'лучник школы: +15% к урону', fn: () => {
     const ctx = game();

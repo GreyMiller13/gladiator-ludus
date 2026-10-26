@@ -359,7 +359,7 @@ function renderModal() {
     ['Здоровье', s.maxHp, 'hp'], ['Урон', `${s.dmgMin}–${s.dmgMax}${s.dmgMult !== 1 ? ` ×${s.dmgMult.toFixed(2)}` : ''}`, 'dmg'],
     ['Точность', `${s.acc >= 0 ? '+' : ''}${s.acc}%`, 'acc'], ['Уклонение', `${s.dodge}%`, 'dodge'], ['Броня', `${s.armor}`, 'armor'],
     ['Шанс крита', `${s.crit}% · ×${s.critMult.toFixed(2)}`, 'crit'], ['Блок щитом', `${s.block}%`, 'block'],
-    ['Инициатива', `${s.init} · шагов ${s.move}`, 'init'], ['Дальность', `${s.reach} кл.`, 'reach'], ['Сопротивление', `${Math.min(100, s.resist)}%`, 'resist'],
+    ['Инициатива', `${s.init} · ОД ${s.ap}`, 'init'], ['Удар / умение', `${s.atkAp} / ${abilityAp(s)} ОД`, 'apcost'], ['Дальность', `${s.reach} кл.`, 'reach'], ['Сопротивление', `${Math.min(100, s.resist)}%`, 'resist'],
   ];
   if (s.stun) derived.push(['Оглушение при ударе', `${s.stun}%`, 'stun']);
   if (s.mercy) derived.push(['Милость толпы', `+${s.mercy}%`, 'mercy']);
@@ -821,7 +821,8 @@ const tipStat = {
   crit: s => `Шанс критического удара.\n3% + 0.8 × Мастерство + снаряжение и навыки.`,
   critMult: s => `Во сколько раз крит сильнее обычного удара. Базово ×1.6, больше — от навыков фракийца.`,
   block: s => `Шанс принять удар на щит: урон −60%.\nДаёт щит и навыки. В обороне +20%.\nНе работает, если боец в сети или оглушён. Некоторые удары (выпад, рассекающий удар, прицельный выстрел) не блокируются.`,
-  init: s => `Инициатива: кто ходит раньше в раунде (к ней добавляется случай 0–6) и сколько клеток боец проходит за ход: 1 + инициатива / 4, от 2 до 5 (инициатива 8 — 3 шага, 12 — 4, 16 — 5).\nСейчас шагов: ${s.move}.`,
+  init: s => `Инициатива: кто ходит раньше в раунде (к ней добавляется случай 0–6) и сколько очков действия (ОД) у бойца на ход: 5 + инициатива / 4, от 5 до 9.\nШаг — 1 ОД, удар — по оружию, умение — на 1 дороже удара. Неистраченные ОД дают +${AP_DODGE}% уклонения до следующего хода.\nСейчас ОД: ${s.ap}.`,
+  apcost: s => `Сколько ОД стоит удар этим оружием и умение школы.\nЛёгкое оружие (сика) — 2, обычное — 3, двуручное и лук — 4, без оружия — 2. Умение — на 1 дороже удара.\nСейчас: удар ${s.atkAp}, умение ${abilityAp(s)}.`,
   resist: s => `Сопротивление: на столько процентов меньше шанс попасть в сеть или под оглушение.\n3% за очко Воли + снаряжение («Стойкость») и навыки. 100% — полная неуязвимость.`,
   reach: s => `Дальность удара в клетках. Обычное оружие — 1 (соседняя клетка, в том числе по диагонали), копьё и трезубец — 2, лук — 6.\nВысокие препятствия закрывают линию выстрела.`,
   stun: s => `Шанс оглушить цель при каждом попадании (булава, секира). Цель пропустит свой следующий ход.`,
@@ -937,11 +938,14 @@ function guideChapter(ch) {
     </ul>
     <h3>Ход</h3>
     <ul>
-      <li>Порядок ходов — по инициативе (очередь видна над ареной). На своём ходу боец может переместиться (до 2–5 клеток) и совершить одно действие: удар, умение, оборону или ожидание.</li>
-      <li>Шаги можно тратить до действия и после него: подойти на клетку, ударить и отступить на оставшиеся. Быстрый боец так уходит туда, где медленный его не достанет, — поэтому ловкость решает, кто диктует дистанцию.</li>
-      <li><b>Удар вдогонку.</b> Кто уходит из клетки рядом с противником, получает от него удар в ${Math.round(PARTING_MULT * 100)}% урона (без крита; от него можно уклониться). Не бьют вдогонку стрелки, оглушённые и опутанные сетью. Шаг вдоль противника, когда боец остаётся рядом, удара не вызывает. Подсказка над клеткой предупреждает об ударе вдогонку.</li>
-      <li> Тратить шаги не обязательно — «Конец хода» (пробел) оставляет бойца на месте. Клик по своему бойцу ничего не делает, так что промах мимо врага не съест ход, а если силуэт бойца закрывает клетку позади него, клик по ней всё равно ведёт на эту клетку. Если боец ещё может ударить, «Конец хода» нужно нажать дважды.</li>
-      <li><b>Оборона</b> (клавиша D): боец остаётся на месте и до следующего хода получает −40% урона, +15% уклонения и +20% блока.</li>
+      <li>Порядок ходов — по инициативе (очередь видна над ареной).</li>
+      <li><b>Очки действия (ОД).</b> На свой ход боец получает 5 + инициатива / 4 ОД, от 5 до 9: ловкость — это и очерёдность, и запас действий. Шаг на клетку стоит 1 ОД. Удар — по оружию: лёгкое (сика) — 2, обычное (гладиус, копьё, трезубец, булава, спата) — 3, двуручное (длинный меч, секира) и выстрел из лука — 4, кулаки — 2. Умение школы — на 1 ОД дороже удара. Удар или умение — одно за ход; шагать можно и до, и после.</li>
+      <li><b>Выход из ближнего боя.</b> Шаг прочь от соседнего противника стоит на ${DISENGAGE_AP} ОД дороже. Подсказка над клеткой показывает цену пути.</li>
+      <li><b>Неистраченные ОД</b> становятся уклонением до следующего хода бойца: +${AP_DODGE}% за каждое. Кто бьёт и отбегает, остаётся без этой защиты; кто стоит и ждёт — вёрток.</li>
+      <li><b>Лицо и спина.</b> Боец смотрит влево или вправо — на того, кого атаковал последним (если сам ещё не бил — на того, кто атаковал его, иначе на ближайшего противника). Удар или выстрел с другой стороны — <b>в спину</b>: шанс крита у атакующего вдвое выше.</li>
+      <li><b>Окружение.</b> Если рядом с бойцом противник перед ним и противник за спиной, он окружён: отойти ни от одного из них нельзя, можно лишь переступить, оставаясь рядом с обоими. Вырваться — повергнуть или оглушить одного из них (оглушённый и опутанный сетью не держат).</li>
+      <li>Тратить ОД не обязательно — «Конец хода» (пробел) оставляет бойца на месте. Клик по своему бойцу ничего не делает, так что промах мимо врага не съест ход, а если силуэт бойца закрывает клетку позади него, клик по ней всё равно ведёт на эту клетку. Если боец ещё может ударить, «Конец хода» нужно нажать дважды.</li>
+      <li><b>Оборона</b> (клавиша D): боец остаётся на месте и до следующего хода получает −40% урона и +20% блока; неистраченные ОД дают ещё и уклонение.</li>
       <li>Лучнику нужна линия выстрела без высоких препятствий. Стрельба в упор: −20% к точности. Сагиттарий бьёт из лука на ${Math.round(SAG_BONUS * 100)}% сильнее прочих стрелков. Сеть летит на 3 клетки.</li>
       <li><b>Сеть и оглушение</b> отнимают у цели её следующий ход. Если цель уже ходила в этом раунде, она пропустит ход в следующем. Пока боец в сети или оглушён, он не уклоняется, не блокирует и не контратакует.</li>
       <li>Сагиттария не достают встречные удары и контратаки. Гопломах встречает подходящих врагов ударом копья раньше, чем они ударят.</li>
@@ -1283,7 +1287,7 @@ function playerTurn(B, u) {
     const refresh = () => {
       T.confirmEnd = false;
       const o = T.o = b.options(u);
-      v.hl.reach = u.mpLeft > 0 ? o.reach : null;
+      v.hl.reach = u.apLeft > 0 ? o.reach : null;
       v.hl.targets = T.aim ? null : new Set([...o.attackNow.map(f => f.uid), ...o.approach.keys()]);
       v.hl.ability = T.aim ? new Set(o.abilityNow.map(f => f.uid)) : null;
       v.hl.selected = u.uid;
@@ -1305,7 +1309,7 @@ function playerTurn(B, u) {
         updateBattleHud();
         if (r === 'end') ended = true;
         // действие сделано и шагов не осталось — ход окончен
-        if (u.acted && u.mpLeft <= 0) ended = true;
+        if (u.apLeft <= 0) ended = true;
         if (b.over || !u.alive || UI.battle !== B) break;
       }
       T.busy = false;
@@ -1328,7 +1332,7 @@ function playerTurn(B, u) {
         if (cell) run([step(cell.c, cell.r), atk(f)]);
         return;
       }
-      if (!f && u.mpLeft > 0) {
+      if (!f && u.apLeft > 0) {
         const n = o.reach.get(cellKey(hit.c, hit.r));
         if (n && n.d > 0) run([step(n.c, n.r)]);
       }
@@ -1347,17 +1351,18 @@ function playerTurn(B, u) {
           return { text: `${f.g.name}: ${blocked ? 'нет линии выстрела — мешает высокое препятствие' : 'вне досягаемости'}`, x: fp.x, y: fp.y + 26, color: '#b9a98c' };
         }
         const pb = u.s.ranged && cheb(from || u, f) <= 1 ? -20 : 0;
-        const dodge = f.net > 0 || f.stun > 0 ? 0 : f.s.dodge + (f.defending ? 15 : 0);
+        const dodge = f.net > 0 || f.stun > 0 ? 0 : f.s.dodge + (f.evade || 0);
         const p = hitChanceOf(u.s.acc + pb, dodge);
-        return { text: `${f.g.name}: попадание ${p}%${from && from !== u ? (u.s.ranged ? ' (перейти и выстрелить)' : ' (подойти и ударить)') : ''}${pb ? ' · в упор' : ''}`, x: fp.x, y: fp.y + 26, color: '#f0b6a6' };
+        const back = b.isBehind(f, from || u);
+        return { text: `${f.g.name}: попадание ${p}%${back ? ' · в спину: крит ×2' : ''}${from && from !== u ? (u.s.ranged ? ' (перейти и выстрелить)' : ' (подойти и ударить)') : ''}${pb ? ' · в упор' : ''}`, x: fp.x, y: fp.y + 26, color: back ? '#f6d47a' : '#f0b6a6' };
       }
-      if (!f && u.mpLeft > 0 && T.o.reach) {
+      if (!f && u.apLeft > 0 && T.o.reach) {
         const n = T.o.reach.get(cellKey(hv.c, hv.r));
         if (n && n.d > 0) {
           const p = cellPos(n.c, n.r);
-          // уход от соседнего противника: он ударит вдогонку
-          const parting = b.enemiesOf(u).filter(e => cheb(u, e) === 1 && cheb(n, e) > 1 && b.free(e) && !e.s.ranged).length;
-          return { text: `Шагов: ${n.d}${parting ? ` · удар вдогонку${parting > 1 ? ` ×${parting}` : ''}` : ''}`, x: p.x, y: p.y + 24, color: parting ? '#f0c08a' : '#bcd6ee' };
+          // путь дороже числа клеток — значит, по дороге боец выходит из ближнего боя
+          const leave = n.d > b.pathOf(n).length;
+          return { text: `ОД: ${n.d}${leave ? ' · выход из боя' : ''}`, x: p.x, y: p.y + 24, color: leave ? '#f0c08a' : '#bcd6ee' };
         }
       }
       return null;
@@ -1383,17 +1388,18 @@ function renderTact(B) {
     el.innerHTML = B.b.mode === 'manual' && B.phase === 'fight' && !B.b.over ? `<div class="tact muted">${B.autoplay ? 'Автобой до конца схватки.' : 'Ходит противник…'}</div>` : '';
     return;
   }
-  const u = T.u, A = clsOf(u.g).ability;
-  const abReady = A && u.cd === 0;
+  const u = T.u, A = clsOf(u.g).ability, b = B.b;
+  const abReady = A && u.cd === 0 && u.apLeft >= abilityAp(u.s);
+  const held = b.holders(u).length > 0;
   const hint = T.busy ? 'Выполняется…' : T.confirmEnd ? '<b class="warn">Боец ещё может атаковать.</b> Нажмите «Конец хода» ещё раз, чтобы всё равно закончить ход.' : T.aim ? `Выберите цель умения «${A.name}» (золотые кольца). Esc — отмена.`
-    : u.acted ? (u.mpLeft > 0 ? `Удар нанесён. Можно остаться на месте («Конец хода», пробел) или отойти на ${u.mpLeft} кл. по синим клеткам.` : 'Действие выполнено.')
-    : `Красные кольца — кого можно атаковать${u.mpLeft > 0 ? ' (если нужно, боец сам подойдёт)' : ''}.${u.mpLeft > 0 ? ` Синие клетки — куда можно шагнуть (осталось ${u.mpLeft}).` : ''} Тратить шаги не обязательно: «Оборона» или «Конец хода» оставят бойца на месте.`;
+    : u.acted ? (u.apLeft > 0 ? `Удар нанесён. Можно отойти по синим клеткам или остаться: оставшиеся ${u.apLeft} ОД дадут +${u.apLeft * AP_DODGE}% уклонения.` : 'Действие выполнено.')
+    : `Красные кольца — кого можно атаковать${u.apLeft > u.s.atkAp ? ' (если нужно, боец сам подойдёт)' : ''}. Синие клетки — куда можно шагнуть. Неистраченные ОД — уклонение до следующего хода.`;
   el.innerHTML = `<div class="tact">
-    <div><b>Ход: <span class="player">${esc(u.g.name)}</span></b> <span class="muted small">${clsOf(u.g).name} · шагов ${u.mpLeft}/${u.mp} · дальность ${u.reach}${u.s.ranged ? ' (лук)' : ''}</span><div class="small muted">${hint}</div></div>
+    <div><b>Ход: <span class="player">${esc(u.g.name)}</span></b> <span class="muted small">${clsOf(u.g).name} · <b class="apnum">ОД ${u.apLeft}/${u.ap}</b> · удар ${u.s.atkAp}${A ? ` · умение ${abilityAp(u.s)}` : ''} · дальность ${u.reach}${u.s.ranged ? ' (лук)' : ''}</span>${held ? ' <span class="badge-s stun">Окружён — не может отступить</span>' : ''}<div class="small muted">${hint}</div></div>
     <div class="tbtns">
-      ${A ? `<button class="small ${T.aim ? 'active' : ''}" data-act="tAbility" ${!abReady || T.busy || u.acted ? 'disabled' : ''} title="${esc(A.desc)}">${A.name}${abReady ? '' : ` (${u.cd})`}</button>` : ''}
-      <button class="small" data-act="tDefend" ${T.busy || u.acted ? 'disabled' : ''} title="Остаться на месте и закрыться: −40% урона, +15% уклонения, +20% блока до следующего хода. Клавиша D">Оборона <kbd>D</kbd></button>
-      <button class="small ${u.acted || T.confirmEnd ? 'primary' : ''}" data-act="tWait" ${T.busy ? 'disabled' : ''} title="Закончить ход, не тратя оставшиеся шаги. Пробел">${T.confirmEnd ? 'Точно закончить?' : 'Конец хода'} <kbd>␣</kbd></button>
+      ${A ? `<button class="small ${T.aim ? 'active' : ''}" data-act="tAbility" ${!abReady || T.busy || u.acted ? 'disabled' : ''} title="${esc(A.desc)} Стоит ${abilityAp(u.s)} ОД.">${A.name}${u.cd ? ` (${u.cd})` : ''}</button>` : ''}
+      <button class="small" data-act="tDefend" ${T.busy || u.acted ? 'disabled' : ''} title="Остаться на месте и закрыться: −40% урона и +20% блока до следующего хода; неистраченные ОД дадут ещё и уклонение. Клавиша D">Оборона <kbd>D</kbd></button>
+      <button class="small ${u.acted || T.confirmEnd ? 'primary' : ''}" data-act="tWait" ${T.busy ? 'disabled' : ''} title="Закончить ход; неистраченные ОД дадут уклонение. Пробел">${T.confirmEnd ? 'Точно закончить?' : 'Конец хода'} <kbd>␣</kbd></button>
       ${tutorFight(B.event) ? '' : `<button class="small" data-act="tAuto" ${T.busy ? 'disabled' : ''} title="Дальше бой проведёт ИИ">Автобой</button>`}
     </div>
   </div>`;
@@ -1444,6 +1450,8 @@ function unitRow(u, B) {
   if (u.stun) tags.push('<span class="badge-s stun">Оглушён — пропустит ход</span>');
   if (u.net) tags.push('<span class="badge-s net">В сети — пропустит ход</span>');
   if (u.defending) tags.push('<span class="badge-s def">Оборона</span>');
+  if (u.alive && u.evade && B.b.current !== u) tags.push(`<span class="badge-s def">Уклонение +${u.evade}%</span>`);
+  if (u.alive && B.b.holders(u).length) tags.push('<span class="badge-s stun">Окружён</span>');
   if (u.spearWall) tags.push('<span class="badge-s def">Заслон</span>');
   if (u.bleeds.length) tags.push(`<span class="badge-s bleed">Кровь ${u.bleeds.reduce((s, b) => s + b.dmg, 0)}/ход</span>`);
   if (u.alive && C.ability) tags.push(u.cd > 0 ? `<span class="badge-s cd">${C.ability.name}: ${u.cd}</span>` : `<span class="badge-s ok">${C.ability.name} готов</span>`);
@@ -1451,7 +1459,7 @@ function unitRow(u, B) {
   return `<div class="urow ${u.side} ${u.alive ? '' : 'dead'} ${active ? 'active' : ''}">
     <img class="portrait sm" src="${portrait(u.g, 44, 55, { bust: true, enemy: u.side === 'enemy' })}" alt="">
     <div class="uinfo">
-      <div class="un">${esc(u.g.name)} <span class="muted tiny">${C.name}, ур. ${u.g.level} · шагов ${u.mp} · дальн. ${u.reach}</span></div>
+      <div class="un">${esc(u.g.name)} <span class="muted tiny">${C.name}, ур. ${u.g.level} · ОД ${u.ap} · дальн. ${u.reach}</span></div>
       <div class="hp"><div style="width:${u.hp / u.maxHp * 100}%"></div><span>${u.hp} / ${u.maxHp}</span></div>
       <div class="badges">${tags.join('')}</div>
     </div>

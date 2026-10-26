@@ -36,7 +36,7 @@ module.exports = [
     assert.equal(ev(ctx, 'g.freeSpec'), 2);
   } },
   { name: 'школы: у каждой — главные, полезные и лишние характеристики и совет по развитию', fn: ctx => {
-    assert.equal(ev(ctx, 'JSON.stringify(classBuild("murmillo"))'), '{"main":["end","str"],"useful":["skl","wil"],"low":["agi"]}');
+    assert.equal(ev(ctx, 'JSON.stringify(classBuild("murmillo"))'), '{"main":["end","str"],"useful":["agi","skl"],"low":["wil"]}');
     assert.equal(ev(ctx, 'JSON.stringify(classBuild("retiarius").main)'), '["agi","skl"]');
     assert.equal(ev(ctx, 'JSON.stringify(classBuild("gallus").main)'), '["str","end"]');
     for (const c of ev(ctx, 'CLASS_KEYS')) {

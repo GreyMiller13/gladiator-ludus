@@ -325,15 +325,24 @@ function computeStats(g) {
   s.dmgMin = Math.round(s.dmgMin); s.dmgMax = Math.round(s.dmgMax);
   s.dodge = Math.round(s.dodge); s.acc = Math.round(s.acc); s.crit = Math.round(s.crit);
   s.dodge = Math.max(0, s.dodge); s.block = Math.max(0, s.block);
-  // тактическое поле: шаги за ход и дальность удара. Шагов мало, и они растут с инициативой:
-  // ловкий боец может ударить и отойти туда, где медленный его не достанет
-  s.move = moveOf(s.init);
+  // тактическое поле: очки действия за ход, цена удара и дальность
+  s.ap = apOf(s.init);
+  s.atkAp = attackAp(weapon);
   s.reach = typeof reachOf === 'function' ? reachOf(g) : 1;
   return s;
 }
 
 const SAG_BONUS = 0.15;
-const moveOf = init => clamp(1 + Math.floor(init / 4), 2, 5);
+// Очки действия (ОД): шаг — 1, удар — по оружию (лёгкое 2, обычное 3, двуручное и лук 4), умение — на 1 дороже.
+// Выход из ближнего боя стоит ещё DISENGAGE_AP; неистраченные ОД — уклонение до следующего хода
+const apOf = init => clamp(5 + Math.floor(init / 4), 5, 9);
+const AP_DODGE = 3, DISENGAGE_AP = 1;
+function attackAp(weapon) {
+  if (!weapon) return 2; // кулаки
+  const B = ITEM_BASES[weapon.base];
+  return B.light ? 2 : B.twoHanded ? 4 : 3;
+}
+const abilityAp = s => s.atkAp + 1;
 
 // Шанс попасть: базовые 72% + точность атакующего − уклонение цели (10..97%)
 const BASE_HIT = 72;
@@ -351,7 +360,7 @@ function combatPower(g) {
   const dmg = (s.dmgMin + s.dmgMax) / 2 * s.dmgMult * crit * hit * 25 / 31;
   const taken = hitChanceOf(10, s.dodge) / 100 * (1 - Math.min(s.block, 80) / 100 * 0.6) * 25 / (25 + s.armor);
   const ranks = Object.values(g.perks || {}).reduce((a, b) => a + b, 0);
-  const skill = (1 + 0.035 * ranks) * (g.cls ? 1.1 : 1) * (1 + 0.05 * (s.move - 2)) * (s.reach > 1 ? 1.08 : 1);
+  const skill = (1 + 0.035 * ranks) * (g.cls ? 1.1 : 1) * (1 + 0.04 * (s.ap - 5)) * (s.reach > 1 ? 1.08 : 1);
   return Math.round(Math.sqrt(dmg * s.maxHp / taken) * skill * POWER_K);
 }
 const teamPower = gs => gs.reduce((s, g) => s + combatPower(g), 0);
