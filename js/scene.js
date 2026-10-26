@@ -187,8 +187,8 @@ const TUTOR_STEPS = [
   { id: 'closeGlad3', g: 'after', lock: true, back: 'newGlad', sel: '#modal [data-act="closeModal"]', wait: 'modalClosed', skip: () => !tutorHas('glad'),
     text: 'Теперь у тебя двое, и оба вооружены. Закрой окно бойца.' },
   { id: 'toBets', g: 'after', lock: true, sel: 'nav [data-tab="arena"]', wait: 'tab:arena',
-    text: 'Напоследок — трибуны. Вернись на арену.' },
-  { id: 'bets', g: 'after', modal: true, tab: 'arena', sel: 'main .betpanel', wait: 'next',
+    text: 'Напоследок — трибуны. Вернись на арену: у каждой арены своя вкладка, а справа — «Бой дня: ставки».' },
+  { id: 'bets', g: 'after', modal: true, tab: 'arena', arenaTab: 'bets', sel: 'main .betpanel', wait: 'next',
     text: `Бой дня: два чужих бойца, почти равных по силе. Нажми на портрет — увидишь снаряжение, характеристики и школу бойца. Выбери сумму — от ${BET_MIN} с шагом ${BET_STEP} — и нажми «Поставить» у своего бойца; выигрыш — ставка × коэффициент. Ставка играет, только если посмотреть бой. До начала боя её можно отменить кнопкой «Отменить ставку», а если завершить день без просмотра — деньги вернутся в казну.` },
   { id: 'endDay', g: 'after', modal: true, sel: 'header [data-act="nextDay"]', wait: 'next', last: true,
     text: 'Когда дела дня сделаны — заверши день: бойцы отдохнут, появятся новые бои и товары. И отложи денег к платежу: ростовщик ждать не станет. Дальше — сам. Ave!' },
@@ -320,6 +320,7 @@ function coachGo(j) {
 function showCoach() {
   const s = TUTOR_STEPS[coachStepIdx()];
   if (!s) return;
+  if (s.arenaTab !== undefined && UI.arenaTab !== s.arenaTab) { UI.arenaTab = s.arenaTab; if (UI.tab === 'arena' && !UI.battle) render(); }
   if (s.tab && UI.tab !== s.tab && !UI.battle) { UI.tab = s.tab; render(); }
   coachCard(s);
 }

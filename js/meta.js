@@ -635,7 +635,7 @@ const META = (() => {
       <div class="small m-desc">${escH(c.desc)}</div>
       <div class="m-cond"><span class="m-lbl">Условие</span>${escH(c.cond ? c.cond.text : 'Победить')}</div>
       <div class="foes">${foes}</div>
-      ${!c.done && typeof pwLine === 'function' ? pwLine(c) : ''}
+      ${!c.done && typeof enemyPower === 'function' ? `<div class="reward">${enemyPower(c)}</div>` : ''}
       <div class="small muted m-heads">Ваших бойцов: <b>${c.playerSize}</b>${c.playerSize < c.size ? ' — в меньшинстве' : ''} · бой не насмерть</div>
       <div class="reward"><span>Плата <b>${c.gold}</b> ден.</span>${c.fame ? `<span>Слава <b>+${c.fame}</b></span>` : ''}<span>Опыт <b>×${c.xpMult}</b></span></div>
       ${art ? `<div class="m-artline">Реликвия: <b class="q4">${escH(art.name)}</b> <span class="tiny muted">(${SLOTS[art.slot].toLowerCase()})</span></div>` : ''}
@@ -653,7 +653,7 @@ const META = (() => {
       <span>Выполнено заказов <b>${c.contracts}</b></span><span>Провалено <b>${c.contractsFailed}</b></span>
       <span>Реликвий за легендарные заказы осталось <b>${left}</b></span>
     </div>
-    <div class="grid m-contracts">${list.map(contractCard).join('') || '<p class="empty-note">Сегодня заказчиков нет. Загляните завтра.</p>'}</div>
+    <div class="grid m-contracts scrollfill">${list.map(contractCard).join('') || '<p class="empty-note">Сегодня заказчиков нет. Загляните завтра.</p>'}</div>
     ${typeof eventPicker === 'function' ? eventPicker('contract') : ''}`;
   }
 
@@ -713,9 +713,9 @@ const META = (() => {
       <div class="bar"><div style="width:${got / total * 100}%"></div></div>
       <span>Реликвий <b>${artsGot} / ${arts.length}</b></span>
     </div>
-    <div class="m-groups">${groups}</div>
+    <div class="scrollfill"><div class="m-groups">${groups}</div>
     <div class="screen-title mt m-relics"><h2>Реликвии</h2><p>Уникальные предметы легендарных бойцов: сильнее любого изделия кузнеца, не продаются и не выпадают с противников. Каждая существует в единственном экземпляре — погибнет боец вместе с ней или уйдёт она с продажей, вернуть её будет нельзя.</p></div>
-    <div class="m-arts">${arts.map(artifactCard).join('')}</div>`;
+    <div class="m-arts">${arts.map(artifactCard).join('')}</div></div>`;
   }
 
   return {

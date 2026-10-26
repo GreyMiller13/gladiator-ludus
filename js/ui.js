@@ -60,6 +60,7 @@ function render() {
     contracts: () => (typeof META !== 'undefined' ? META.screenContracts() : ''),
     glory: () => (typeof META !== 'undefined' ? META.screenAchievements() : ''),
   };
+  $('main').dataset.tab = UI.tab;
   $('main').innerHTML = screens[UI.tab]();
   if (UI.tab === 'ludus') paintLudusHero();
   renderModal();
@@ -207,11 +208,11 @@ function renderNav() {
 const POWER_TIP = 'Мощь — оценка силы в бою: сколько урона боец наносит за ход и сколько выдержит, с учётом снаряжения, навыков школы и шагов. У команды мощь складывается. Перевес в 1.25 раза — примерно 3 победы из 4, в 1.5 раза — почти наверняка.';
 const pwBadge = p => `<span class="pw" data-tip="${tipAttrHtml(POWER_TIP)}">мощь <b>${p}</b></span>`;
 function pwLine(ev, team) {
-  if (!STATE.gladiators.length || !ev.enemies || !ev.enemies.length) return '';
-  const n = playerCount(ev), mine = team && team.length ? team : bestTeam(n);
-  const my = teamPower(mine), en = teamPower(ev.enemies), v = powerVerdict(my / Math.max(1, en));
-  const who = team && team.length ? 'выбранные бойцы' : mine.length < n ? `у вас бойцов ${mine.length} из ${n}` : n === 1 ? 'ваш сильнейший' : `ваши ${n} сильнейших`;
-  return `<div class="pwline ${v.cls}" data-tip="${tipAttrHtml(POWER_TIP)}">Мощь: ${who} <b>${my}</b> против <b>${en}</b> — ${v.text}</div>`;
+  if (!ev.enemies || !ev.enemies.length) return '';
+  const en = teamPower(ev.enemies);
+  if (!team || !team.length) return `<div class="pwline pw-even" data-tip="${tipAttrHtml(POWER_TIP)}">Мощь противников <b>${en}</b>. Выберите бойцов — покажу расклад.</div>`;
+  const my = teamPower(team), v = powerVerdict(my / Math.max(1, en));
+  return `<div class="pwline ${v.cls}" data-tip="${tipAttrHtml(POWER_TIP)}">Мощь: ваши <b>${my}</b> против <b>${en}</b> — ${v.text}</div>`;
 }
 
 function gladCard(g, opts = {}) {
@@ -246,7 +247,7 @@ function screenLudus() {
   const free = Math.max(0, Math.min(MAX_GLADIATORS, Math.max(3, gs.length + 1)) - gs.length);
   const beds = Array.from({ length: free }, () => `<div class="gcard bed" data-act="tab" data-tab="market">
       <div class="bed-ico">${ICON.helm}</div><div><div class="gname">Свободная койка</div><div class="gsub">Купить бойца на невольничьем рынке</div></div></div>`).join('');
-  const list = `<div class="grid">${gs.map(g => gladCard(g)).join('')}${beds}</div>`;
+  const list = `<div class="grid barracks scrollfill">${gs.map(g => gladCard(g)).join('')}${beds}</div>`;
   const power = teamPower(bestTeam(3));
   return `
   <div class="ludus-hero">
@@ -257,13 +258,13 @@ function screenLudus() {
     </div>
   </div>
   <div class="two-col">
-    <div>
+    <div class="col-fill">
       <div class="sec-head"><h3>Казармы</h3><span class="muted small">Нажмите на бойца, чтобы распределить очки, сменить снаряжение или тренировать его.</span></div>
       ${list}
     </div>
     <div class="side-col">
       ${todayPanel()}
-      <div class="panel"><h3>Хроника лудуса</h3>
+      <div class="panel chron"><h3>Хроника лудуса</h3>
         <div class="journal">${STATE.journal.map(j => `<p><span class="d">День ${j.day}</span>${j.text}</p>`).join('')}</div>
       </div>
     </div>
@@ -301,7 +302,9 @@ function paintLudusHero() {
   if (!cv || typeof paintArena !== 'function' || typeof drawFigure !== 'function') return;
   const tier = clamp(Math.max(...unlockedTiers()), 0, TIERS.length - 1);
   const team = STATE.gladiators.slice(0, 6);
-  const key = `${tier}|${team.map(g => `${g.id}:${g.cls}:${SLOT_KEYS.map(k => (g.equip[k] ? g.equip[k].base : '')).join(',')}`).join(';')}`;
+  // картина рисуется под пропорции полосы на экране: в низкой полосе бойцы мельче, но целиком
+  const H = clamp(Math.round(HERO_W * (cv.clientHeight || 300) / (cv.clientWidth || HERO_W)), 100, 300);
+  const key = `${tier}|${H}|${team.map(g => `${g.id}:${g.cls}:${SLOT_KEYS.map(k => (g.equip[k] ? g.equip[k].base : '')).join(',')}`).join(';')}`;
   if (LUDUS_ART.key !== key) {
     // арена целиком, из неё — полоса от нижних трибун до песка; бойцы — в правой части, слева текст
     const full = document.createElement('canvas');
@@ -313,23 +316,24 @@ function paintLudusHero() {
       fctx.fillStyle = CROWD_SKIN[p.k]; fctx.fillRect(p.x - 1.5 * p.s, p.y - 9.6 * p.s, 3 * p.s, 3 * p.s);
     }
     const off = document.createElement('canvas');
-    off.width = HERO_W; off.height = HERO_H;
+    off.width = HERO_W; off.height = H;
     const ctx = off.getContext('2d');
-    ctx.drawImage(full, 0, 250, AW, HERO_H, 0, 0, HERO_W, HERO_H);
-    const n = team.length, gap = 150, cx = HERO_W * 0.64;
+    // полоса от нижних трибун до песка: чем она ниже, тем ближе к песку
+    ctx.drawImage(full, 0, 250 + (300 - H) * 0.55, AW, H, 0, 0, HERO_W, H);
+    const k = Math.min(1, H / 250), n = team.length, gap = 150 * Math.max(0.75, k), cx = HERO_W * 0.64;
     team.forEach((g, i) => {
       ensureLook(g);
-      const x = cx + (i - (n - 1) / 2) * gap, y = HERO_H - 22;
+      const x = cx + (i - (n - 1) / 2) * gap, y = H - 12 * k - 6;
       ctx.fillStyle = 'rgba(40,22,8,.35)';
-      ctx.beginPath(); ctx.ellipse(x, y, 40, 8, 0, 0, Math.PI * 2); ctx.fill();
-      drawFigure(ctx, figureSpec(g), { ...stancePose(g.cls), ...GUARD }, x, y, { scale: 0.95, facing: x < cx ? 1 : -1 });
+      ctx.beginPath(); ctx.ellipse(x, y, 40 * k, 8 * k, 0, 0, Math.PI * 2); ctx.fill();
+      drawFigure(ctx, figureSpec(g), { ...stancePose(g.cls), ...GUARD }, x, y, { scale: 0.95 * k, facing: x < cx ? 1 : -1 });
     });
     LUDUS_ART.key = key; LUDUS_ART.cv = off;
   }
-  cv.width = HERO_W; cv.height = HERO_H;
+  cv.width = HERO_W; cv.height = H;
   cv.getContext('2d').drawImage(LUDUS_ART.cv, 0, 0);
 }
-const HERO_W = 1280, HERO_H = 300;
+const HERO_W = 1280;
 
 // ------------------------------------------------------------
 //  Модальное окно гладиатора
@@ -544,23 +548,40 @@ const changeClassCost = g => 40 * g.level;
 // ------------------------------------------------------------
 //  Арена
 // ------------------------------------------------------------
+// Арена: вкладка на каждую арену (бои только этой арены — все на одном экране) и вкладка ставок
+const ARENA_SHORT = ['Помпеи', 'Капуя', 'Рим', 'Колизей'];
+const arenaLock = i => (STATE.story ? STORY.lockText(i) : `Откроется при славе лудуса ${TIERS[i].fameReq}.`);
+function arenaTab() {
+  const t = UI.arenaTab;
+  if (t === 'bets' || (Number.isInteger(t) && tierOpen(t))) return t;
+  // по умолчанию — арена учебного боя, иначе старшая открытая арена, где ещё есть бои
+  const live = STATE.events.filter(e => !e.done);
+  const train = live.find(e => e.training);
+  if (train) return train.tier;
+  const open = unlockedTiers().filter(i => live.some(e => e.tier === i));
+  return open.length ? Math.max(...open) : maxTier();
+}
 function screenArena() {
-  const tiers = TIERS.map((T, i) => ({ T, i }));
-  let html = `<div class="screen-title"><h2>Арена</h2><p>Каждый боец может выйти на песок один раз в день. Раненые не сражаются.</p></div>`;
-  html += betPanel();
-  html += finalCard();
-  for (const { T, i } of tiers) {
-    if (!tierOpen(i)) {
-      html += `<div class="locked-tier mt">${T.name} (${T.place}). ${STATE.story ? STORY.lockText(i) : `Откроется при славе лудуса ${T.fameReq}.`}</div>`;
-      continue;
-    }
-    const evs = STATE.events.filter(e => e.tier === i);
-    if (!evs.length) continue;
-    html += `<h3 class="mt" style="color:var(--bronze);font-size:20px">${T.name} <span class="muted small" style="font-family:var(--font-body)">· ${T.place} · ${T.mood}</span></h3>
-      <div class="grid mt" style="margin-top:8px">${evs.map(eventCard).join('')}</div>`;
+  const cur = arenaTab();
+  const tabs = TIERS.map((T, i) => {
+    const open = tierOpen(i), n = STATE.events.filter(e => e.tier === i && !e.done).length + (i === 3 && finalUnlocked() ? 1 : 0);
+    return `<button class="atab ${cur === i ? 'on' : ''}" ${open ? `data-act="arenaTab" data-t="${i}"` : 'disabled'} data-tip="${tipAttrHtml(open ? `${T.name}. ${T.mood}` : `${T.place}: ${arenaLock(i)}`)}">${open ? '' : '🔒 '}${ARENA_SHORT[i]}${open && n ? `<span class="badge">${n}</span>` : ''}</button>`;
+  }).join('');
+  const bet = STATE.bet && STATE.bet.day === STATE.day ? STATE.bet : null;
+  const betTab = `<button class="atab bets ${cur === 'bets' ? 'on' : ''}" data-act="arenaTab" data-t="bets">Бой дня: ставки${bet && bet.pick !== null && !bet.done ? '<span class="badge">1</span>' : ''}</button>`;
+  let body;
+  if (cur === 'bets') body = betPanel();
+  else {
+    const T = TIERS[cur];
+    const evs = STATE.events.filter(e => e.tier === cur);
+    const fin = cur === 3 ? finalCard() : '';
+    body = `<p class="arena-sub muted small">${T.name} · ${T.mood} Каждый боец выходит на песок раз в день, раненые не сражаются. Нажмите на бой, чтобы выбрать бойцов; на портрет — чтобы рассмотреть противника.</p>
+      <div class="evgrid">${evs.map(eventCard).join('')}${fin}</div>
+      ${evs.length || fin ? '' : '<p class="empty-note">Сегодня здесь боёв нет.</p>'}`;
   }
-  html += eventPicker('arena') + eventPicker('final');
-  return html;
+  return `<div class="arena-head"><h2>Арена</h2><div class="atabs">${tabs}<span class="sp"></span>${betTab}</div></div>
+    ${body}
+    ${eventPicker('arena') + eventPicker('final')}`;
 }
 
 // ------------------------------------------------------------
@@ -678,45 +699,51 @@ function finalCard() {
     <div class="eh"><h3>${ev.done ? 'Финал проигран — чемпионы ждут завтра' : 'Финал: Игры за рудис свободы'}</h3><span class="fmt">3 на 3</span></div>
     <p class="small">Император выставляет трёх величайших гладиаторов Рима. Победа принесёт лудусу вечную славу и завершит историю. Бой смертельный — проигравших судит толпа.</p>
     <div class="foes">${foeRows(ev)}</div>
-    ${ev.done ? '' : pwLine(ev)}
-    <div class="reward"><span>Награда <b>${ev.gold}</b> ден.</span><span>Слава <b>+${ev.fame}</b></span></div>
+    <div class="reward">${enemyPower(ev)}<span><b>${ev.gold}</b> ден.</span><span><b>+${ev.fame}</b> славы</span></div>
   </div>`;
 }
 
 // Противники боя: нажатие на портрет открывает карточку бойца
-const foeRows = ev => ev.enemies.map((e, i) => `<div class="foe"><button class="pbtn" data-act="foeInfo" data-ev="${ev.id}" data-i="${i}" data-tip="Подробнее о бойце" aria-label="Подробнее: ${esc(e.name)}"><img class="portrait sm" src="${portrait(e, 44, 55, { bust: true, enemy: true })}" alt=""></button><span><b class="enemy">${esc(e.name)}</b><br><span class="muted small">${clsOf(e).name}, ур. ${e.level} · мощь ${combatPower(e)}</span></span></div>`).join('');
+const foeRows = ev => ev.enemies.map((e, i) => `<button class="pbtn foe" data-act="foeInfo" data-ev="${ev.id}" data-i="${i}" data-tip="${tipAttrHtml(`${e.name}: ${clsOf(e).name}, ${e.level}-й уровень, мощь ${combatPower(e)}. Нажмите, чтобы рассмотреть.`)}" aria-label="Подробнее: ${esc(e.name)}"><img class="portrait sm" src="${portrait(e, 44, 55, { bust: true, enemy: true })}" alt=""><span class="fn">${esc(e.name)}</span><span class="fl">${e.level} ур.</span></button>`).join('');
 
 function eventCard(ev) {
   const sel = ev.id === UI.eventId;
   const title = ev.done ? 'Бой окончен' : ev.boss ? esc(ev.title) : ev.training ? 'Учебный бой' : 'Поединок';
-  return `<div class="panel event ${ev.boss ? 'boss' : ''} ${ev.training ? 'training' : ''} ${sel ? 'sel' : ''} ${ev.done ? 'done' : ''}" data-act="${ev.done ? '' : 'pickEvent'}" data-id="${ev.id}">
+  const note = ev.training ? 'Без смертей, ручное управление, наставник подскажет.' : ev.boss && !ev.done ? 'Победа откроет следующую арену. Проигранный бой можно повторить завтра.' : '';
+  return `<div class="panel event ${ev.boss ? 'boss' : ''} ${ev.training ? 'training' : ''} ${sel ? 'sel' : ''} ${ev.done ? 'done' : ''}" data-act="${ev.done ? '' : 'pickEvent'}" data-id="${ev.id}" ${note ? `data-tip="${tipAttrHtml(note)}"` : ''}>
     <div class="eh"><h3>${title}</h3><span class="fmt">${ev.size} на ${ev.size}</span></div>
-    ${ev.training ? '<div class="small ev-note">Без смертей · ручное управление · наставник подскажет</div>' : ''}
-    ${ev.boss && !ev.done ? '<div class="small ev-note">Победа откроет следующую арену. Проигранный бой можно повторить завтра.</div>' : ''}
     <div class="foes">${foeRows(ev)}</div>
-    ${ev.done ? '' : pwLine(ev)}
-    <div class="reward"><span>Награда <b>${ev.gold}</b> ден.</span><span>Слава <b>+${ev.fame}</b></span></div>
+    <div class="reward">${enemyPower(ev)}<span><b>${ev.gold}</b> ден.</span><span><b>+${ev.fame}</b> славы</span></div>
   </div>`;
 }
+const enemyPower = ev => `<span class="pw" data-tip="${tipAttrHtml(`Мощь противников. Сравните с мощью своих бойцов. ${POWER_TIP}`)}">мощь <b>${teamPower(ev.enemies)}</b></span>`;
 const emblemMini = cls => `<svg viewBox="0 0 48 48" width="16" height="16" style="vertical-align:-3px;color:#c96b5e" fill="none" stroke="currentColor" stroke-width="3">${EMBLEMS[cls]}</svg>`;
+
+// Боец в окне выбора: коротко — кто он, мощь и может ли выйти
+function pickCard(g, sel) {
+  const st = gladiatorStatus(g), ok = canFight(g);
+  return `<div class="pcard ${sel ? 'sel' : ''} ${ok ? '' : 'disabled'}" data-act="${ok ? 'pickGlad' : ''}" data-id="${g.id}">
+    <img class="portrait sm" src="${portrait(g, 44, 55, { bust: true })}" alt="">
+    <div><b>${esc(g.name)}</b><div class="tiny muted">${clsOf(g).name} · ур. ${g.level}</div><div class="tiny">${pwBadge(combatPower(g))} <span class="st ${st.key}">${st.text}</span></div></div>
+  </div>`;
+}
 
 function picker(ev) {
   const T = TIERS[clamp(ev.tier || 0, 0, 3)];
   const n = playerCount(ev);
   const avgLvl = ev.enemies.reduce((s, e) => s + e.level, 0) / ev.enemies.length;
-  const cards = STATE.gladiators.map(g => gladCard(g, {
-    act: canFight(g) ? 'pickGlad' : '', sel: UI.picked.includes(g.id), disabled: !canFight(g), noFlag: true,
-  })).join('');
+  const cards = STATE.gladiators.map(g => pickCard(g, UI.picked.includes(g.id))).join('');
   const ready = UI.picked.length === n;
   const mode = battleMode();
   const note = ev.kind === 'contract'
     ? 'Бой не на смерть: выбывший боец просто сдаётся и отлёживается день. Приговора толпы не будет.'
     : `Помните: если ваша команда проиграет, толпа решит судьбу каждого бойца. Тот, кто успел повергнуть противника, имеет куда больше шансов на помилование. ${T.mood}`;
-  return `<div class="panel picker">
-    <h3>Выбор бойцов: ${n} на ${ev.size} · ${ev.kind === 'contract' ? esc(ev.title) : ev.kind === 'final' ? 'Финал' : T.name} (противники ~${avgLvl.toFixed(0)} ур.)</h3>
-    <p class="small muted">${note}</p>
+  return `<div class="pick-bg" data-act="cancelPickBg"><div class="panel picker" role="dialog" aria-label="Выбор бойцов">
+    <h3>Выбор бойцов: ${n} на ${ev.size} · ${ev.kind === 'contract' ? esc(ev.title) : ev.kind === 'final' ? 'Финал' : T.name}</h3>
+    <div class="foes pick-foes">${foeRows(ev)}</div>
     ${pwLine(ev, UI.picked.map(glad).filter(Boolean))}
-    <div class="grid">${cards || '<p class="empty-note">Нет бойцов.</p>'}</div>
+    <p class="tiny muted">${note}</p>
+    <div class="pickgrid">${cards || '<p class="empty-note">Нет бойцов.</p>'}</div>
     ${ev.training ? '<div class="modesel"><span class="muted small">Учебный бой — только ручное управление: вы сами командуете бойцом.</span></div>' : `<div class="modesel">
       <span>Режим боя:</span>
       <button class="small ${mode === 'auto' ? 'active' : ''}" data-act="setMode" data-m="auto" title="Бойцы расставляются и сражаются сами">Автобой</button>
@@ -731,7 +758,7 @@ function picker(ev) {
       <button class="primary" data-act="startBattle" ${ready ? '' : 'disabled'}>Выйти на арену</button>
       <button data-act="cancelPick">Отмена</button>
     </div>
-  </div>`;
+  </div></div>`;
 }
 
 // ------------------------------------------------------------
@@ -750,7 +777,7 @@ function screenSmith() {
   const sell = STATE.armory.length
     ? STATE.armory.map(it => itemRow(it, `<span class="price">${sellItemPrice(it)}</span><button class="small" data-act="sellItem" data-item="${it.id}">Продать</button>`, true)).join('')
     : '<p class="empty-note">На складе ничего нет.</p>';
-  return `<div class="screen-title"><h2>Кузница</h2><p>Товар обновляется каждый день: оружие, щиты и доспехи для всех слотов, больше всего — для школ вашего лудуса. С открытием новых арен качество растёт.${rareShopOpen() ? '' : ` При славе лудуса ${RARE_SHOP_FAME} откроется <b>лавка редкостей</b> с уникальными изделиями.`} Характеристики предмета зависят только от его вида и качества. Надеть можно на любого бойца, но <b>+25% к характеристикам</b> предмета («школьная выучка») получит только боец указанной школы.</p></div>
+  return `<div class="screen-title"><h2>Кузница</h2><p>Товар обновляется каждый день. Вещь своей школы даёт бойцу <b>+25%</b> к её характеристикам.${rareShopOpen() ? '' : ` При славе ${RARE_SHOP_FAME} откроется лавка редкостей.`} <a href="#" data-act="openGuide" data-ch="gear">Подробнее о снаряжении</a></p></div>
   <div class="chips">${chips}</div>
   <div class="two-col smithcols">
     <div class="panel"><h3>Товары кузнеца</h3><div class="list goods">${goods}</div></div>
@@ -780,12 +807,15 @@ function screenMarket() {
 }
 
 function screenArmory() {
-  const bySlot = Object.entries(SLOTS).map(([slot, label]) => {
-    const items = STATE.armory.filter(i => i.slot === slot).sort((a, b) => b.q - a.q);
-    return `<div class="panel"><h3>${label}</h3><div class="list">${items.length ? items.map(it => itemRow(it, `<span class="price">${sellItemPrice(it)}</span><button class="small" data-act="sellItem" data-item="${it.id}">Продать</button>`)).join('') : '<p class="empty-note small">Пусто</p>'}</div></div>`;
-  }).join('');
-  return `<div class="screen-title"><h2>Склад</h2><p>Здесь хранится снаряжение, снятое с бойцов, купленное у кузнеца или взятое с поверженных врагов. Надеть предмет можно в окне гладиатора.</p></div>
-  <div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(420px,1fr))">${bySlot}</div>`;
+  const f = UI.armorySlot || 'all';
+  const count = s => STATE.armory.filter(i => s === 'all' || i.slot === s).length;
+  const chips = [['all', 'Всё'], ...Object.entries(SLOTS)].map(([k, n]) =>
+    `<button class="small chip ${f === k ? 'active' : ''}" data-act="armorySlot" data-s="${k}">${n} <span class="muted">${count(k)}</span></button>`).join('');
+  const items = STATE.armory.filter(i => f === 'all' || i.slot === f)
+    .sort((a, b) => SLOT_KEYS.indexOf(a.slot) - SLOT_KEYS.indexOf(b.slot) || b.q - a.q);
+  return `<div class="screen-title"><h2>Склад</h2><p>Снаряжение, снятое с бойцов, купленное у кузнеца или взятое с поверженных врагов. Надеть — в окне бойца, ненужное можно продать за 40% цены.</p></div>
+  <div class="chips">${chips}</div>
+  <div class="panel scrollfill"><div class="armorygrid">${items.length ? items.map(it => itemRow(it, `<span class="price">${sellItemPrice(it)}</span><button class="small" data-act="sellItem" data-item="${it.id}">Продать</button>`, f === 'all')).join('') : '<p class="empty-note small">Пусто.</p>'}</div></div>`;
 }
 
 function screenNecro() {
@@ -870,7 +900,7 @@ function screenRules() {
   const ch = UI.guide || 'ludus';
   const nav = GUIDE.map(([k, n]) => `<button class="small ${k === ch ? 'active' : ''}" data-act="guide" data-ch="${k}">${n}</button>`).join('');
   return `<div class="screen-title"><h2>Справочник</h2><p>Все правила и формулы игры. В окне бойца у каждой характеристики есть подсказка — наведите на название.</p></div>
-  <div class="guide"><div class="gnav">${nav}</div><div class="panel rules">${guideChapter(ch)}</div></div>`;
+  <div class="guide"><div class="gnav">${nav}</div><div class="panel rules scrollfill">${guideChapter(ch)}</div></div>`;
 }
 function guideChapter(ch) {
   switch (ch) {
@@ -1195,6 +1225,7 @@ function startBattle() {
   const mode = ev.training ? 'manual' : battleMode(); // учебный бой — всегда с подсказками, вручную
   const b = new Battle(glads, ev.enemies, ev, { mode });
   UI.picked = []; UI.eventId = null;
+  $('main .pick-bg')?.remove();
   openBattle(b, ev, glads, mode);
   coach('battleStart', ev);
 }
@@ -2019,7 +2050,10 @@ const ACTIONS = {
     }, { ok: `Продать за ${price}`, danger: true });
   },
 
-  pickEvent: d => { UI.eventId = +d.id; UI.picked = []; setShort(findEvent(UI.eventId), false); render(); coach('pick', findEvent(UI.eventId)); setTimeout(() => $('.picker')?.scrollIntoView({ behavior: 'smooth' }), 30); },
+  pickEvent: d => { UI.eventId = +d.id; UI.picked = []; setShort(findEvent(UI.eventId), false); render(); coach('pick', findEvent(UI.eventId)); },
+  armorySlot: d => { UI.armorySlot = d.s; render(); },
+  arenaTab: d => { UI.arenaTab = d.t === 'bets' ? 'bets' : +d.t; render(); },
+  cancelPickBg: (d, el, e) => { if (e.target === el) ACTIONS.cancelPick(); },
   setMode: d => {
     STATE.settings = STATE.settings || {};
     STATE.settings.mode = d.m === 'manual' ? 'manual' : 'auto';
@@ -2309,6 +2343,7 @@ function bindEvents() {
     if (typeof sceneKey === 'function' && sceneKey(e)) return;
     if (typeof coachKey === 'function' && coachKey(e)) return;
     if (e.key === 'Escape' && UI.gladId) ACTIONS.closeModal();
+    else if (e.key === 'Escape' && UI.eventId && !UI.battle) ACTIONS.cancelPick();
     if (UI.gladId && !UI.battle && (e.key === 'ArrowLeft' || e.key === 'ArrowRight') && !/INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) {
       e.preventDefault(); ACTIONS.gladStep({ d: e.key === 'ArrowLeft' ? -1 : 1 });
     }
