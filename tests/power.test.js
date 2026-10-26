@@ -16,6 +16,12 @@ module.exports = [
     assert.equal(ev(ctx, 'powerVerdict(1).cls'), 'pw-even');
     assert.equal(ev(ctx, 'powerVerdict(0.6).cls'), 'pw-bad');
   } },
+  { name: 'посильный бой: если на младшей арене нет боя по силам лудуса, один бой становится по размеру', fn: ctx => {
+    ev(ctx, 'newGame("Т")');
+    ev(ctx, 'var evs = [2, 3].map(size => ({ id: uid(), tier: 0, size, enemies: generateEnemyTeam(0, size), gold: 50, fame: 3, done: false })); ensureEasyEvent(evs)');
+    assert.ok(ev(ctx, 'evs.some(e => e.easy && e.size === 1 && e.enemies.length === 1)'));
+    assert.ok(ev(ctx, 'evs.filter(e => e.easy).every(e => e.size <= STATE.gladiators.length)'));
+  } },
   { name: 'посильный бой: каждый день на младшей арене есть бой, где ваши лучшие сильнее в 1.4 раза', fn: ctx => {
     ev(ctx, 'newGame("Т")');
     for (let day = 0; day < 12; day++) {

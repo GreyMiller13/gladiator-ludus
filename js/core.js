@@ -578,7 +578,13 @@ function ensureEasyEvent(events) {
   const easy = e => teamPower(bestTeam(e.size)) >= EASY_RATIO * teamPower(e.enemies);
   const fits = events.filter(e => e.tier === tier && e.size <= n);
   if (fits.some(easy)) { fits.filter(easy).forEach(e => { e.easy = true; }); return; }
-  const ev = fits.sort((a, b) => a.size - b.size)[0] || events.filter(e => e.tier === tier).sort((a, b) => a.size - b.size)[0];
+  let ev = fits.sort((a, b) => a.size - b.size)[0];
+  // на младшей арене все бои больше, чем бойцов в лудусе: самый малый из них ужимаем до их числа
+  if (!ev) {
+    ev = events.filter(e => e.tier === tier).sort((a, b) => a.size - b.size)[0];
+    const T = TIERS[tier], size = Math.min(n, 3);
+    Object.assign(ev, { size, gold: Math.round(T.gold * FORMAT_MULT[size] * (0.9 + Math.random() * 0.3)), fame: Math.round(T.fame * FORMAT_MULT[size]) });
+  }
   const target = teamPower(bestTeam(ev.size)) / EASY_RATIO;
   let best = null;
   for (let k = 0; k < 12 && !(best && best.p <= target); k++) {

@@ -494,6 +494,7 @@ class Battle {
     const low = u.hp / u.maxHp < 0.25 && foes.length > 1;
     if (best) {
       this.moveTo(u, best.cell);
+      if (!u.alive || this.over) return; // пал от удара вдогонку
       if (low && best.type === 'attack' && chance(20)) return this.doDefend(u);
       u.acted = true;
       if (best.type === 'ability') this.doAbility(u, best.f);
@@ -526,6 +527,7 @@ class Battle {
     }
     const moved = step && (step.n.c !== u.c || step.n.r !== u.r);
     if (step) this.moveTo(u, step.n);
+    if (!u.alive || this.over) return;
     if (low && chance(40)) this.doDefend(u);
     else if (moved || !step) this.ev({ t: 'wait', u: u.uid, silent: true });
   }

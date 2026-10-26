@@ -181,7 +181,7 @@ const TUTOR_STEPS = [
   { id: 'newGlad', g: 'after', lock: true, tab: 'ludus', wait: 'openGlad', skip: () => !tutorHas('glad'),
     sel: () => `main .gcard[data-id="${tutorState().glad}"]`,
     text: 'Открой карточку нового бойца.' },
-  { id: 'equipNew', g: 'after', lock: true, back: 'newGlad', wait: 'equipped', skip: () => !tutorNewItem() || tutorNewItemOn(),
+  { id: 'equipNew', g: 'after', lock: true, back: 'newGlad', wait: 'equipped', skip: () => !tutorHas('glad') || !tutorNewItem() || tutorNewItemOn(),
     sel: () => { const it = tutorNewItem(); return it ? `#modal .stash [data-item="${it.id}"], #modal .dslot[data-slot="${it.slot}"]` : '#modal .doll'; },
     text: () => { const it = tutorNewItem(); return `Купленное лежит на складе лудуса. Перетащи «${it ? it.name : 'вещь'}» на бойца или нажми «Надеть».`; } },
   { id: 'closeGlad3', g: 'after', lock: true, back: 'newGlad', sel: '#modal [data-act="closeModal"]', wait: 'modalClosed', skip: () => !tutorHas('glad'),
@@ -277,6 +277,11 @@ function resumeTutorial() {
   if (tutorState().step === 'toArena' && (STATE.story.flags.trainWon || !STATE.events.some(e => e.training && !e.done))) tutorState().step = 'lvlGlad';
   // шаги в окне бойца — с открытия карточки
   if (st.back && !UI.gladId) tutorState().step = st.back;
+  // шаги, которые уже не нужны (например, покупать некого), пропускаем
+  let j = coachStepIdx();
+  while (TUTOR_STEPS[j] && TUTOR_STEPS[j].skip && TUTOR_STEPS[j].skip()) j++;
+  if (!TUTOR_STEPS[j]) return endTutorial(true);
+  tutorState().step = TUTOR_STEPS[j].id;
   showCoach();
 }
 

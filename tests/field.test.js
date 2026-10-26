@@ -34,6 +34,26 @@ module.exports = [
     ev(ctx, 'f.stun = 1; B.cmdMove(u, 2, 1)');
     assert.equal(ev(ctx, 'B.log.some(l => l.text.includes("вдогонку"))'), false);
   } },
+  { name: 'поле: боец, павший от удара вдогонку, уже не бьёт', fn: () => {
+    const ctx = game();
+    let deaths = 0;
+    for (let i = 0; i < 60; i++) {
+      const r = ev(ctx, `(() => {
+        const a = createGladiator('gallus', 8, { forceSchool: true, autoSpend: true, quality: 2 });
+        const b = createGladiator('sagittarius', 8, { forceSchool: true, autoSpend: true, quality: 2 });
+        const e = { id: 1, kind: 'arena', tier: 0, size: 1 }; ensureField(e); e.field.obstacles = [];
+        const B = new Battle([a], [b], e, { mode: 'auto' });
+        const [p, s] = B.units;
+        p.c = 4; p.r = 2; s.c = 5; s.r = 2; s.hp = 1; s.mpLeft = s.mp;
+        B.aiTurn(s);
+        // выстрелить до отхода можно; после своего падения — нет
+        const fell = B.events.findIndex(x => x.t === 'fall' && x.u === s.uid);
+        return { dead: !s.alive, shot: fell >= 0 && B.events.slice(fell).some(x => x.t === 'strike' && x.a === s.uid), both: !p.alive && !s.alive };
+      })()`);
+      if (r.dead) { deaths++; assert.equal(r.shot, false, 'павший лучник выстрелил'); assert.equal(r.both, false); }
+    }
+    assert.ok(deaths > 0, 'удар вдогонку ни разу не убил лучника — проверка ничего не проверила');
+  } },
   { name: 'лучник школы: +15% к урону', fn: () => {
     const ctx = game();
     ev(ctx, 'var g = createGladiator("sagittarius", 6, { forceSchool: true, autoSpend: true, quality: 1 })');
