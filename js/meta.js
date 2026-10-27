@@ -678,17 +678,16 @@ const META = (() => {
     </div>`;
   }
 
+  // Реликвия — компактная плитка: название, слот, как получить; подробности — при наведении
   function artifactCard(id) {
     const B = ITEM_BASES[id];
     const own = M().artifacts[id];
     const notes = [B.twoHanded ? (B.ranged ? 'двуручное, стрелковое' : 'двуручное') : '', B.needsBow ? 'только с луком' : ''].filter(Boolean).join(', ');
     const who = B.classes.length >= CLASS_KEYS.length ? 'все школы' : B.classes.map(c => CLASSES[c].name).join(', ');
-    return `<div class="m-art ${own ? 'own' : 'locked'}">
-      <div class="m-art-h"><span class="iname ${own ? 'q4' : ''}">${escH(B.name)}</span><span class="tiny muted">${SLOTS[B.slot]}${notes ? ` · ${notes}` : ''}</span></div>
-      <div class="istats">${statsText(B.stats)}</div>
-      <div class="ifor">Для школ: ${who}</div>
-      <div class="m-legend">${escH(B.desc)}</div>
-      <div class="m-src">${own ? `Получена в день ${own.day}. ${locateArtifact(id)}` : `<span class="m-lbl">Как получить</span>${escH(B.source)}`}</div>
+    const tip = `${B.name} — ${SLOTS[B.slot].toLowerCase()}${notes ? `, ${notes}` : ''}\n${statsText(B.stats)}\nДля школ: ${who}\n\n${B.desc}`;
+    return `<div class="m-art ${own ? 'own' : 'locked'}" data-tip="${escH(tip).replace(/\n/g, '&#10;')}">
+      <div class="m-art-h"><span class="iname ${own ? 'q4' : ''}">${escH(B.name)}</span><span class="tiny muted">${SLOTS[B.slot]}</span></div>
+      <div class="m-src">${own ? `Получена в день ${own.day}. ${locateArtifact(id)}` : escH(B.source)}</div>
     </div>`;
   }
 
@@ -700,20 +699,20 @@ const META = (() => {
     const got = ACH.filter(a => m.ach[a.id]).length;
     const arts = Object.keys(ARTIFACTS);
     const artsGot = arts.filter(id => m.artifacts[id]).length;
-    const groups = Object.entries(GROUPS).map(([g, name]) => {
-      const list = ACH.filter(a => a.group === g);
-      const n = list.filter(a => m.ach[a.id]).length;
-      return `<div class="panel"><h3>${name} <span class="muted small m-gcount">${n} / ${list.length}</span></h3><div class="list">${list.map(achRow).join('')}</div></div>`;
-    }).join('');
-    return `<div class="screen-title"><h2>Достижения</h2><p>Испытания для ланисты. За каждое — награда, а за самые трудные — реликвии великих бойцов.</p></div>
-    <div class="m-sum m-total">
-      <span>Открыто <b>${got} / ${total}</b></span>
-      <div class="bar"><div style="width:${got / total * 100}%"></div></div>
-      <span>Реликвий <b>${artsGot} / ${arts.length}</b></span>
-    </div>
-    <div class="scrollfill"><div class="m-groups">${groups}</div>
-    <div class="screen-title mt m-relics"><h2>Реликвии</h2><p>Уникальные предметы легендарных бойцов: сильнее любого изделия кузнеца, не продаются и не выпадают с противников. Каждая существует в единственном экземпляре — погибнет боец вместе с ней или уйдёт она с продажей, вернуть её будет нельзя.</p></div>
-    <div class="m-arts">${arts.map(artifactCard).join('')}</div></div>`;
+    // вкладки: группы достижений и реликвии — каждая помещается на экран целиком
+    const tab = typeof UI !== 'undefined' && (UI.gloryTab in GROUPS || UI.gloryTab === 'relics') ? UI.gloryTab : Object.keys(GROUPS)[0];
+    const tabs = Object.entries(GROUPS).map(([g, name]) => {
+      const list = ACH.filter(a => a.group === g), n = list.filter(a => m.ach[a.id]).length;
+      return `<button class="atab ${tab === g ? 'on' : ''}" data-act="gloryTab" data-g="${g}">${name} <span class="m-gcount">${n}/${list.length}</span></button>`;
+    }).join('') + `<span class="sp"></span><button class="atab ${tab === 'relics' ? 'on' : ''}" data-act="gloryTab" data-g="relics">Реликвии <span class="m-gcount">${artsGot}/${arts.length}</span></button>`;
+    const body = tab === 'relics'
+      ? `<p class="small muted m-relnote">Уникальные вещи легендарных бойцов: сильнее любого изделия кузнеца, не продаются у торговцев и не падают с противников. Каждая — в единственном экземпляре: погибнет боец вместе с ней или уйдёт она с продажей — вернуть нельзя. Наведите на реликвию, чтобы увидеть её свойства.</p>
+        <div class="m-arts">${arts.map(artifactCard).join('')}</div>`
+      : `<div class="m-achgrid">${ACH.filter(a => a.group === tab).map(achRow).join('')}</div>`;
+    return `<div class="arena-head m-head"><h2>Достижения</h2>
+      <div class="m-sum m-total"><span>Открыто <b>${got} / ${total}</b></span><div class="bar"><div style="width:${got / total * 100}%"></div></div><span>Реликвий <b>${artsGot} / ${arts.length}</b></span></div></div>
+    <div class="atabs m-tabs">${tabs}</div>
+    <div class="scrollfill m-body">${body}</div>`;
   }
 
   return {
@@ -786,6 +785,12 @@ if (typeof document !== 'undefined' && document.head && !document.getElementById
 .contract .m-outcome.fail { color: #e08e83; }
 
 .m-groups { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 400px), 1fr)); align-items: start; }
+.m-head { align-items: center; }
+.m-head .m-sum { margin: 0; flex: 1; }
+.m-tabs { margin: 4px 0 12px; flex: none; }
+.m-tabs .m-gcount { font-size: 12.5px; color: var(--muted); margin-left: 4px; }
+.m-achgrid { display: grid; gap: 8px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 380px), 1fr)); align-content: start; }
+.m-relnote { margin: 0 0 10px; max-width: 980px; }
 .m-gcount { font-family: var(--font-body); float: right; }
 .m-ach { display: grid; grid-template-columns: 38px 1fr auto; gap: 10px; align-items: center; padding: 7px 8px; border: 1px solid var(--line); background: var(--panel2); border-radius: 2px; }
 .m-ach .m-medal { width: 38px; height: 38px; color: var(--dim); }
@@ -800,7 +805,10 @@ if (typeof document !== 'undefined' && document.head && !document.getElementById
 .m-ach.done .m-rew { opacity: .6; }
 
 .m-relics { margin-top: 28px; }
-.m-arts { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); }
+.m-arts { display: grid; gap: 8px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr)); align-content: start; }
+.m-art[data-tip] { cursor: help; padding: 7px 10px; gap: 2px; }
+.m-art[data-tip] .iname { font-size: 17px; }
+.m-art[data-tip] .m-src { padding-top: 4px; font-size: 12px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .m-art { border: 1px solid var(--line); border-left: 3px solid var(--q4); background: linear-gradient(var(--panel2), var(--panel)); padding: 10px 12px; border-radius: 2px; display: flex; flex-direction: column; gap: 3px; }
 .m-art .m-art-h { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }
 .m-art .iname { font-family: var(--font-head); font-size: 18px; }

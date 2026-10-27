@@ -76,8 +76,7 @@ function renderHeader() {
       ${res('laurel', 'слава лудуса', STATE.fame)}
       ${res('helm', 'бойцы', `${STATE.gladiators.length}/${MAX_GLADIATORS}`)}
       ${res('sun', 'день', STATE.day)}
-      ${soundBtn()}
-      <button class="small" data-act="menu" title="Главное меню: сохранение, новая игра, справочник">Меню</button>
+      <button class="small" data-act="menu" title="Главное меню: сохранение, новая игра, справочник, настройки">Меню</button>
       <button class="primary" data-act="nextDay" title="Содержание бойцов: ${upkeepCost()} денариев">Завершить день</button>
     </div>`;
 }
@@ -95,12 +94,17 @@ function showDebtDialog() {
   const d = STATE.debt;
   if (!d) return;
   const n = debtNext();
-  const rows = n ? d.plan.slice(d.idx, d.idx + 3).map((a, k) => `<tr><td>${debtDay(d.idx + k)}-й день</td><td>${a} ден.</td></tr>`).join('') : '';
+  const rows = n ? d.plan.slice(d.idx, d.idx + 3).map((a, k) => { const day = debtDay(d.idx + k), left = day - STATE.day;
+    return `<tr><td>${day}-й день</td><td>${left > 0 ? `через ${left} ${plural(left, 'день', 'дня', 'дней')}` : 'сегодня'}</td><td>${a} ден.</td></tr>`; }).join('') : '';
   showDialog({
     title: 'Долг отца', cls: 'debtdlg',
-    body: `<img class="debt-face" src="${PORTRAIT.url(d.holder, 'neutral', 96)}" alt="">
-      <p>Долг держит <b>${debtHolderName()}</b>. ${n ? `Осталось выплатить <b>${debtLeft()}</b> ден.` : 'Долг закрыт.'} Выплачено: ${d.paid} ден.</p>
-      ${rows ? `<table class="debt-plan"><caption>Ближайшие платежи</caption>${rows}</table>` : ''}
+    body: `<div class="debt-who"><img class="debt-face" src="${PORTRAIT.url(d.holder, 'neutral', 96)}" alt=""><div><span>Кредитор</span><b>${debtHolderName()}</b></div></div>
+      <div class="debt-sum">
+        <div><span>Осталось</span><b>${n ? debtLeft() : 0}</b></div>
+        <div><span>Выплачено</span><b>${d.paid}</b></div>
+        <div><span>Следующий платёж</span><b>${n ? n.amount : '—'}</b></div>
+      </div>
+      ${rows ? `<table class="debt-plan"><thead><tr><th>Срок</th><th>Осталось</th><th>Сумма</th></tr></thead><tbody>${rows}</tbody></table>` : '<p>Долг закрыт.</p>'}
       <p class="small muted">Платёж списывается сам в день срока. Если денег не хватит — лудус отберут.</p>`,
     ok: 'Понятно', cancel: false,
   });
@@ -635,7 +639,7 @@ function betPanel() {
   }
   return `<div class="panel betpanel mt">
     <div class="eh"><h3>Бой дня: ставки</h3><span class="fmt">1 на 1</span></div>
-    <p class="small muted">Устроитель игр прогнал этот бой ${BET_SIMS} раз и назначил коэффициенты по шансам бойцов, оставив себе свою долю. Нажмите на портрет, чтобы рассмотреть бойца. Одна ставка в день. Ставка играет, только если посмотреть бой: до начала боя её можно отменить, а если завершить день без просмотра — она вернётся в казну.</p>
+    <p class="small muted">У ворот амфитеатра менялы принимают ставки на поединок дня. Цену каждому бойцу они знают по слухам из казарм и его прошлым боям: чем меньше в него верят, тем выше коэффициент — а своё менялы возьмут при любом исходе. Нажмите на портрет, чтобы рассмотреть бойца. Одна ставка в день; она играет, только если смотреть бой с трибуны. До начала боя ставку можно забрать, а если пропустить бой — меняла вернёт деньги.</p>
     <div class="bet-sides">${side(0)}<div class="bet-vs">vs</div>${side(1)}</div>
     ${foot}
   </div>`;
@@ -651,8 +655,7 @@ function showFighterInfo(g) {
     body: `<div class="fi-head"><img class="portrait" src="${portrait(g, 64, 80, { bust: true })}" alt=""><div><b>${C.name}</b>${g.cls ? ` <span class="muted tiny">${C.latin}</span>` : ''} · уровень ${g.level} · ${esc(g.origin)} · ${pwBadge(combatPower(g))}
         ${C.ability ? `<div class="small"><b>${C.ability.name}:</b> ${C.ability.desc}</div>` : '<div class="small muted">Без школы: ни особого приёма, ни навыков.</div>'}
         ${g.cls ? buildHtml(g.cls) : ''}</div></div>
-      <h4 class="mt">Снаряжение</h4>${items.length ? `<div class="list fi-items">${items.map(it => itemRow(it, '', true, g)).join('')}</div>` : '<p class="small muted">Без снаряжения.</p>'}
-      <p class="tiny muted mt">Характеристики и навыки чужого бойца перед боем не узнать — видно лишь школу, опыт и снаряжение.</p>`,
+      <h4 class="mt">Снаряжение</h4>${items.length ? `<div class="list fi-items">${items.map(it => itemRow(it, '', true, g)).join('')}</div>` : '<p class="small muted">Без снаряжения.</p>'}`,
   });
 }
 
@@ -1013,7 +1016,7 @@ function guideChapter(ch) {
     <h3>Бой меньшинством</h3>
     <p>На обычный бой арены 2 на 2 или 3 на 3 можно выйти на одного бойца меньше — отметьте это при выборе бойцов. Награда за победу (денарии и слава) — <b>×${SHORT_MULT}</b>. Учебный бой и бои с хозяевами арен — только поровну.</p>
     <h3>Ставки на бой дня</h3>
-    <p>Каждый день на арене проходит один бой 1 на 1 между чужими бойцами текущей арены. Их школу, уровень и снаряжение можно посмотреть заранее (нажмите на портрет); характеристики и навыки чужих бойцов не видны. Устроитель игр прогоняет бой ${BET_SIMS} раз и по шансам назначает коэффициенты, оставляя себе ${Math.round(BET_MARGIN * 100)}%: у слабого бойца коэффициент выше. Ставка — от ${BET_MIN} с шагом ${BET_STEP}, предел растёт с ареной: ${BET_MAX.join(' / ')} денариев (Помпеи / Капуя / Рим / Колизей). Выигрыш — ставка × коэффициент. Устроитель подбирает бойцов почти равных по силе, так что исход угадать непросто; шансы не показываются — только коэффициенты. Одна ставка в день.</p>
+    <p>Каждый день на арене проходит один бой 1 на 1 между чужими бойцами текущей арены. Их школу, уровень и снаряжение можно посмотреть заранее (нажмите на портрет); характеристики и навыки чужих бойцов не видны. Менялы назначают коэффициенты по настоящим шансам бойцов, оставляя себе ${Math.round(BET_MARGIN * 100)}%: у слабого бойца коэффициент выше. Ставка — от ${BET_MIN} с шагом ${BET_STEP}, предел растёт с ареной: ${BET_MAX.join(' / ')} денариев (Помпеи / Капуя / Рим / Колизей). Выигрыш — ставка × коэффициент. Пару для боя дня подбирают почти равной по силе, так что исход угадать непросто; шансы не показываются — только коэффициенты. Одна ставка в день.</p>
     <ul>
       <li>Ставка играет, только если посмотреть бой: кнопка «Смотреть бой» на арене.</li>
       <li>Пока бой не начался, ставку можно отменить — деньги вернутся, и можно поставить заново.</li>
@@ -2000,6 +2003,11 @@ const ACTIONS = {
     applyZoom();
     if (typeof MENU !== 'undefined' && MENU.open) renderMenu();
   },
+  setZoom: d => {
+    try { if (d.z === 'auto') localStorage.removeItem(ZOOM_KEY); else localStorage.setItem(ZOOM_KEY, d.z); } catch (e) { /* хранилище недоступно */ }
+    applyZoom();
+    if (typeof MENU !== 'undefined' && MENU.open) renderMenu();
+  },
   toggleSound: () => {
     if (typeof SFX === 'undefined') return;
     SFX.toggleMute();
@@ -2048,6 +2056,7 @@ const ACTIONS = {
 
   pickEvent: d => { UI.eventId = +d.id; UI.picked = []; setShort(findEvent(UI.eventId), false); render(); coach('pick', findEvent(UI.eventId)); },
   armorySlot: d => { UI.armorySlot = d.s; render(); },
+  gloryTab: d => { UI.gloryTab = d.g; render(); },
   arenaTab: d => { UI.arenaTab = d.t === 'bets' ? 'bets' : +d.t; render(); },
   cancelPickBg: (d, el, e) => { if (e.target === el) ACTIONS.cancelPick(); },
   setMode: d => {

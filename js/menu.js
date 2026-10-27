@@ -5,11 +5,11 @@
 // ------------------------------------------------------------
 //  Главное меню: продолжить, новая игра, сохранение, справочник
 // ------------------------------------------------------------
-const MENU = { open: false, guide: false, bgDone: false };
+const MENU = { open: false, guide: false, settings: false, bgDone: false };
 
 function showMenu() {
   if (UI.battle) return toast('Меню откроется после боя.', true);
-  MENU.open = true; MENU.guide = false;
+  MENU.open = true; MENU.guide = false; MENU.settings = false;
   UI.gladId = null; renderModal();
   if (typeof hideCoach === 'function') hideCoach(); // обучение продолжится после «Продолжить»
   const el = $('#menu');
@@ -32,19 +32,57 @@ function renderMenu() {
     return;
   }
   box.className = 'menu-box';
-  box.innerHTML = `
-    <div class="menu-crest">${ICON.crest}</div>
-    <span class="menu-pre">лудус</span>
-    <h1 class="menu-title">Кровь и&nbsp;Песок</h1>
-    <p class="menu-sub">Отец оставил вам лудус в Помпеях и долг в пять тысяч денариев. Выучите бойцов, расплатитесь с кредиторами и проведите школу через арены Капуи и Рима — к Играм за рудис свободы.</p>
-    <div class="menu-btns">
-      ${STATE && STATE.lost ? `<button class="primary" data-act="menuLost">Итог: лудус отобран<small>${saveSummary(STATE)}</small></button>` : ''}
-      ${STATE && !STATE.lost ? `<button class="primary" data-act="menuContinue">Продолжить<small>${saveSummary(STATE)}</small></button>` : ''}
-      <button class="${STATE ? '' : 'primary'}" data-act="newGameAsk">Новая игра</button>
+  const head = `<div class="menu-head">
+      <div class="menu-crest">${ICON.crest}</div>
+      <span class="menu-pre">лудус</span>
+      <h1 class="menu-title">Кровь и&nbsp;Песок</h1>
+    </div>`;
+  if (MENU.settings) {
+    box.innerHTML = `${head}<div class="menu-panel"><h2 class="menu-h">Настройки</h2>${settingsHtml()}
+      <button class="menu-back" data-act="menuSettings" data-on="0">← Назад</button></div>`;
+    return;
+  }
+  box.innerHTML = `${head}
+    <p class="menu-sub">Отец оставил вам лудус в Помпеях и долг в пять тысяч денариев. Выучите бойцов, расплатитесь и проведите школу через арены Капуи и Рима — к Играм за рудис свободы.</p>
+    ${STATE ? saveCard(STATE) : ''}
+    <div class="menu-list" role="navigation" aria-label="Главное меню">
+      <button data-act="newGameAsk">Новая игра</button>
       <button data-act="saveAsk">Сохранение</button>
       <button data-act="menuGuide">Справочник</button>
-    </div>
-    <div class="menu-foot">${soundBtn()}${zoomBtn()}</div>`;
+      <button data-act="menuSettings" data-on="1">Настройки</button>
+    </div>`;
+}
+
+// Карточка сохранённой игры: ланиста, лудус, где остановились — нажатие продолжает игру
+function saveCard(st) {
+  const lost = !!st.lost;
+  const ch = st.story ? ['I', 'II', 'III', 'IV'][st.story.chapter] || 'I' : '';
+  const face = typeof PORTRAIT !== 'undefined' && st.lanista ? `<img class="sc-face" src="${PORTRAIT.url(st.lanista.portrait, lost ? 'angry' : 'neutral', 72)}" alt="">` : '';
+  return `<button class="save-card ${lost ? 'lost' : ''}" data-act="${lost ? 'menuLost' : 'menuContinue'}">
+    ${face}
+    <span class="sc-body">
+      <span class="sc-act">${lost ? 'Итог: лудус отобран' : 'Продолжить'}</span>
+      <span class="sc-name">«${esc(st.ludusName || 'Лудус')}»</span>
+      <span class="sc-meta">${ch ? `Глава ${ch} · ` : ''}день ${st.day}</span>
+      <span class="sc-stats"><span>${ICON.coin}${st.gold}</span><span>${ICON.laurel}${st.fame}</span><span>${ICON.helm}${st.gladiators.length}</span></span>
+    </span>
+  </button>`;
+}
+
+// Настройки: звук, музыка, масштаб
+function settingsHtml() {
+  const has = typeof SFX !== 'undefined';
+  const snd = has && !SFX.muted, mus = has && !SFX.musicMuted && snd;
+  const sw = (act, on, label, hint, dis) => `<button class="set-row" data-act="${act}" role="switch" aria-checked="${on}" ${dis ? 'disabled' : ''}>
+      <span class="set-l"><b>${label}</b><small>${hint}</small></span><i class="switch ${on ? 'on' : ''}"></i></button>`;
+  const z = zoomPref();
+  const seg = ZOOM_STEPS.map(s => `<button class="seg ${z === s ? 'on' : ''}" data-act="setZoom" data-z="${s}">${s === 'auto' ? `Авто · ${Math.round(autoZoom() * 100)}%` : `${Math.round(+s * 100)}%`}</button>`).join('');
+  return `<div class="settings">
+    ${sw('toggleSound', snd, 'Звук', 'Все звуки игры: удары, толпа, интерфейс', !has)}
+    ${sw('toggleMusic', mus, 'Музыка', 'Фоновая музыка лудуса и арены', !has || !snd)}
+    <div class="set-row static"><span class="set-l"><b>Масштаб</b><small>«Авто» увеличивает игру на больших мониторах по размеру окна</small></span></div>
+    <div class="segs">${seg}</div>
+  </div>`;
 }
 
 // Фон меню: Колизей и двое бойцов друг против друга
@@ -81,5 +119,6 @@ Object.assign(ACTIONS, {
   menuLost: () => { hideMenu(); render(); showDebtLost(); },
   menuGuide: () => { MENU.guide = true; renderMenu(); $('#menu').scrollTop = 0; },
   menuBack: () => { MENU.guide = false; renderMenu(); },
+  menuSettings: d => { MENU.settings = d.on === '1'; renderMenu(); },
 });
 
