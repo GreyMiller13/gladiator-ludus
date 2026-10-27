@@ -6,10 +6,10 @@
 const BET_MIN = 50, BET_STEP = 50;
 const BET_MAX = [300, 600, 1200, 2500]; // предел ставки на арене Помпей, Капуи, Рима, Колизея
 const BET_MARGIN = 0.08;                // доля устроителя игр
-const BET_SIMS = 150;
+const BET_SIMS = 100;
 const BET_BAND = 0.1;                   // шанс первого бойца — в пределах 50% ± BET_BAND
-const BET_SCREEN = 30;                  // быстрый прогон: явно неравную пару дальше не считаем
-const BET_TRIES = 12;
+const BET_SCREEN = 20;                  // быстрый прогон: явно неравную пару дальше не считаем
+const BET_TRIES = 30;
 const BET_UNDERDOG = 2.5;               // «тёмная лошадка» — коэффициент не ниже этого
 
 const betTier = () => clamp(Math.max(...unlockedTiers()), 0, TIERS.length - 1);
@@ -145,7 +145,7 @@ function ensureBet() {
 }
 
 // Новый день: ставка на несмотренный бой возвращается в казну, будто её и не было.
-// Бой, начатый и прерванный (например, перезагрузкой), доигрывается без показа. Затем — новый бой дня
+// Бой, начатый и прерванный (например, перезагрузкой), доигрывается без показа
 function betOnNewDay() {
   const bet = STATE.bet;
   let note = null;
@@ -161,6 +161,7 @@ function betOnNewDay() {
     note = `Бой дня доигран без вас: победил ${[bet.a, bet.b][w].name}. ${pay ? `Ставка сыграла: +${pay} денариев.` : `Ставка ${bet.stake} денариев проиграна.`}`;
     journal(note);
   }
-  STATE.bet = newBet();
+  // новый бой дня подбирается при первом взгляде на ставки (ensureBet): подбор долгий, день завершается без задержки
+  STATE.bet = null;
   return note;
 }

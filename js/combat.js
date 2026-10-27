@@ -247,25 +247,27 @@ class Battle {
     const map = new Map([[cellKey(u.c, u.r), start]]);
     const holders = this.holders(u);
     const foes = this.enemiesOf(u).filter(f => this.free(f));
-    const q = [start];
-    while (q.length) {
-      q.sort((a, b) => a.d - b.d);
-      const p = q.shift();
+    // цены шагов — 1 или 2 ОД: обходим клетки «корзинами» по цене пути, без сортировки
+    const buckets = [[start]];
+    for (let cost = 0; cost < buckets.length; cost++) for (const p of buckets[cost] || []) {
       if (map.get(cellKey(p.c, p.r)) !== p) continue;
+      // соседние с клеткой противники — шаг прочь от любого из них стоит дороже
+      const near = foes.filter(f => Math.abs(f.c - p.c) <= 1 && Math.abs(f.r - p.r) <= 1);
       for (const [dc, dr] of DIRS8) {
-        const c = p.c + dc, r = p.r + dr, k = cellKey(c, r), n = { c, r };
+        const c = p.c + dc, r = p.r + dr;
+        if (p.d + 1 > ap) break;
         // на клетке может стоять только один боец, и сквозь бойцов (даже своих) не пройти
         if (this.closed(c, r, u)) continue;
         // по диагонали нельзя протиснуться между двумя занятыми клетками
         if (dc && dr && this.closed(p.c + dc, p.r, u) && this.closed(p.c, p.r + dr, u)) continue;
-        if (holders.some(h => cheb(n, h) > 1)) continue;
-        const leave = foes.some(f => cheb(p, f) === 1 && cheb(n, f) > 1);
+        if (holders.length && holders.some(h => Math.abs(h.c - c) > 1 || Math.abs(h.r - r) > 1)) continue;
+        const leave = near.some(f => Math.abs(f.c - c) > 1 || Math.abs(f.r - r) > 1);
         const d = p.d + 1 + (leave ? DISENGAGE_AP : 0);
         if (d > ap) continue;
-        const old = map.get(k);
+        const k = cellKey(c, r), old = map.get(k);
         if (old && old.d <= d) continue;
-        n.d = d; n.prev = p;
-        map.set(k, n); q.push(n);
+        const n = { c, r, d, prev: p };
+        map.set(k, n); (buckets[d] = buckets[d] || []).push(n);
       }
     }
     return map;

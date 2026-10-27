@@ -61,7 +61,9 @@ module.exports = [
     ev(ctx, 'STATE.bet = newBet(); STATE.gold = 5000; placeBet(0, 100); var old = STATE.bet; var r = nextDay()');
     assert.equal(ev(ctx, 'STATE.gold'), ev(ctx, '5000 - r.cost'));
     assert.equal(ev(ctx, 'old.payout'), 0);
-    assert.equal(ev(ctx, 'STATE.bet.day'), 2);
+    // новый бой дня подбирается не при завершении дня, а когда игрок заглянет на ставки
+    assert.equal(ev(ctx, 'STATE.bet'), null);
+    assert.equal(ev(ctx, 'ensureBet().day'), 2);
     assert.equal(ev(ctx, 'STATE.bet.pick'), null);
     assert.ok(ev(ctx, 'r.bet.includes("вернулась в казну")'), ev(ctx, 'r.bet'));
     assert.ok(ev(ctx, 'STATE.journal.some(j => j.text.includes("вернулась в казну"))'));
