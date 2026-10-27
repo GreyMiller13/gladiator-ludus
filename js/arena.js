@@ -700,7 +700,8 @@ class ArenaView {
     ctx.fillRect(x, y, w * hp, 5);
     ctx.globalAlpha = 1;
     // очки действия бойца, который сейчас ходит
-    const cur = this.b.current === f.unit && f.unit.alive && !this.b.over && f.state === 'idle';
+    // очки действия — только у своих: сколько ОД у противника, со стороны не видно
+    const cur = this.b.current === f.unit && f.side === 'player' && f.unit.alive && !this.b.over && f.state === 'idle';
     if (cur) {
       const n = f.unit.ap, left = f.unit.apLeft, r = 3, gap = 8, x0 = f.x - (n - 1) * gap / 2;
       for (let i = 0; i < n; i++) {

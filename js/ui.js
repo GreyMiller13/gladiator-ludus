@@ -603,12 +603,11 @@ function betPanel() {
   const { amt, top } = betAmount();
   const canBet = open && top >= BET_MIN;
   const side = i => {
-    const g = F[i], s = computeStats(g), fav = bet.odds[i] < bet.odds[1 - i];
+    const g = F[i], fav = bet.odds[i] < bet.odds[1 - i];
     return `<div class="bet-side ${bet.pick === i ? 'picked' : ''} ${bet.done && bet.winner === i ? 'won' : ''}">
       <button class="pbtn" data-act="betInspect" data-i="${i}" data-tip="Подробнее о бойце" aria-label="Подробнее: ${esc(g.name)}"><img class="portrait" src="${portrait(g, 64, 80, { bust: true, enemy: i === 1 })}" alt=""></button>
       <div class="bet-who">
         <b>${esc(g.name)}</b> <span class="muted small">${clsOf(g).name}, ур. ${g.level}</span>
-        <div class="tiny muted">Здоровье ${s.maxHp} · урон ${s.dmgMin}–${s.dmgMax} · броня ${s.armor} · уклонение ${s.dodge}%</div>
         <div class="bet-odds"><span class="bet-pct ${fav ? 'fav' : ''}">${xOdds(bet.odds[i])}</span><span class="muted small">коэффициент</span></div>
         <div class="bet-btns">
           ${canBet ? `<button class="small primary" data-act="betPlace" data-i="${i}">Поставить ${amt} → ${Math.round(amt * bet.odds[i])}</button>` : ''}
@@ -642,26 +641,18 @@ function betPanel() {
   </div>`;
 }
 
-// Карточка чужого бойца: характеристики, снаряжение, школа и навыки
+// Карточка чужого бойца — только то, что видно глазами: школа, уровень (опыт по повадкам) и снаряжение.
+// Характеристики и навыки чужого бойца перед боем не узнать
 function showFighterInfo(g) {
-  const s = computeStats(g), C = clsOf(g);
-  const attrs = ATTR_KEYS.map(k => `<span>${ATTRS[k].name}</span><b>${s.attrs[k]}</b>`).join('');
-  const derived = [['Здоровье', s.maxHp], ['Урон', `${s.dmgMin}–${s.dmgMax}`], ['Точность', `${s.acc >= 0 ? '+' : ''}${s.acc}%`], ['Уклонение', `${s.dodge}%`], ['Броня', s.armor],
-    ['Шанс крита', `${s.crit}%`], ['Блок щитом', `${s.block}%`], ['Инициатива', s.init], ['Дальность', `${s.reach} кл.`]]
-    .map(([a, b]) => `<span>${a}</span><b>${b}</b>`).join('');
+  const C = clsOf(g);
   const items = SLOT_KEYS.map(k => g.equip[k]).filter(Boolean);
-  const perks = Object.entries(g.perks || {}).filter(([id, r]) => PERKS[id] && r > 0)
-    .map(([id, r]) => `<li><b>${PERKS[id].name}</b> ${r}/${PERKS[id].max}</li>`).join('');
   showDialog({
     title: esc(g.name), cls: 'fighter-info', ok: false, cancel: 'Закрыть',
     body: `<div class="fi-head"><img class="portrait" src="${portrait(g, 64, 80, { bust: true })}" alt=""><div><b>${C.name}</b>${g.cls ? ` <span class="muted tiny">${C.latin}</span>` : ''} · уровень ${g.level} · ${esc(g.origin)} · ${pwBadge(combatPower(g))}
         ${C.ability ? `<div class="small"><b>${C.ability.name}:</b> ${C.ability.desc}</div>` : '<div class="small muted">Без школы: ни особого приёма, ни навыков.</div>'}
         ${g.cls ? buildHtml(g.cls) : ''}</div></div>
-      <div class="fi-cols">
-        <div><h4>Характеристики</h4><div class="fi-kv">${attrs}</div><div class="fi-kv mt">${derived}</div></div>
-        <div><h4>Снаряжение</h4>${items.length ? `<div class="list">${items.map(it => itemRow(it, '', true, g)).join('')}</div>` : '<p class="small muted">Без снаряжения.</p>'}
-          ${g.cls ? `<h4 class="mt">Навыки школы</h4>${perks ? `<ul class="fi-perks small">${perks}</ul>` : '<p class="small muted">Пока ни одного.</p>'}` : ''}</div>
-      </div>`,
+      <h4 class="mt">Снаряжение</h4>${items.length ? `<div class="list fi-items">${items.map(it => itemRow(it, '', true, g)).join('')}</div>` : '<p class="small muted">Без снаряжения.</p>'}
+      <p class="tiny muted mt">Характеристики и навыки чужого бойца перед боем не узнать — видно лишь школу, опыт и снаряжение.</p>`,
   });
 }
 
@@ -973,6 +964,7 @@ function guideChapter(ch) {
       <li><b>Очки действия (ОД).</b> На свой ход боец получает 5 + инициатива / 4 ОД, от 5 до 9: ловкость — это и очерёдность, и запас действий. Шаг на клетку стоит 1 ОД. Удар — по оружию: лёгкое (сика) — 2, обычное (гладиус, копьё, трезубец, булава, спата) — 3, двуручное (длинный меч, секира) и выстрел из лука — 4, кулаки — 2. Умение школы — на 1 ОД дороже удара. Удар или умение — одно за ход; шагать можно и до, и после.</li>
       <li><b>Выход из ближнего боя.</b> Шаг прочь от соседнего противника стоит на ${DISENGAGE_AP} ОД дороже. Подсказка над клеткой показывает цену пути.</li>
       <li><b>Неистраченные ОД</b> становятся уклонением до следующего хода бойца: +${AP_DODGE}% за каждое. Кто бьёт и отбегает, остаётся без этой защиты; кто стоит и ждёт — вёрток.</li>
+      <li><b>Что видно о противнике.</b> Школа, уровень, снаряжение и примерная мощь — то, что видно глазами. Характеристики, навыки и очки действия противника не видны.</li>
       <li><b>Лицо и спина.</b> Боец смотрит влево или вправо — на того, кого атаковал последним (если сам ещё не бил — на того, кто атаковал его, иначе на ближайшего противника). Удар или выстрел с другой стороны — <b>в спину</b>: шанс крита у атакующего вдвое выше.</li>
       <li><b>Окружение.</b> Если рядом с бойцом противник перед ним и противник за спиной, он окружён: отойти ни от одного из них нельзя, можно лишь переступить, оставаясь рядом с обоими. Вырваться — повергнуть или оглушить одного из них (оглушённый и опутанный сетью не держат).</li>
       <li>Тратить ОД не обязательно — «Конец хода» (пробел) оставляет бойца на месте. Клик по своему бойцу ничего не делает, так что промах мимо врага не съест ход, а если силуэт бойца закрывает клетку позади него, клик по ней всё равно ведёт на эту клетку. Если боец ещё может ударить, «Конец хода» нужно нажать дважды.</li>
@@ -1021,7 +1013,7 @@ function guideChapter(ch) {
     <h3>Бой меньшинством</h3>
     <p>На обычный бой арены 2 на 2 или 3 на 3 можно выйти на одного бойца меньше — отметьте это при выборе бойцов. Награда за победу (денарии и слава) — <b>×${SHORT_MULT}</b>. Учебный бой и бои с хозяевами арен — только поровну.</p>
     <h3>Ставки на бой дня</h3>
-    <p>Каждый день на арене проходит один бой 1 на 1 между чужими бойцами текущей арены. Их снаряжение, характеристики, школу и навыки можно посмотреть заранее. Устроитель игр прогоняет бой ${BET_SIMS} раз и по шансам назначает коэффициенты, оставляя себе ${Math.round(BET_MARGIN * 100)}%: у слабого бойца коэффициент выше. Ставка — от ${BET_MIN} с шагом ${BET_STEP}, предел растёт с ареной: ${BET_MAX.join(' / ')} денариев (Помпеи / Капуя / Рим / Колизей). Выигрыш — ставка × коэффициент. Устроитель подбирает бойцов почти равных по силе, так что исход угадать непросто; шансы не показываются — только коэффициенты. Одна ставка в день.</p>
+    <p>Каждый день на арене проходит один бой 1 на 1 между чужими бойцами текущей арены. Их школу, уровень и снаряжение можно посмотреть заранее (нажмите на портрет); характеристики и навыки чужих бойцов не видны. Устроитель игр прогоняет бой ${BET_SIMS} раз и по шансам назначает коэффициенты, оставляя себе ${Math.round(BET_MARGIN * 100)}%: у слабого бойца коэффициент выше. Ставка — от ${BET_MIN} с шагом ${BET_STEP}, предел растёт с ареной: ${BET_MAX.join(' / ')} денариев (Помпеи / Капуя / Рим / Колизей). Выигрыш — ставка × коэффициент. Устроитель подбирает бойцов почти равных по силе, так что исход угадать непросто; шансы не показываются — только коэффициенты. Одна ставка в день.</p>
     <ul>
       <li>Ставка играет, только если посмотреть бой: кнопка «Смотреть бой» на арене.</li>
       <li>Пока бой не начался, ставку можно отменить — деньги вернутся, и можно поставить заново.</li>
@@ -1484,7 +1476,7 @@ function unitRow(u, B) {
   if (u.stun) tags.push('<span class="badge-s stun">Оглушён — пропустит ход</span>');
   if (u.net) tags.push('<span class="badge-s net">В сети — пропустит ход</span>');
   if (u.defending) tags.push('<span class="badge-s def">Оборона</span>');
-  if (u.alive && u.evade && B.b.current !== u) tags.push(`<span class="badge-s def">Уклонение +${u.evade}%</span>`);
+  if (u.alive && u.evade && B.b.current !== u && u.side === 'player') tags.push(`<span class="badge-s def">Уклонение +${u.evade}%</span>`);
   if (u.alive && B.b.holders(u).length) tags.push('<span class="badge-s stun">Окружён</span>');
   if (u.spearWall) tags.push('<span class="badge-s def">Заслон</span>');
   if (u.bleeds.length) tags.push(`<span class="badge-s bleed">Кровь ${u.bleeds.reduce((s, b) => s + b.dmg, 0)}/ход</span>`);
@@ -1493,7 +1485,7 @@ function unitRow(u, B) {
   return `<div class="urow ${u.side} ${u.alive ? '' : 'dead'} ${active ? 'active' : ''}">
     <img class="portrait sm" src="${portrait(u.g, 44, 55, { bust: true, enemy: u.side === 'enemy' })}" alt="">
     <div class="uinfo">
-      <div class="un">${esc(u.g.name)} <span class="muted tiny">${C.name}, ур. ${u.g.level} · ОД ${active ? `<b class="apnum">${u.apLeft}/${u.ap}</b>` : u.ap} · дальн. ${u.reach}</span></div>
+      <div class="un">${esc(u.g.name)} <span class="muted tiny">${C.name}, ур. ${u.g.level}${u.side === 'player' ? ` · ОД ${active ? `<b class="apnum">${u.apLeft}/${u.ap}</b>` : u.ap}` : ''} · дальн. ${u.reach}</span></div>
       <div class="hp"><div style="width:${u.hp / u.maxHp * 100}%"></div><span>${u.hp} / ${u.maxHp}</span></div>
       <div class="badges">${tags.join('')}</div>
     </div>
