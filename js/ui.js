@@ -253,15 +253,10 @@ function screenLudus() {
   const beds = Array.from({ length: free }, () => `<div class="gcard bed" data-act="tab" data-tab="market">
       <div class="bed-ico">${ICON.helm}</div><div><div class="gname">Свободная койка</div><div class="gsub">Купить бойца на невольничьем рынке</div></div></div>`).join('');
   const list = `<div class="grid barracks scrollfill">${gs.map(g => gladCard(g)).join('')}${beds}</div>`;
-  const power = teamPower(bestTeam(3));
   return `
   <div class="ludus-hero">
     <canvas class="ludus-bg" aria-hidden="true"></canvas>
     <img class="lh-banner" data-banner="${bannerOf(STATE.banner).id}" src="${bannerUrl(STATE.banner)}" alt="">
-    <div class="lh-text">
-      <span class="lh-pre">лудус</span><h2>${esc(STATE.ludusName)}</h2>
-      <p>День ${STATE.day}, бойцов ${gs.length} из ${MAX_GLADIATORS}, слава ${STATE.fame}${gs.length ? `, <span data-tip="${tipAttrHtml(`Сумма мощи трёх сильнейших бойцов. ${POWER_TIP}`)}">мощь тройки <b>${power}</b></span>` : ''}</p>
-    </div>
   </div>
   <div class="two-col">
     <div class="col-fill">
