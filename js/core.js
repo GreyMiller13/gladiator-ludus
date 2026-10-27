@@ -406,7 +406,7 @@ function newGame(ludusName = 'Лудус', opts = {}) {
     if (typeof STORY !== 'undefined') STATE.story = STORY.create();
   }
   refreshSmith(); refreshMarket(); generateEvents(); refreshRareShop(true);
-  journal(`Вы приобрели лудус и единственного новобранца. Купите ему снаряжение или найдите второго бойца на рынке. С ${SCHOOL_LEVEL}-го уровня бойца можно посвятить в школу.`);
+  journal(`Вы купили лудус с единственным новобранцем. Снарядите его или найдите второго бойца на рынке. С ${SCHOOL_LEVEL}-го уровня бойца можно посвятить в школу.`);
   if (typeof META !== 'undefined') META.init();
   if (STATE.story) STORY.injectEvents();
   save();
@@ -637,7 +637,7 @@ function nextDay() {
     if (g.wounded > 0) g.wounded--;
   }
   refreshSmith(); refreshMarket(); generateEvents(); refreshRareShop();
-  journal(`Наступил день ${STATE.day}. Содержание бойцов: −${cost} денариев.`);
+  journal(`День ${STATE.day}. Содержание бойцов: −${cost} денариев.`);
   // ставка решается до платежа по долгу: выигрыш успевает в казну
   const bet = typeof betOnNewDay === 'function' ? betOnNewDay() : null;
   const debt = STATE.debt && typeof debtOnNewDay === 'function' ? debtOnNewDay() : null;

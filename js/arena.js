@@ -329,8 +329,8 @@ class ArenaView {
     if (ob) {
       const p = cellPos(ob.c, ob.r);
       h = isHigh(ob.type)
-        ? { text: `${OBSTACLES[ob.type].name}: высокое — не пройти и не прострелить`, x: p.x, y: p.y + 26, color: '#e8c18a' }
-        : { text: `${OBSTACLES[ob.type].name}: низкое — не пройти, но стрелять поверх можно`, x: p.x, y: p.y + 26, color: '#bcd6ee' };
+        ? { text: `${OBSTACLES[ob.type].name}: высокое, не пройти и не прострелить`, x: p.x, y: p.y + 26, color: '#e8c18a' }
+        : { text: `${OBSTACLES[ob.type].name}: низкое, не пройти, но можно стрелять поверх`, x: p.x, y: p.y + 26, color: '#bcd6ee' };
     }
     if (!h) return;
     ctx.save();
@@ -718,7 +718,7 @@ class ArenaView {
     if (f.unit.bleeds.length && f.unit.alive) tags.push(['кровь', '#e07a6e']);
     if ((f.netted || f.stunned) && f.state === 'idle') {
       // плашка «пропустит ход» — видно, что ход будет потерян
-      const label = f.netted ? 'В СЕТИ · пропустит ход' : 'ОГЛУШЁН · пропустит ход';
+      const label = f.netted ? 'В СЕТИ, пропустит ход' : 'ОГЛУШЁН, пропустит ход';
       ctx.font = '700 12px "PT Serif", Georgia, serif';
       const tw = ctx.measureText(label).width + 14;
       const by = y - 40;
@@ -728,7 +728,7 @@ class ArenaView {
     }
     if (tags.length) {
       ctx.font = 'italic 11px "PT Serif", Georgia, serif';
-      const txt = tags.map(t => t[0]).join(' · ');
+      const txt = tags.map(t => t[0]).join(', ');
       const ty = y + (cur ? 28 : 17);
       ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.fillText(txt, f.x + 1, ty + 1);
       ctx.fillStyle = tags[0][1]; ctx.fillText(txt, f.x, ty);
@@ -1042,7 +1042,7 @@ class ArenaView {
   async playSkip(f, why) {
     this.active = f.uid;
     this.banner = { text: 'Пропуск хода', sub: `${f.unit.g.name} ${why === 'stun' ? 'приходит в себя после оглушения' : 'бьётся в сети'}`, side: f.side, t0: performance.now(), dur: 1500 / this.speed };
-    this.float(f, why === 'stun' ? 'Оглушён — пропуск хода' : 'В сети — пропуск хода', 'status');
+    this.float(f, why === 'stun' ? 'Оглушён, пропуск хода' : 'В сети, пропуск хода', 'status');
     if (why === 'net') {
       sfx('netHit', { pan: panOf(f.x) });
       await this.clip(f, 'struggle').done;

@@ -152,7 +152,7 @@ function betOnNewDay() {
   if (bet && !bet.done && bet.pick !== null && !bet.watched) {
     const back = cancelBet();
     bet.done = true;
-    note = `Бой дня прошёл без вас — ставка ${back} денариев вернулась в казну.`;
+    note = `Бой дня прошёл без вас. Ставка ${back} денариев вернулась в казну.`;
     journal(note);
   } else if (bet && !bet.done && bet.pick !== null) {
     if (!bet.seed) bet.seed = rnd(1, 2 ** 31 - 1);

@@ -173,7 +173,7 @@ class Battle {
     this.current = null;
     this.extraAction = false;
     this.updateFacing();
-    this.say(`${this.tier.place}. ${this.nonLethal ? 'Бой до сдачи — не на смерть.' : this.tier.mood}`, 'sys');
+    this.say(`${this.tier.place}. ${this.nonLethal ? 'Бой до сдачи, не насмерть.' : this.tier.mood}`, 'sys');
   }
 
   makeUnit(g, side, slot, cell) {
@@ -209,8 +209,8 @@ class Battle {
       this.over = true;
       this.winner = p > 0 ? 'player' : 'enemy';
       // бой дня на ставки: игрок лишь зритель
-      if (this.event.kind === 'bet') this.say(`Толпа ревёт — победил ${this.alive(this.winner)[0] ? this.alive(this.winner)[0].g.name : 'сильнейший'}!`, 'sys big');
-      else this.say(this.winner === 'player' ? 'Толпа ревёт — победа за вашим лудусом!' : 'Ваши бойцы повержены.', 'sys big');
+      if (this.event.kind === 'bet') this.say(`Толпа ревёт: победил ${this.alive(this.winner)[0] ? this.alive(this.winner)[0].g.name : 'сильнейший'}!`, 'sys big');
+      else this.say(this.winner === 'player' ? 'Толпа ревёт: победа за вашим лудусом!' : 'Ваши бойцы повержены.', 'sys big');
       this.ev({ t: 'end', winner: this.winner });
     }
     return this.over;
@@ -341,7 +341,7 @@ class Battle {
     const order = this.units.filter(u => u.alive).map(u => ({ u, ini: u.s.init + rnd(0, 6) }));
     order.sort((a, b) => b.ini - a.ini);
     this.queue = order.map(o => o.u);
-    this.say(`— Раунд ${this.round} —`, 'round');
+    this.say(`Раунд ${this.round}`, 'round');
     this.ev({ t: 'round', n: this.round });
   }
 
@@ -383,7 +383,7 @@ class Battle {
       e.hp = u.hp;
       if (this.checkEnd() || !u.alive) return { u, act: false };
     }
-    if (this.holders(u).length) this.say(`${this.nm(u)} окружён — отступить нельзя, только пробиться.`, 'status');
+    if (this.holders(u).length) this.say(`${this.nm(u)} окружён: отступить нельзя, только пробиться.`, 'status');
     if (u.stun > 0) {
       u.stun--;
       u.apLeft = 0; // пропущенный ход уклонения не даёт
@@ -411,7 +411,7 @@ class Battle {
     this.over = true;
     this.winner = 'enemy';
     this.surrendered = true;
-    this.say('Ланиста поднимает руку — ваши бойцы сдаются на милость толпы.', 'sys big');
+    this.say('Ланиста поднимает руку: ваши бойцы сдаются на милость толпы.', 'sys big');
   }
 
   // --------------------------------------------------------
@@ -684,23 +684,23 @@ class Battle {
       case 'shieldBash': {
         const legion = this.pv(u, 'mur_cap');
         if (legion) u.cd--;
-        this.say(`${this.nm(u)}: «${A.name}» — цель ${this.nm(t)}!`, 'skill');
+        this.say(`${this.nm(u)}: «${A.name}», цель ${this.nm(t)}!`, 'skill');
         const r = this.strike(u, t, { mult: legion ? 1.3 : 0.8, noCounter: true, kind: 'shieldBash' });
         if (r.hit && t.alive) this.tryControl(u, t, 'stun', legion ? 100 : 60, 1);
         break;
       }
       case 'netThrow': {
-        this.say(`${this.nm(u)} бросает сеть${targets.length > 1 ? ' на всех противников рядом' : ` — цель ${this.nm(t)}`}!`, 'skill');
+        this.say(`${this.nm(u)} бросает сеть${targets.length > 1 ? ' на всех противников рядом' : `, цель ${this.nm(t)}`}!`, 'skill');
         for (const x of targets) this.tryControl(u, x, 'net', 85 + u.s.netBonus, 1);
         break;
       }
       case 'onslaught': {
-        this.say(`${this.nm(u)}: «${A.name}» — цель ${this.nm(t)}!`, 'skill');
+        this.say(`${this.nm(u)}: «${A.name}», цель ${this.nm(t)}!`, 'skill');
         this.strike(u, t, { mult: 1.5, accBonus: 15, ignoreArmor: 0.5, noCounter: true, kind: 'onslaught' });
         break;
       }
       case 'slash': {
-        this.say(`${this.nm(u)}: «${A.name}» — цель ${this.nm(t)}!`, 'skill');
+        this.say(`${this.nm(u)}: «${A.name}», цель ${this.nm(t)}!`, 'skill');
         const r = this.strike(u, t, { mult: 0.7, accBonus: 10, kind: 'slash' });
         if (r.hit && t.alive) {
           const turns = this.pv(u, 'thr_cap') ? 5 : 3;
@@ -717,7 +717,7 @@ class Battle {
       }
       case 'spearWall': {
         if (this.pv(u, 'hop_cap')) u.cd--;
-        this.say(`${this.nm(u)}: «${A.name}» — выпад в ${this.nm(t)}!`, 'skill');
+        this.say(`${this.nm(u)}: «${A.name}», выпад в ${this.nm(t)}!`, 'skill');
         this.strike(u, t, { mult: 1.4, unblockable: true, noCounter: true, kind: 'lunge' });
         if (u.alive) {
           u.spearWall = true;
@@ -729,7 +729,7 @@ class Battle {
       case 'aimedShot': {
         const cap2 = this.pv(u, 'sag_cap');
         if (cap2) u.cd--;
-        this.say(`${this.nm(u)} натягивает тетиву до уха — «${A.name}» в ${this.nm(t)}!`, 'skill');
+        this.say(`${this.nm(u)} натягивает тетиву до уха: «${A.name}» в ${this.nm(t)}!`, 'skill');
         this.strike(u, t, { mult: 1.5, accBonus: 20, critBonus: 10, forceCrit: !!cap2, unblockable: true, noCounter: true, kind: 'aimed' });
         const volley = this.pv(u, 'sag_volley');
         if (volley && u.alive) {
@@ -738,7 +738,7 @@ class Battle {
         break;
       }
       case 'cleave': {
-        this.say(`${this.nm(u)}: «${A.name}» — с плеча по ${this.nm(t)}!`, 'skill');
+        this.say(`${this.nm(u)}: «${A.name}», с плеча по ${this.nm(t)}!`, 'skill');
         this.strike(u, t, { mult: 1.4, unblockable: true, noCounter: true, kind: 'cleave' });
         if (!u.alive) break;
         const all = this.pv(u, 'gal_cap');
@@ -752,7 +752,7 @@ class Battle {
 
   tryControl(u, t, kind, base, turns) {
     if (t.s.resist >= 100) {
-      this.say(`${this.nm(t)} неумолим — эффект не действует.`, 'status');
+      this.say(`${this.nm(t)} неумолим: эффект не действует.`, 'status');
       this.ev({ t: 'control', u: t.uid, src: u.uid, kind, ok: false, immune: true });
       return false;
     }
@@ -761,7 +761,7 @@ class Battle {
     const pr = Math.round(p);
     if (chance(p)) {
       t[kind] = Math.max(t[kind], turns);
-      this.say(`${this.nm(t)} ${kind === 'stun' ? 'оглушён' : 'опутан сетью'} (шанс ${pr}%) и пропустит свой следующий ход!`, 'status');
+      this.say(`${this.nm(t)} ${kind === 'stun' ? 'оглушён' : 'опутан сетью'} (шанс ${pr}%) и пропустит ход!`, 'status');
       this.ev({ t: 'control', u: t.uid, src: u.uid, kind, ok: true, p: pr });
       u.flair += 1;
       return true;
@@ -774,7 +774,7 @@ class Battle {
   addBleed(src, t, dmg, turns) {
     if (this.pv(src, 'thr_cap')) dmg *= 2;
     t.bleeds.push({ dmg, turns, src });
-    this.say(`${this.nm(t)} истекает кровью (${dmg} за ход, ${turns} хода).`, 'bleed');
+    this.say(`${this.nm(t)} истекает кровью (${dmg} за ход, ${turns} ${turns < 5 ? 'хода' : 'ходов'}).`, 'bleed');
     this.ev({ t: 'bleedOn', u: t.uid });
   }
 
@@ -809,7 +809,7 @@ class Battle {
     const pointBlank = ranged && dist <= 1 ? -20 : 0;
     const hitChance = hitChanceOf(u.s.acc + (opts.accBonus || 0) + pointBlank, dodge);
     if (!chance(hitChance)) {
-      this.say(helpless ? `${this.nm(u)} промахивается по беспомощному ${this.nm(t)}.` : `${this.nm(u)} ${ranged ? 'стреляет' : 'бьёт'} мимо — ${this.nm(t)} уклоняется.`, 'miss');
+      this.say(helpless ? `${this.nm(u)} промахивается по беспомощному ${this.nm(t)}.` : `${this.nm(u)} ${ranged ? 'стреляет' : 'бьёт'} мимо, ${this.nm(t)} уклоняется.`, 'miss');
       this.ev({ t: 'strike', a: u.uid, d: t.uid, kind, res: 'miss', hp: t.hp, ranged, helpless });
       if (!helpless) t.flair += 0.5;
       const evd = this.pv(t, 'ret_evade');
@@ -918,14 +918,14 @@ class Battle {
       if (src && src !== t) {
         src.kills++;
         src.flair += 2;
-        this.say(this.nonLethal ? `${this.nm(t)} не может продолжать бой — выбыл! Победил его ${this.nm(src)}` : `${this.nm(t)} повержен! Добил: ${this.nm(src)}`, 'kill');
+        this.say(this.nonLethal ? `${this.nm(t)} выбывает из боя! Его одолел ${this.nm(src)}.` : `${this.nm(t)} повержен! Добил: ${this.nm(src)}`, 'kill');
         this.ev({ t: 'fall', u: t.uid, by: src.uid });
         if (this.pv(src, 'gal_cap') && src.alive) src.cd = 0;
         const reap = this.pv(src, 'dim_reap');
         if (reap && src.alive) this.heal(src, Math.round(src.maxHp * reap / 100));
         if (this.pv(src, 'sec_cap') && src.alive && src === this.current && !this.over) {
           this.extraAction = true;
-          this.say(`${this.nm(src)} в охотничьем азарте — дополнительный ход!`, 'skill');
+          this.say(`${this.nm(src)} в охотничьем азарте: ещё один ход!`, 'skill');
           this.ev({ t: 'extra', u: src.uid });
         }
       } else {

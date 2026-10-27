@@ -43,7 +43,7 @@ function renderMenu() {
     return;
   }
   box.innerHTML = `${head}
-    <p class="menu-sub">Отец оставил вам лудус в Помпеях и долг в пять тысяч денариев. Выучите бойцов, расплатитесь и проведите школу через арены Капуи и Рима — к Играм за рудис свободы.</p>
+    <p class="menu-sub">Отец оставил вам лудус в Помпеях и долг в пять тысяч денариев. Выучите бойцов, расплатитесь и проведите школу через Капую и Рим к Играм за рудис свободы.</p>
     ${STATE ? saveCard(STATE) : ''}
     <div class="menu-list" role="navigation" aria-label="Главное меню">
       <button data-act="newGameAsk">Новая игра</button>
@@ -63,7 +63,7 @@ function saveCard(st) {
     <span class="sc-body">
       <span class="sc-act">${lost ? 'Итог: лудус отобран' : 'Продолжить'}</span>
       <span class="sc-name">«${esc(st.ludusName || 'Лудус')}»</span>
-      <span class="sc-meta">${ch ? `Глава ${ch} · ` : ''}день ${st.day}</span>
+      <span class="sc-meta">${ch ? `Глава ${ch}, ` : ''}день ${st.day}</span>
       <span class="sc-stats"><span>${ICON.coin}${st.gold}</span><span>${ICON.laurel}${st.fame}</span><span>${ICON.helm}${st.gladiators.length}</span></span>
     </span>
   </button>`;
@@ -76,7 +76,7 @@ function settingsHtml() {
   const sw = (act, on, label, hint, dis) => `<button class="set-row" data-act="${act}" role="switch" aria-checked="${on}" ${dis ? 'disabled' : ''}>
       <span class="set-l"><b>${label}</b><small>${hint}</small></span><i class="switch ${on ? 'on' : ''}"></i></button>`;
   const z = zoomPref();
-  const seg = ZOOM_STEPS.map(s => `<button class="seg ${z === s ? 'on' : ''}" data-act="setZoom" data-z="${s}">${s === 'auto' ? `Авто · ${Math.round(autoZoom() * 100)}%` : `${Math.round(+s * 100)}%`}</button>`).join('');
+  const seg = ZOOM_STEPS.map(s => `<button class="seg ${z === s ? 'on' : ''}" data-act="setZoom" data-z="${s}">${s === 'auto' ? `Авто (${Math.round(autoZoom() * 100)}%)` : `${Math.round(+s * 100)}%`}</button>`).join('');
   return `<div class="settings">
     ${sw('toggleSound', snd, 'Звук', 'Все звуки игры: удары, толпа, интерфейс', !has)}
     ${sw('toggleMusic', mus, 'Музыка', 'Фоновая музыка лудуса и арены', !has || !snd)}
