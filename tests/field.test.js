@@ -15,12 +15,12 @@ const setup = ctx => ev(ctx, `(() => {
 })()`);
 
 module.exports = [
-  { name: 'поле: ОД — 5 + инициатива / 4, от 5 до 9; удар стоит по оружию', fn: () => {
+  { name: 'поле: ОД — 5 + инициатива / 4, от 5 до 9; удар — 4 ОД любым оружием, умение — 5', fn: () => {
     const ctx = game();
     assert.deepEqual([3, 7, 8, 16, 40].map(i => ev(ctx, `apOf(${i})`)), [5, 6, 7, 9, 9]);
-    assert.deepEqual(['sica', 'gladius', 'spear', 'arcus', 'longsword'].map(b => ev(ctx, `attackAp(makeItem("${b}", 1))`)), [2, 3, 3, 4, 4]);
-    assert.equal(ev(ctx, 'attackAp(null)'), 2);
-    assert.equal(ev(ctx, 'abilityAp({ atkAp: 3 })'), 4);
+    assert.deepEqual(['sica', 'gladius', 'spear', 'arcus', 'longsword'].map(b => ev(ctx, `attackAp(makeItem("${b}", 1))`)), [4, 4, 4, 4, 4]);
+    assert.equal(ev(ctx, 'attackAp(null)'), 4);
+    assert.equal(ev(ctx, 'abilityAp(computeStats(createGladiator("thraex", 5, { forceSchool: true })))'), 5);
   } },
   { name: 'поле: шаг прочь от соседнего противника стоит на 1 ОД дороже, шаг вдоль — нет', fn: () => {
     const ctx = game();
@@ -32,13 +32,16 @@ module.exports = [
     ev(ctx, 'f.stun = 1');
     assert.equal(ev(ctx, 'B.reachable(u, 10).get(cellKey(3, 2)).d'), 1);
   } },
-  { name: 'поле: удар тратит ОД, удар один за ход, остаток ОД — уклонение до следующего хода', fn: () => {
+  { name: 'поле: удар тратит 4 ОД, ударов — сколько хватит ОД, остаток — уклонение до следующего хода', fn: () => {
     const ctx = game();
     setup(ctx);
-    ev(ctx, 'u.apLeft = 7; f.hp = f.maxHp = 9999');
+    ev(ctx, 'u.apLeft = 9; f.hp = f.maxHp = 9999');
     assert.equal(ev(ctx, 'B.cmdAttack(u, f)'), true);
-    assert.equal(ev(ctx, 'u.apLeft'), ev(ctx, '7 - u.s.atkAp'));
-    assert.equal(ev(ctx, 'B.cmdAttack(u, f)'), false);
+    assert.equal(ev(ctx, 'u.apLeft'), 5);
+    assert.equal(ev(ctx, 'B.cmdAttack(u, f)'), true, 'второй удар — ОД хватает');
+    assert.equal(ev(ctx, 'u.apLeft'), 1);
+    assert.equal(ev(ctx, 'B.cmdAttack(u, f)'), false, 'на третий не хватает');
+    assert.equal(ev(ctx, 'u.hits'), 2);
     ev(ctx, 'B.current = u; B.queue = [f]; B.beginTurn()');
     assert.equal(ev(ctx, 'u.evade'), ev(ctx, 'u.apLeft * AP_DODGE'));
     assert.ok(ev(ctx, 'u.evade') > 0);

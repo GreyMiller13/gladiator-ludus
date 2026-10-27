@@ -280,7 +280,7 @@ const ITEM_BASES = {
   // Оружие
   gladius:   { slot: 'weapon', name: 'Гладиус', price: 40, stats: { dmgMin: 6, dmgMax: 10, acc: 5 },
     classes: ['murmillo', 'secutor', 'dimachaerus'], bonus: [['acc', 3], ['str', 1], ['crit', 3]] },
-  sica:      { slot: 'weapon', name: 'Сика', price: 40, light: true, stats: { dmgMin: 5, dmgMax: 9, crit: 6 },
+  sica:      { slot: 'weapon', name: 'Сика', price: 40, stats: { dmgMin: 6, dmgMax: 10, crit: 6 },
     classes: ['thraex', 'dimachaerus'], bonus: [['crit', 2], ['agi', 1], ['skl', 1]] },
   spatha:    { slot: 'weapon', name: 'Спата', price: 55, stats: { dmgMin: 8, dmgMax: 12 },
     classes: ['murmillo', 'dimachaerus'], bonus: [['str', 1], ['acc', 3], ['crit', 3]] },
@@ -362,7 +362,7 @@ const RARE_BASES = {
   rare_praetor:   { slot: 'weapon', look: 'gladius', name: 'Гладиус преторианца', price: 1600,
     stats: { dmgMin: 13, dmgMax: 21, acc: 16, str: 3, crit: 5 }, classes: ['murmillo', 'secutor', 'dimachaerus'],
     desc: 'Клинок из личной стражи легата: сталь норикской ковки, рукоять из слоновой кости.' },
-  rare_damascus:  { slot: 'weapon', look: 'sica', name: 'Сика из восточной стали', price: 1500, light: true,
+  rare_damascus:  { slot: 'weapon', look: 'sica', name: 'Сика из восточной стали', price: 1500,
     stats: { dmgMin: 11, dmgMax: 19, crit: 15, agi: 2, acc: 6 }, classes: ['thraex', 'dimachaerus'],
     desc: 'Узорчатый клинок, привезённый караваном из Дамаска. Режет кожу, как папирус.' },
   rare_sarissa:   { slot: 'weapon', look: 'spear', name: 'Македонское копьё', price: 1500,

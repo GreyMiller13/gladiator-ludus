@@ -355,7 +355,7 @@ class Battle {
     this.updateFacing();
     if (this.extraAction && this.current && this.current.alive) {
       this.extraAction = false;
-      this.current.apLeft = this.current.ap; this.current.acted = false; this.current.evade = 0;
+      this.current.apLeft = this.current.ap; this.current.acted = false; this.current.evade = 0; this.current.hits = 0;
       this.ev({ t: 'turn', u: this.current.uid, extra: true });
       return { u: this.current, act: true };
     }
@@ -368,7 +368,7 @@ class Battle {
     }
     this.current = u;
     // ОД тратятся на шаги до и после действия; удар или умение — одно за ход
-    u.apLeft = u.ap; u.acted = false; u.evade = 0;
+    u.apLeft = u.ap; u.acted = false; u.evade = 0; u.hits = 0;
     this.ev({ t: 'turn', u: u.uid });
     u.defending = false; u.spearWall = false;
     if (u.cd > 0) u.cd--;
@@ -428,8 +428,8 @@ class Battle {
   finishAct() { this.checkEnd(); }
   cmdAttack(u, t) {
     this.events = [];
-    if (u.acted || u.apLeft < u.s.atkAp || !t || !t.alive || !this.canHit(u, u, t)) return false;
-    u.acted = true; u.apLeft -= u.s.atkAp;
+    if (u.apLeft < u.s.atkAp || !t || !t.alive || !this.canHit(u, u, t)) return false;
+    u.acted = true; u.apLeft -= u.s.atkAp; u.hits = (u.hits || 0) + 1;
     this.doAttack(u, t);
     this.finishAct();
     return true;
@@ -437,7 +437,7 @@ class Battle {
   cmdAbility(u, t) {
     this.events = [];
     const A = clsOf(u.g).ability;
-    if (!A || u.cd > 0 || u.acted || u.apLeft < abilityAp(u.s)) return false;
+    if (!A || u.cd > 0 || u.apLeft < abilityAp(u.s)) return false;
     if (A.id === 'whirl') { if (!this.adjacentFoes(u).length) return false; }
     else if (!t || !this.abilityTargets(u, u).includes(t)) return false;
     u.acted = true; u.apLeft -= abilityAp(u.s);
@@ -457,9 +457,9 @@ class Battle {
   options(u) {
     const reach = u.apLeft > 0 ? this.reachable(u) : new Map([[cellKey(u.c, u.r), { c: u.c, r: u.r, d: 0, prev: null }]]);
     const atk = u.s.atkAp;
-    const foes = u.acted || u.apLeft < atk ? [] : this.enemiesOf(u);
+    const foes = u.apLeft < atk ? [] : this.enemiesOf(u);
     const attackNow = foes.filter(f => this.canHit(u, u, f));
-    const abilityNow = u.acted || u.apLeft < abilityAp(u.s) ? [] : this.abilityTargets(u, u);
+    const abilityNow = u.apLeft < abilityAp(u.s) ? [] : this.abilityTargets(u, u);
     // подойти и ударить: лучшая клетка (ближайшая), откуда на удар ещё хватит ОД
     const approach = new Map();
     for (const f of foes) {
@@ -506,10 +506,9 @@ class Battle {
     }
   }
 
-  aiTurn(u) {
-    this.events = [];
+  // Лучшее действие ИИ из всех клеток, куда можно дойти и ещё ударить: { cell, type, f, score } или null
+  aiPick(u) {
     const foes = this.enemiesOf(u);
-    if (!foes.length || u.acted) return; // действие уже сделано (ход передан ИИ после удара)
     const A = clsOf(u.g).ability;
     const ready = A && u.cd === 0;
     const reach = this.reachable(u);
@@ -537,17 +536,30 @@ class Battle {
         if (adj.length) consider({ cell: n, type: 'ability', f: null, score: 1 + this.abilityScore(u, A, n, null) - dz });
       }
     }
+    return best;
+  }
+
+  aiTurn(u) {
+    this.events = [];
+    const foes = this.enemiesOf(u);
+    if (!foes.length) return;
+    const ranged = u.s.ranged;
     const low = u.hp / u.maxHp < 0.25 && foes.length > 1;
-    if (best) {
+    // бьём, пока хватает ОД: каждый удар — 4 ОД, умение — 5
+    let acts = 0;
+    for (let best = this.aiPick(u); best && u.alive && !this.over && acts < 4; best = this.aiPick(u), acts++) {
       this.moveTo(u, best.cell);
       if (!u.alive || this.over) return;
-      if (low && best.type === 'attack' && chance(20)) return this.doDefend(u);
+      if (low && !acts && !u.acted && best.type === 'attack' && chance(20)) return this.doDefend(u);
       u.acted = true;
-      u.apLeft -= best.type === 'ability' ? abC : atk;
+      u.apLeft -= best.type === 'ability' ? abilityAp(u.s) : u.s.atkAp;
+      if (best.type === 'attack') u.hits = (u.hits || 0) + 1;
       if (best.type === 'ability') this.doAbility(u, best.f);
       else this.doAttack(u, best.f);
       this.checkEnd();
-      // боец ближнего боя после удара отходит, только если на оставшиеся ОД можно уйти туда,
+    }
+    if (acts) {
+      // боец ближнего боя после ударов отходит, только если на оставшиеся ОД можно уйти туда,
       // где его не достанут; иначе стоит — неистраченные ОД дадут уклонение
       if (!ranged && u.alive && !this.over && u.apLeft > 0 && this.danger(u, u) > 0) {
         let safe = null;
@@ -566,6 +578,7 @@ class Battle {
       return;
     }
     // никого не достать: идём к ближайшей позиции для удара
+    const reach = this.reachable(u);
     const goal = this.goalDistance(u);
     let step = null;
     for (const n of reach.values()) {
@@ -628,7 +641,8 @@ class Battle {
 
   doAttack(u, t, opts = {}) {
     if (!t || !t.alive) return;
-    const res = this.strike(u, t, { kind: 'basic', ...opts });
+    // второй и следующие удары за ход — слабее: боец устаёт
+    const res = this.strike(u, t, { kind: 'basic', ...(u.hits > 1 ? { mult: REPEAT_MULT } : {}), ...opts });
     if (res.aborted) return;
     // быстрая тетива сагиттария
     const quick = this.pv(u, 'sag_quick');
@@ -780,7 +794,8 @@ class Battle {
     // встречный удар копья: гопломах бьёт первым
     if (melee && !opts.noCounter && t !== u && this.free(t) && u.alive && dist <= t.reach) {
       const reach = this.pv(t, 'hop_reach');
-      if (t.spearWall || (reach && chance(reach))) {
+      // копьё встречает того, кто подходит, — перед первым ударом за ход, а не перед каждым
+      if ((u.hits || 0) <= 1 && (t.spearWall || (reach && chance(reach)))) {
         this.say(`${this.nm(t)} встречает ${this.nm(u)} ударом копья!`, 'skill');
         const cap = this.pv(t, 'hop_cap');
         this.strike(t, u, { mult: cap ? 1.1 : 0.8, noCounter: true, noCrit: !cap, kind: 'intercept' });

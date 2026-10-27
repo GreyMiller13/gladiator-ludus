@@ -333,15 +333,13 @@ function computeStats(g) {
 }
 
 const SAG_BONUS = 0.15;
-// Очки действия (ОД): шаг — 1, удар — по оружию (лёгкое 2, обычное 3, двуручное и лук 4), умение — на 1 дороже.
-// Выход из ближнего боя стоит ещё DISENGAGE_AP; неистраченные ОД — уклонение до следующего хода
+// Очки действия (ОД): шаг — 1, удар — ATTACK_AP любым оружием, умение — на 1 дороже.
+// Ударов за ход — сколько хватит ОД. Выход из ближнего боя стоит ещё DISENGAGE_AP;
+// неистраченные ОД — уклонение до следующего хода
 const apOf = init => clamp(5 + Math.floor(init / 4), 5, 9);
-const AP_DODGE = 3, DISENGAGE_AP = 1;
-function attackAp(weapon) {
-  if (!weapon) return 2; // кулаки
-  const B = ITEM_BASES[weapon.base];
-  return B.light ? 2 : B.twoHanded ? 4 : 3;
-}
+const AP_DODGE = 3, DISENGAGE_AP = 1, ATTACK_AP = 4;
+const REPEAT_MULT = 0.75; // второй и следующие удары за ход — в 75% силы: боец устаёт
+const attackAp = () => ATTACK_AP;
 const abilityAp = s => s.atkAp + 1;
 
 // Шанс попасть: базовые 72% + точность атакующего − уклонение цели (10..97%)
