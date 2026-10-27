@@ -406,13 +406,8 @@ function bannerUrl(id) {
   return BANNER_IMG[key];
 }
 
-// Выбор знамени: выбранное крупно, рядом все варианты
-function bannerPickHtml(cur) {
-  const b = bannerOf(cur);
-  return `<div class="banner-wrap"><span>Знамя лудуса</span><div class="banner-pick">
-    <img class="bp-big" data-banner="${b.id}" src="${bannerUrl(b.id)}" alt="">
-    <div class="bp-side"><div class="bp-grid">${BANNERS.map(x => `<button type="button" class="bp ${x.id === b.id ? 'on' : ''}" data-act="pickBanner" data-k="${x.id}" title="${x.name}" aria-label="${x.name}" aria-pressed="${x.id === b.id}"><img data-banner="${x.id}" src="${bannerUrl(x.id)}" alt=""></button>`).join('')}</div>
-    <div class="bp-name">${bannerNameHtml(b)}</div></div></div></div>`;
+// Выбор знамени в окне новой игры: знамя выбирается на всю игру
+function bannerPickHtml() {
+  return `<div class="banner-wrap"><span>Знамя лудуса</span><div class="banner-pick">${BANNERS.map((x, i) => `<button type="button" class="bp ${i ? '' : 'on'}" data-act="pickBanner" data-k="${x.id}" aria-label="${x.name}" aria-pressed="${!i}"><img data-banner="${x.id}" src="${bannerUrl(x.id)}" alt=""></button>`).join('')}</div></div>`;
 }
-const bannerNameHtml = b => `<b>${b.name}</b><span>${b.motto}, «${b.tr}»</span>`;
 const pickedBanner = () => { const el = document.querySelector('.banner-pick .bp.on'); return el ? el.dataset.k : ''; };

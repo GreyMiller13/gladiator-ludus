@@ -257,7 +257,7 @@ function screenLudus() {
   return `
   <div class="ludus-hero">
     <canvas class="ludus-bg" aria-hidden="true"></canvas>
-    <button type="button" class="lh-banner" data-act="bannerAsk" data-tip="${tipAttrHtml(`Знамя лудуса: <b>${bannerOf(STATE.banner).name}</b>, ${bannerOf(STATE.banner).motto}. Нажмите, чтобы сменить.`)}" aria-label="Знамя лудуса: ${bannerOf(STATE.banner).name}"><img data-banner="${bannerOf(STATE.banner).id}" src="${bannerUrl(STATE.banner)}" alt=""></button>
+    <img class="lh-banner" data-banner="${bannerOf(STATE.banner).id}" src="${bannerUrl(STATE.banner)}" alt="">
     <div class="lh-text">
       <span class="lh-pre">лудус</span><h2>${esc(STATE.ludusName)}</h2>
       <p>День ${STATE.day}, бойцов ${gs.length} из ${MAX_GLADIATORS}, слава ${STATE.fame}${gs.length ? `, <span data-tip="${tipAttrHtml(`Сумма мощи трёх сильнейших бойцов. ${POWER_TIP}`)}">мощь тройки <b>${power}</b></span>` : ''}</p>
@@ -1964,18 +1964,7 @@ const ACTIONS = {
   },
   pickBanner: (d, el) => {
     document.querySelectorAll('.banner-pick .bp').forEach(b => { b.classList.toggle('on', b === el); b.setAttribute('aria-pressed', b === el ? 'true' : 'false'); });
-    const b = bannerOf(d.k), wrap = el.closest('.banner-pick');
-    const big = wrap.querySelector('.bp-big');
-    big.dataset.banner = b.id; big.src = bannerUrl(b.id);
-    wrap.querySelector('.bp-name').innerHTML = bannerNameHtml(b);
   },
-  bannerAsk: () => showDialog({
-    title: 'Знамя лудуса', cls: 'bannerdlg',
-    text: 'Под этим знаменем ваши бойцы выходят на песок.',
-    after: bannerPickHtml(STATE.banner),
-    ok: 'Поднять знамя',
-    onOk: () => { STATE.banner = bannerId(pickedBanner()); save(); render(); },
-  }),
   newGameAsk: () => showNewGameDialog(),
   saveAsk: () => showSaveDialog(),
   dlgOk: () => {

@@ -264,10 +264,7 @@ main { padding: 28px 26px 70px; max-width: 1440px; margin: 0 auto; }
 .lh-text { position: relative; z-index: 1; padding: 30px 32px; max-width: 520px; }
 /* знамя стоит в левом углу шапки, древко уходит в песок; текст сдвинут на ширину знамени (300:440 от высоты шапки) */
 .ludus-hero { container-type: size; }
-.lh-banner { position: absolute; z-index: 2; left: 14px; top: 4px; bottom: -3px; padding: 0; margin: 0; background: none; border: 0; box-shadow: none; cursor: pointer; }
-.lh-banner:hover:not(:disabled) { background: none; border: 0; }
-.lh-banner img { display: block; height: 100%; width: auto; filter: drop-shadow(0 6px 10px rgba(0,0,0,.65)); transition: transform .15s; }
-.lh-banner:hover img { transform: translateY(-2px); }
+.lh-banner { position: absolute; z-index: 2; left: 14px; top: 4px; height: calc(100% - 1px); width: auto; pointer-events: none; filter: drop-shadow(0 6px 10px rgba(0,0,0,.65)); }
 .ludus-hero .lh-text { padding-left: calc(28px + 68cqh); max-width: calc(520px + 68cqh); }
 .lh-pre { font-family: var(--font-head); font-style: italic; color: var(--dust); font-size: 15px; }
 .lh-text h2 { font-size: 46px; line-height: 1; color: var(--blood-hi); text-shadow: 0 2px 0 rgba(0,0,0,.7); margin: 2px 0 10px; }
@@ -795,18 +792,11 @@ body.drag-on #tip { display: none !important; }
 @media (max-width: 560px) { .lanista-pick .lp img { width: 68px; height: 68px; } .lanista-pick .lp { font-size: 12px; } }
 .banner-wrap { margin-top: 14px; text-align: left; }
 .banner-wrap > span { font-size: 14px; color: var(--muted); }
-.banner-pick { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 12px; margin-top: 6px; align-items: start; }
-.banner-pick .bp-big { display: block; width: 92px; height: auto; background: radial-gradient(ellipse at 50% 40%, #3a2a1f, rgba(0,0,0,.25) 70%); border: 1px solid var(--seam); }
-.bp-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 5px; }
+.banner-pick { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; margin-top: 6px; }
 .banner-pick .bp { display: block; padding: 1px; line-height: 0; background: rgba(0,0,0,.25); border: 1px solid var(--seam); border-radius: 2px; box-shadow: none; }
 .banner-pick .bp img { display: block; width: 100%; height: auto; }
 .banner-pick .bp:hover { border-color: var(--seam2); }
 .banner-pick .bp.on { border-color: var(--bronze-hi); background: rgba(168,129,74,.12); box-shadow: 0 0 0 1px var(--bronze-hi) inset; }
-.bp-name { margin-top: 8px; font-size: 13px; line-height: 1.3; color: var(--muted); }
-.bp-name b { display: block; font-family: var(--font-head); font-weight: 400; font-size: 18px; color: var(--bronze-hi); }
-.modal.dlg.bannerdlg { max-width: 480px; }
-.bannerdlg .banner-wrap > span { display: none; }
-@media (max-width: 420px) { .banner-pick { grid-template-columns: minmax(0, 1fr); } .banner-pick .bp-big { display: none; } }
 .dlg-check { display: flex; gap: 9px; align-items: center; justify-content: center; margin-top: 14px; font-size: 15px; color: var(--text); cursor: pointer; }
 .dlg-check input { width: 17px; height: 17px; accent-color: var(--blood-hi); }
 .dlg-btns { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 20px; }
