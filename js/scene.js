@@ -117,7 +117,7 @@ const TUTOR_STEPS = [
   { id: 'debt', g: 'intro', modal: true, sel: 'header .debtres', wait: 'next',
     text: 'А это долг твоего отца. Платёж заберут в срок сами, держи деньги наготове. Нажми на долг, и увидишь, когда и сколько платить.' },
   { id: 'tasks', g: 'intro', modal: true, sel: '#taskbar', wait: 'next',
-    text: 'Здесь твоя задача на сейчас. Нажми на строку, и увидишь все задачи главы.' },
+    text: 'Здесь твоя задача на сегодня. Нажми на строку, и увидишь все задачи главы.' },
   { id: 'glad', g: 'intro', lock: true, tab: 'ludus', sel: 'main .gcard', one: true, wait: 'openGlad',
     text: 'Это твой единственный боец. Открой его карточку.' },
   { id: 'gift', g: 'intro', modal: true, back: 'glad', sel: '#modal .doll', wait: 'next',
