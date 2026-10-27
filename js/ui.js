@@ -149,6 +149,7 @@ function endDay() {
   if (STATE.lost) { flushScenes(() => showDebtLost()); return; }
   storyTick();
   checkGameOver();
+  coach('dayEnded');
 }
 
 // Значки шапки (рисуются линией, цвет — от текста)
@@ -708,9 +709,9 @@ const foeRows = ev => ev.enemies.map((e, i) => `<button class="pbtn foe" data-ac
 
 function eventCard(ev) {
   const sel = ev.id === UI.eventId;
-  const title = ev.done ? 'Бой окончен' : ev.boss ? esc(ev.title) : ev.training ? 'Учебный бой' : 'Поединок';
+  const title = ev.done ? 'Бой окончен' : ev.boss || ev.duo ? esc(ev.title) : ev.training ? 'Учебный бой' : 'Поединок';
   const note = ev.training ? 'Без смертей, ручное управление, наставник подскажет.' : ev.boss && !ev.done ? 'Победа откроет следующую арену. Проигранный бой можно повторить завтра.' : '';
-  return `<div class="panel event ${ev.boss ? 'boss' : ''} ${ev.training ? 'training' : ''} ${sel ? 'sel' : ''} ${ev.done ? 'done' : ''}" data-act="${ev.done ? '' : 'pickEvent'}" data-id="${ev.id}" ${note ? `data-tip="${tipAttrHtml(note)}"` : ''}>
+  return `<div class="panel event ${ev.boss ? 'boss' : ''} ${ev.training ? 'training' : ''} ${ev.duo ? 'duo' : ''} ${sel ? 'sel' : ''} ${ev.done ? 'done' : ''}" data-act="${ev.done ? '' : 'pickEvent'}" data-id="${ev.id}" ${note ? `data-tip="${tipAttrHtml(note)}"` : ''}>
     <div class="eh"><h3>${title}</h3><span class="fmt">${ev.size} на ${ev.size}</span></div>
     <div class="foes">${foeRows(ev)}</div>
     <div class="reward">${enemyPower(ev)}<span><b>${ev.gold}</b> ден.</span><span><b>+${ev.fame}</b> славы</span></div>
@@ -1384,8 +1385,9 @@ function playerTurn(B, u) {
         const pb = u.s.ranged && cheb(from || u, f) <= 1 ? -20 : 0;
         const dodge = f.net > 0 || f.stun > 0 ? 0 : f.s.dodge + (f.evade || 0);
         const p = hitChanceOf(u.s.acc + pb, dodge);
-        const back = b.isBehind(f, from || u);
-        return { text: `${f.g.name}: попадание ${p}%${back ? ' · в спину: крит ×2' : ''}${from && from !== u ? (u.s.ranged ? ' (перейти и выстрелить)' : ' (подойти и ударить)') : ''}${pb ? ' · в упор' : ''}`, x: fp.x, y: fp.y + 26, color: back ? '#f6d47a' : '#f0b6a6' };
+        const back = b.backstab(f, u, from || u);
+        const cost = (from && from !== u ? from.d : 0) + u.s.atkAp;
+        return { text: `${f.g.name}: попадание ${p}% · ${cost} ОД${back ? ' · в спину: крит ×2' : ''}${from && from !== u ? (u.s.ranged ? ' (перейти и выстрелить)' : ' (подойти и ударить)') : ''}${pb ? ' · в упор' : ''}`, x: fp.x, y: fp.y + 26, color: back ? '#f6d47a' : '#f0b6a6' };
       }
       if (!f && u.apLeft > 0 && T.o.reach) {
         const n = T.o.reach.get(cellKey(hv.c, hv.r));
@@ -1393,7 +1395,7 @@ function playerTurn(B, u) {
           const p = cellPos(n.c, n.r);
           // путь дороже числа клеток — значит, по дороге боец выходит из ближнего боя
           const leave = n.d > b.pathOf(n).length;
-          return { text: `ОД: ${n.d}${leave ? ' · выход из боя' : ''}`, x: p.x, y: p.y + 24, color: leave ? '#f0c08a' : '#bcd6ee' };
+          return { text: `${n.d} ОД, останется ${u.apLeft - n.d}${leave ? ' · выход из боя +1' : ''}`, x: p.x, y: p.y + 24, color: leave ? '#f0c08a' : '#bcd6ee' };
         }
       }
       return null;
@@ -1426,7 +1428,8 @@ function renderTact(B) {
     : u.acted ? (u.apLeft > 0 ? `Удар нанесён. Можно отойти по синим клеткам или остаться: оставшиеся ${u.apLeft} ОД дадут +${u.apLeft * AP_DODGE}% уклонения.` : 'Действие выполнено.')
     : `Красные кольца — кого можно атаковать${u.apLeft > u.s.atkAp ? ' (если нужно, боец сам подойдёт)' : ''}. Синие клетки — куда можно шагнуть. Неистраченные ОД — уклонение до следующего хода.`;
   el.innerHTML = `<div class="tact">
-    <div><b>Ход: <span class="player">${esc(u.g.name)}</span></b> <span class="muted small">${clsOf(u.g).name} · <b class="apnum">ОД ${u.apLeft}/${u.ap}</b> · удар ${u.s.atkAp}${A ? ` · умение ${abilityAp(u.s)}` : ''} · дальность ${u.reach}${u.s.ranged ? ' (лук)' : ''}</span>${held ? ' <span class="badge-s stun">Окружён — не может отступить</span>' : ''}<div class="small muted">${hint}</div></div>
+    <div><div class="appips" data-tip="${tipAttrHtml(`Очки действия: осталось ${u.apLeft} из ${u.ap}. Шаг — 1, удар — ${u.s.atkAp}${A ? `, умение — ${abilityAp(u.s)}` : ''}. Неистраченные дают +${AP_DODGE}% уклонения каждое.`)}"><span class="aplabel">ОД</span>${Array.from({ length: u.ap }, (_, i) => `<i class="${i < u.apLeft ? 'on' : ''}"></i>`).join('')}<b class="apnum">${u.apLeft}/${u.ap}</b></div>
+      <b>Ход: <span class="player">${esc(u.g.name)}</span></b> <span class="muted small">${clsOf(u.g).name} · удар ${u.s.atkAp} ОД${A ? ` · умение ${abilityAp(u.s)} ОД` : ''} · дальность ${u.reach}${u.s.ranged ? ' (лук)' : ''}</span>${held ? ' <span class="badge-s stun">Окружён — не может отступить</span>' : ''}<div class="small muted">${hint}</div></div>
     <div class="tbtns">
       ${A ? `<button class="small ${T.aim ? 'active' : ''}" data-act="tAbility" ${!abReady || T.busy || u.acted ? 'disabled' : ''} title="${esc(A.desc)} Стоит ${abilityAp(u.s)} ОД.">${A.name}${u.cd ? ` (${u.cd})` : ''}</button>` : ''}
       <button class="small" data-act="tDefend" ${T.busy || u.acted ? 'disabled' : ''} title="Остаться на месте и закрыться: −40% урона и +20% блока до следующего хода; неистраченные ОД дадут ещё и уклонение. Клавиша D">Оборона <kbd>D</kbd></button>
@@ -1490,7 +1493,7 @@ function unitRow(u, B) {
   return `<div class="urow ${u.side} ${u.alive ? '' : 'dead'} ${active ? 'active' : ''}">
     <img class="portrait sm" src="${portrait(u.g, 44, 55, { bust: true, enemy: u.side === 'enemy' })}" alt="">
     <div class="uinfo">
-      <div class="un">${esc(u.g.name)} <span class="muted tiny">${C.name}, ур. ${u.g.level} · ОД ${u.ap} · дальн. ${u.reach}</span></div>
+      <div class="un">${esc(u.g.name)} <span class="muted tiny">${C.name}, ур. ${u.g.level} · ОД ${active ? `<b class="apnum">${u.apLeft}/${u.ap}</b>` : u.ap} · дальн. ${u.reach}</span></div>
       <div class="hp"><div style="width:${u.hp / u.maxHp * 100}%"></div><span>${u.hp} / ${u.maxHp}</span></div>
       <div class="badges">${tags.join('')}</div>
     </div>
@@ -2030,6 +2033,7 @@ const ACTIONS = {
     if (!g || !g.wounded || STATE.gold < healCost(g)) return;
     STATE.gold -= healCost(g); g.wounded--;
     toast(`Лекарь занялся ранами ${g.name}.`); save(); render();
+    coach('healed');
   },
   rename: () => {
     const g = glad(UI.gladId);

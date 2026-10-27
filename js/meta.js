@@ -632,14 +632,12 @@ const META = (() => {
     return `<div class="panel event contract ${c.story ? 'storyc' : ''} ${art ? 'legend' : ''} ${sel ? 'sel' : ''} ${c.done ? 'done' : ''}" data-act="${c.done ? '' : 'pickEvent'}" data-id="${c.id}">
       <div class="eh"><h3>${escH(c.title)}</h3><span class="fmt">${c.playerSize} на ${c.size}</span></div>
       <div class="m-cl">${c.story ? '<span class="m-diff story">Сюжетный заказ</span>' : `<span class="m-diff d${c.difficulty}">${D.name}</span>`}<span class="muted small">${escH(c.client)}</span></div>
-      <div class="small m-desc">${escH(c.desc)}</div>
+      <div class="small m-desc" data-tip="${escH(c.desc)}">${escH(c.desc)}</div>
       <div class="m-cond"><span class="m-lbl">Условие</span>${escH(c.cond ? c.cond.text : 'Победить')}</div>
       <div class="foes">${foes}</div>
-      ${!c.done && typeof enemyPower === 'function' ? `<div class="reward">${enemyPower(c)}</div>` : ''}
-      <div class="small muted m-heads">Ваших бойцов: <b>${c.playerSize}</b>${c.playerSize < c.size ? ' — в меньшинстве' : ''} · бой не насмерть</div>
-      <div class="reward"><span>Плата <b>${c.gold}</b> ден.</span>${c.fame ? `<span>Слава <b>+${c.fame}</b></span>` : ''}<span>Опыт <b>×${c.xpMult}</b></span></div>
+      <div class="reward">${!c.done && typeof enemyPower === 'function' ? enemyPower(c) : ''}<span><b>${c.gold}</b> ден.</span>${c.fame ? `<span><b>+${c.fame}</b> славы</span>` : ''}<span>опыт <b>×${c.xpMult}</b></span></div>
       ${art ? `<div class="m-artline">Реликвия: <b class="q4">${escH(art.name)}</b> <span class="tiny muted">(${SLOTS[art.slot].toLowerCase()})</span></div>` : ''}
-      ${c.done ? outcome : `<div class="tiny muted m-fee">При неудаче — плата за выход ${Math.round(c.gold * FAIL_FEE)} ден.</div>`}
+      ${c.done ? outcome : `<div class="tiny muted m-fee">При неудаче — плата за выход ${Math.round(c.gold * FAIL_FEE)} ден.${c.playerSize < c.size ? ' Вы в меньшинстве.' : ''}</div>`}
     </div>`;
   }
 
@@ -775,8 +773,8 @@ if (typeof document !== 'undefined' && document.head && !document.getElementById
 .m-diff.d1 { color: var(--q1); border-color: var(--line2); }
 .m-diff.d2 { color: var(--bronze2); border-color: var(--bronze); }
 .m-diff.d3 { color: #f0b3a8; border-color: var(--blood); background: rgba(110,29,23,.35); }
-.contract .m-desc { color: #cbc1b0; }
-.contract .m-cond { margin: 8px 0; padding: 5px 9px; border-left: 2px solid var(--bronze); background: rgba(180,140,82,.08); font-size: 13.5px; }
+.contract .m-desc { color: #cbc1b0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.contract .m-cond { margin: 4px 0; padding: 5px 9px; border-left: 2px solid var(--bronze); background: rgba(180,140,82,.08); font-size: 13.5px; }
 .contract .m-heads { margin: 2px 0 6px; }
 .contract .m-heads b { color: var(--text); font-weight: 400; }
 .contract .m-artline { margin-top: 6px; font-size: 13.5px; }

@@ -181,7 +181,8 @@ main { padding: 28px 26px 70px; max-width: 1440px; margin: 0 auto; }
   main > * { flex: none; }
   main .screen-title { margin-bottom: 12px; }
   main .screen-title h2 { font-size: 34px; }
-  .scrollfill { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+  /* строки сетки — по содержимому: когда карточек мало, они не растягиваются на всю высоту */
+  .scrollfill { flex: 1 1 auto; min-height: 0; overflow-y: auto; align-content: start; }
   main > .scrollfill, main > .two-col, main > .guide { flex: 1 1 auto; min-height: 0; }
   main > .two-col, main > .guide { grid-template-rows: minmax(0, 1fr); align-items: stretch; }
   .guide .gnav { align-self: start; }
@@ -202,7 +203,7 @@ main { padding: 28px 26px 70px; max-width: 1440px; margin: 0 auto; }
   /* кузница: два списка, каждый листается сам */
   main[data-tab="smith"] .smithcols { flex: 1; min-height: 0; }
   .smithcols > .panel { display: flex; flex-direction: column; min-height: 0; max-height: 100%; }
-  .smithcols .list { flex: 1; min-height: 0; overflow-y: auto; padding-right: 4px; }
+  .smithcols .list { flex: 1; min-height: 0; overflow-y: auto; padding-right: 4px; align-content: start; }
   /* справочник */
   .guide { align-items: stretch; }
   .guide .rules { max-width: none; }
@@ -377,7 +378,9 @@ button.sound.off { color: var(--dust); }
 .pwline { font-size: 14px; margin: 6px 0; padding: 4px 8px; border-left: 3px solid currentColor; background: rgba(0,0,0,.18); cursor: help; }
 .pwline b { color: var(--bone); }
 .pw-good { color: var(--q2); } .pw-fair { color: #b9c98a; } .pw-even { color: var(--bronze-hi); } .pw-risk { color: #e0955a; } .pw-bad { color: #e0604d; }
-.pbtn, .pbtn:hover:not(:disabled) { padding: 0; border: none; background: none; box-shadow: none; cursor: zoom-in; flex: none; line-height: 0; border-radius: 2px; }
+.pbtn { padding: 0; border: none; background: none; box-shadow: none; cursor: zoom-in; flex: none; line-height: 0; border-radius: 2px; }
+/* при наведении меняется только рамка портрета — размеры кнопки те же, иначе окно «прыгает» */
+.pbtn:hover:not(:disabled) { border: none; background: none; box-shadow: none; }
 .pbtn:hover .portrait, .pbtn:focus-visible .portrait { outline: 2px solid var(--bronze-hi); outline-offset: 1px; }
 .bet-who { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
 .bet-odds { display: flex; align-items: baseline; gap: 10px; }
@@ -609,6 +612,11 @@ button.sound.off { color: var(--dust); }
 .badge-s.def { border-color: var(--bronze); color: var(--bronze-hi); }
 .badge-s.cd { border-color: var(--seam); color: var(--dust); }
 .badge-s.ok { border-color: var(--olive); color: #b6cf8d; }
+.appips { display: flex; align-items: center; gap: 4px; margin-bottom: 4px; cursor: help; }
+.appips .aplabel { font-family: var(--font-head); color: var(--bronze-hi); font-size: 15px; margin-right: 2px; }
+.appips i { width: 13px; height: 13px; border-radius: 50%; border: 1px solid var(--bronze); background: rgba(0,0,0,.4); }
+.appips i.on { background: radial-gradient(circle at 35% 35%, #f6d98f, #b8862f); border-color: #f0d49c; box-shadow: 0 0 4px rgba(240,200,120,.5); }
+.apnum { color: var(--bronze-hi); font-family: var(--font-head); font-size: 16px; margin-left: 4px; }
 
 .blog {
   border: 1px solid var(--seam); background: rgba(10,7,5,.88); border-radius: 2px;

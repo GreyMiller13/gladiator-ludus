@@ -64,6 +64,18 @@ module.exports = [
     assert.equal(ev(ctx, 'f.face'), 1);
     assert.equal(ev(ctx, 'B.isBehind(f, u)'), true);
   } },
+  { name: 'поле: в спину бьют только того, кто занят другим противником; один на один — всегда в лицо', fn: () => {
+    const ctx = game();
+    setup(ctx);
+    // f дерётся с u (смотрит влево); u обходит его справа — f повернётся к нему, удар в лицо
+    ev(ctx, 'u.c = 6; u.r = 2; B.updateFacing()');
+    assert.equal(ev(ctx, 'B.backstab(f, u)'), false);
+    // а если f занят w, удар u с другой стороны — в спину
+    ev(ctx, 'w.side = "player"; w.c = 4; w.r = 2; f.lastTarget = w.uid; B.updateFacing()');
+    assert.equal(ev(ctx, 'f.face'), -1);
+    assert.equal(ev(ctx, 'B.backstab(f, u)'), true);
+    assert.equal(ev(ctx, 'B.backstab(f, w)'), false);
+  } },
   { name: 'поле: удар в спину вдвое чаще критический', fn: () => {
     const ctx = game();
     setup(ctx);

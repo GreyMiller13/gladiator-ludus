@@ -286,6 +286,15 @@ class Battle {
   }
   // Стоит ли a за спиной у t (по ту сторону, куда t не смотрит)
   isBehind(t, a) { return a.c !== t.c && Math.sign(a.c - t.c) === -t.face; }
+  // Будет ли удар бойца a по t из клетки cell ударом в спину. В спину бьют того, кто занят другим:
+  // t смотрит на свою цель (кого атаковал или кто атаковал его). Если его цель — сам a, t повернётся
+  // к нему, и удар придётся в лицо: в бою один на один удара в спину не бывает
+  backstab(t, a, cell = a) {
+    const f = this.focusOf(t);
+    if (!f || f === a || cell.c === t.c) return false;
+    const dir = f.c !== t.c ? Math.sign(f.c - t.c) : t.face;
+    return Math.sign(cell.c - t.c) === -dir;
+  }
   // Окружён: рядом противник перед бойцом и противник за спиной (оглушённые и в сети не держат).
   // Возвращает тех, от кого он не может отойти, или пустой список
   holders(u) {
@@ -372,6 +381,7 @@ class Battle {
       e.hp = u.hp;
       if (this.checkEnd() || !u.alive) return { u, act: false };
     }
+    if (this.holders(u).length) this.say(`${this.nm(u)} окружён — отступить нельзя, только пробиться.`, 'status');
     if (u.stun > 0) {
       u.stun--;
       u.apLeft = 0; // пропущенный ход уклонения не даёт
@@ -511,7 +521,7 @@ class Battle {
       const dz = this.danger(u, n) * (ranged ? 0.9 : 0.12) + n.d * 0.03;
       for (const f of foes) {
         // удар в спину — вдвое больше шанс крита
-        const back = this.isBehind(f, n) ? 0.6 : 0;
+        const back = this.backstab(f, u, n) ? 0.6 : 0;
         if (left >= atk && this.canHit(u, n, f)) {
           const pb = ranged && cheb(n, f) === 1 ? 1.2 : 0;
           consider({ cell: n, type: 'attack', f, score: this.targetValue(u, f) + back - pb - dz + Math.random() * 0.3 });
@@ -763,7 +773,7 @@ class Battle {
     const melee = !ranged;
     const dist = cheb(u, t);
     // удар в спину (по взгляду цели до удара), затем оба поворачиваются друг к другу
-    const back = t !== u && this.isBehind(t, u);
+    const back = t !== u && this.backstab(t, u);
     if (t !== u) { u.lastTarget = t.uid; t.lastAttacker = u.uid; this.updateFacing(); }
     // встречный удар копья: гопломах бьёт первым
     if (melee && !opts.noCounter && t !== u && this.free(t) && u.alive && dist <= t.reach) {

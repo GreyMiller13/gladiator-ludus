@@ -699,8 +699,19 @@ class ArenaView {
     ctx.fillStyle = f.side === 'player' ? '#c49a55' : '#b23a2e';
     ctx.fillRect(x, y, w * hp, 5);
     ctx.globalAlpha = 1;
+    // очки действия бойца, который сейчас ходит
+    const cur = this.b.current === f.unit && f.unit.alive && !this.b.over && f.state === 'idle';
+    if (cur) {
+      const n = f.unit.ap, left = f.unit.apLeft, r = 3, gap = 8, x0 = f.x - (n - 1) * gap / 2;
+      for (let i = 0; i < n; i++) {
+        ctx.beginPath(); ctx.arc(x0 + i * gap, y + 12, r, 0, Math.PI * 2);
+        ctx.fillStyle = i < left ? '#f0cd7a' : 'rgba(10,6,4,.75)'; ctx.fill();
+        ctx.strokeStyle = 'rgba(30,18,8,.9)'; ctx.lineWidth = 1; ctx.stroke();
+      }
+    }
     const tags = [];
     if (f.state === 'fallen') tags.push(['повержен', '#d0473a']);
+    if (f.unit.alive && f.state === 'idle' && this.b.holders(f.unit).length) tags.push(['окружён', '#ff8f6b']);
     if (f.guard) tags.push(['оборона', '#e6c27a']);
     if (f.wall) tags.push(['копейный заслон', '#e6c27a']);
     if (f.unit.bleeds.length && f.unit.alive) tags.push(['кровь', '#e07a6e']);
@@ -717,8 +728,9 @@ class ArenaView {
     if (tags.length) {
       ctx.font = 'italic 11px "PT Serif", Georgia, serif';
       const txt = tags.map(t => t[0]).join(' · ');
-      ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.fillText(txt, f.x + 1, y + 18);
-      ctx.fillStyle = tags[0][1]; ctx.fillText(txt, f.x, y + 17);
+      const ty = y + (cur ? 28 : 17);
+      ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.fillText(txt, f.x + 1, ty + 1);
+      ctx.fillStyle = tags[0][1]; ctx.fillText(txt, f.x, ty);
     }
   }
 
@@ -1154,6 +1166,7 @@ class ArenaView {
       this.blood(D, dir, e.crit ? 24 : 11, e.crit);
       D.flash = 1;
       this.float(D, `−${e.dmg}`, e.crit ? 'crit' : 'hit');
+      if (e.back) this.float(D, 'В спину!', 'crit');
       if (e.crit) { this.shake = 10; this.excite(0.7); this.float(D, 'Крит!', 'crit'); sfx('gasp', { vol: 0.7 }); }
       else this.excite(0.12);
     }

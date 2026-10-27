@@ -127,7 +127,7 @@ const TUTOR_STEPS = [
   { id: 'equip', g: 'intro', lock: true, back: 'glad', sel: '#modal .dslot[data-slot="weapon"], #modal .panel.stash', wait: 'equipped', accept: d => d === 'weapon', skip: () => !!(tutorGlad() && tutorGlad().equip.weapon),
     text: 'Надень меч: нажми «Надеть» рядом с ним на складе или перетащи его на бойца.' },
   { id: 'closeGlad', g: 'intro', lock: true, back: 'glad', sel: '#modal [data-act="closeModal"]', wait: 'modalClosed',
-    text: 'Теперь он похож на гладиатора. Здесь же бойца тренируют и лечат. Закрой окно.' },
+    text: 'Теперь он похож на гладиатора. Закрой окно.' },
   { id: 'toArena', g: 'intro', lock: true, sel: 'nav [data-tab="arena"]', wait: 'tab:arena',
     text: 'Пора на песок. Открой «Арену».' },
   { id: 'pickTraining', g: 'intro', lock: true, sel: '.event.training', wait: 'pick', accept: d => d && d.training,
@@ -149,13 +149,16 @@ const TUTOR_STEPS = [
   { id: 'endTurn', g: 'battle', dock: true, sel: '[data-act="tWait"]', wait: 'turnEnd',
     text: 'Неистраченные ОД не пропадают: каждое даёт +3% уклонения до следующего хода. Поэтому бить и убегать дорого — а шаг прочь от соседнего врага стоит лишнее ОД. Закончи ход — «Конец хода» или пробел.' },
   { id: 'fight', g: 'battle', dock: true, wait: 'results',
-    text: 'Теперь ходит противник. Запомни ещё одно: удар в спину вдвое чаще бывает критическим, а окружённый спереди и сзади не может отступить. В бою двое на одного это решает всё. Дерись, пока кто-то не упадёт.' },
+    text: 'Теперь ходит противник. Дерись так же, пока кто-то не упадёт: подходи, бей, а лишние ОД оставляй на уклонение.' },
   { id: 'mercy', g: 'battle', dock: true, sel: '#bresults', wait: 'battleClosed',
     text: 'Бой окончен. Поверженных судит толпа: шанс помилования зависит от того, как они дрались. В учебном бою никто не гибнет. Возвращайся в лудус.' },
   { id: 'lvlGlad', g: 'after', lock: true, tab: 'ludus', sel: 'main .gcard', one: true, wait: 'openGlad',
-    text: () => (tutorGlad() && tutorGlad().freeAttr ? 'Победа — это опыт: боец дорос до 2-го уровня. Открой его карточку.' : 'Открой карточку бойца — посмотрим, чему его учить.') },
+    enter: () => tutorWound(),
+    text: () => (tutorGlad() && tutorGlad().wounded ? 'Сур всё-таки зацепил его — рана. Открой карточку бойца.' : 'Открой карточку бойца — посмотрим, чему его учить.') },
+  { id: 'heal', g: 'after', lock: true, back: 'lvlGlad', sel: '#modal [data-act="heal"]', wait: 'healed', skip: () => !(tutorGlad() && tutorGlad().wounded),
+    text: () => `Раненый не выходит на песок, пока рана не заживёт, — день, а то и больше. Лекарь поставит его на ноги сразу, но за деньги. Нажми «Лекарь» (${tutorGlad() ? healCost(tutorGlad()) : ''} ден.).` },
   { id: 'attrs', g: 'after', lock: true, back: 'lvlGlad', sel: '#modal .attrs-panel', wait: 'attrSpent', accept: d => d === 0, skip: () => !(tutorGlad() && tutorGlad().freeAttr),
-    text: 'Каждый уровень даёт 3 очка характеристик. Раздай их кнопками «+». Сила — урон, ловкость — уклонение, выносливость — здоровье, мастерство — точность, воля — милость толпы. Знак ◆ отмечает главные для будущей школы. Наведи на название, чтобы узнать больше.' },
+    text: 'Победа принесла опыт: боец дорос до 2-го уровня, а каждый уровень даёт 3 очка характеристик. Раздай их кнопками «+». Сила — урон, ловкость — уклонение, выносливость — здоровье, мастерство — точность, воля — милость толпы. Знак ◆ отмечает главные для будущей школы. Наведи на название, чтобы узнать больше.' },
   { id: 'school', g: 'after', modal: true, back: 'lvlGlad', sel: '#modal .school-panel', wait: 'next',
     text: () => `С ${SCHOOL_LEVEL}-го уровня бойца посвящают в школу: мирмиллон, ретиарий и другие. Здесь показана школа, к которой он годится лучше всего, и какие характеристики ей нужны; остальные — под кнопкой «Другие школы». Раздавай очки с прицелом на выбранную школу. После посвящения каждый уровень даёт очко на умения школы: первая ступень открыта сразу, следующие — на ${TIER_LEVEL[2]}, ${TIER_LEVEL[3]} и ${TIER_LEVEL[4]}-м уровнях.` },
   { id: 'closeGlad2', g: 'after', lock: true, back: 'lvlGlad', sel: '#modal [data-act="closeModal"]', wait: 'modalClosed',
@@ -186,12 +189,28 @@ const TUTOR_STEPS = [
     text: () => { const it = tutorNewItem(); return `Купленное лежит на складе лудуса. Перетащи «${it ? it.name : 'вещь'}» на бойца или нажми «Надеть».`; } },
   { id: 'closeGlad3', g: 'after', lock: true, back: 'newGlad', sel: '#modal [data-act="closeModal"]', wait: 'modalClosed', skip: () => !tutorHas('glad'),
     text: 'Теперь у тебя двое, и оба вооружены. Закрой окно бойца.' },
-  { id: 'toBets', g: 'after', lock: true, sel: 'nav [data-tab="arena"]', wait: 'tab:arena',
-    text: 'Напоследок — трибуны. Вернись на арену: у каждой арены своя вкладка, а справа — «Бой дня: ставки».' },
-  { id: 'bets', g: 'after', modal: true, tab: 'arena', arenaTab: 'bets', sel: 'main .betpanel', wait: 'next',
+  { id: 'endDay1', g: 'after', lock: true, sel: 'header [data-act="nextDay"]', wait: 'dayEnded',
+    text: 'Дела первого дня сделаны. Заверши день: бойцы отдохнут, появятся новые бои и товары, а из казны уйдёт плата за их содержание. Завтра выведем обоих на песок.' },
+  { id: 'day2', g: 'duo', modal: true, wait: 'next', enter: () => tutorDuo(),
+    text: 'Новый день. Каждый день — новые бои, товары и рабы на рынке, а долг всё ближе: следи за счётчиком в шапке. Сегодня у тебя двое — пора на схватку двое на двое.' },
+  { id: 'toArena2', g: 'duo', lock: true, sel: 'nav [data-tab="arena"]', wait: 'tab:arena', enter: () => tutorDuo(),
+    text: 'Открой «Арену».' },
+  { id: 'pickDuo', g: 'duo', lock: true, arenaTab: 0, sel: '.event.duo', wait: 'pick', accept: d => d && d.duo,
+    text: 'Учебная схватка: двое на двое, никто не погибнет. Мощь противников — под портретами, сравни её с мощью своих бойцов. Выбери схватку.' },
+  { id: 'pickDuo2', g: 'duo', lock: true, sel: '.picker', deny: '[data-act="cancelPick"]', wait: 'battleStart', accept: d => d && d.duo,
+    text: 'Отметь обоих бойцов — внизу появится расклад сил — и выходи на арену.' },
+  { id: 'duoDeploy', g: 'duo', dock: true, sel: '[data-act="dStart"]', wait: 'fightStart',
+    text: 'Расставь бойцов рядом, чтобы они помогали друг другу, или сразу жми «В бой!».' },
+  { id: 'duoFight', g: 'duo', dock: true, wait: 'results',
+    text: 'Двое на двое решает слаженность. Боец смотрит на того, с кем дерётся. Пока враг занят твоим первым бойцом, второй, зайдя с другой стороны, бьёт его <b>в спину</b> — крит вдвое чаще (подсказка над врагом скажет «в спину»). А если враг зажат спереди и сзади — он <b>окружён</b> и не может отступить. Один на один такого не бывает.' },
+  { id: 'duoMercy', g: 'duo', dock: true, sel: '#bresults', wait: 'battleClosed',
+    text: 'Схватка окончена. Возвращайся — осталось показать трибуны.' },
+  { id: 'toBets', g: 'duo', lock: true, sel: 'nav [data-tab="arena"]', wait: 'tab:arena',
+    text: 'Напоследок — трибуны. Вернись на арену: справа от вкладок арен — «Бой дня: ставки».' },
+  { id: 'bets', g: 'duo', modal: true, tab: 'arena', arenaTab: 'bets', sel: 'main .betpanel', wait: 'next',
     text: `Бой дня: два чужих бойца, почти равных по силе. Нажми на портрет — увидишь снаряжение, характеристики и школу бойца. Выбери сумму — от ${BET_MIN} с шагом ${BET_STEP} — и нажми «Поставить» у своего бойца; выигрыш — ставка × коэффициент. Ставка играет, только если посмотреть бой. До начала боя её можно отменить кнопкой «Отменить ставку», а если завершить день без просмотра — деньги вернутся в казну.` },
-  { id: 'endDay', g: 'after', modal: true, sel: 'header [data-act="nextDay"]', wait: 'next', last: true,
-    text: 'Когда дела дня сделаны — заверши день: бойцы отдохнут, появятся новые бои и товары. И отложи денег к платежу: ростовщик ждать не станет. Дальше — сам. Ave!' },
+  { id: 'done', g: 'duo', modal: true, wait: 'next', last: true,
+    text: 'Остальное узнаешь сам: заказы горожан, лавку кузнеца, школы, хозяина арены Келада. Правила — в «Справочнике». И не забывай про платёж ростовщику. Ave!' },
 ];
 
 const TAB_HINTS = {
@@ -222,6 +241,26 @@ function tutorPicks() {
 const tutorHas = k => !!(tutorState() && tutorState()[k]);
 const tutorNewItem = () => STATE.armory.find(i => i.id === (tutorState() || {}).item) || null;
 const tutorNewItemOn = () => { const g = glad((tutorState() || {}).glad); return !!(g && Object.values(g.equip).some(i => i && i.id === (tutorState() || {}).item)); };
+// После учебного боя боец ранен — чтобы показать лекаря
+function tutorWound() {
+  const g = tutorGlad(), t = tutorState();
+  if (!g || t.woundShown) return;
+  t.woundShown = true;
+  if (!g.wounded && STATE.gold >= healCost(g)) g.wounded = 1;
+  save(); render();
+}
+// Схватка двое на двое на второй день обучения: учебная (без смертей, вручную), противники послабее
+function tutorDuo() {
+  if (STATE.gladiators.length < 2 || STATE.events.some(e => e.duo && !e.done)) return;
+  const T = TIERS[0];
+  const ev = { id: uid(), kind: 'arena', tier: 0, size: 2, training: true, duo: true, title: 'Учебная схватка', xpMult: 1.3,
+    enemies: generateEnemyTeam(0, 2, { lvlDrop: 1, plain: true }), gold: Math.round(T.gold * FORMAT_MULT[2]), fame: Math.round(T.fame * FORMAT_MULT[2]), done: false };
+  ensureEasyEvent([ev]);
+  ev.enemies.forEach(ensureLook);
+  STATE.events.unshift(ev);
+  save(); render();
+}
+
 // Денег на обе покупки может не хватить — наставник добавляет из отцовских сбережений
 function tutorFund() {
   UI.smithFilter = 'all';
@@ -275,6 +314,9 @@ function resumeTutorial() {
   if (st.id === 'pickTraining' || st.id === 'pickGlad') tutorState().step = 'toArena';
   // учебный бой уже позади — выигран или проигран — дальше шаги после боя
   if (tutorState().step === 'toArena' && (STATE.story.flags.trainWon || !STATE.events.some(e => e.training && !e.done))) tutorState().step = 'lvlGlad';
+  // схватка двое на двое: без боя — снова к арене, а если она уже позади — к ставкам
+  if (['pickDuo', 'pickDuo2', 'duoDeploy', 'duoFight', 'duoMercy'].includes(st.id) && !UI.battle)
+    tutorState().step = STATE.events.some(e => e.duo && e.done) ? 'toBets' : 'toArena2';
   // шаги в окне бойца — с открытия карточки
   if (st.back && !UI.gladId) tutorState().step = st.back;
   // шаги, которые уже не нужны (например, покупать некого), пропускаем
@@ -298,7 +340,7 @@ function coachEvent(name, data) {
   const cur = TUTOR_STEPS[i];
   if (!cur) return;
   // шаги боя слушают только учебный бой (после него бой уже закрыт — событие battleClosed)
-  if (cur.g === 'battle' && UI.battle && !(UI.battle.event && UI.battle.event.training)) return;
+  if ((cur.g === 'battle' || cur.g === 'duo') && UI.battle && !(UI.battle.event && UI.battle.event.training)) return;
   for (let j = i; j < TUTOR_STEPS.length; j++) {
     const s = TUTOR_STEPS[j];
     if (s.g !== cur.g && j > i + 1) break;
