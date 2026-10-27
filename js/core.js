@@ -389,10 +389,13 @@ function powerScore(g) {
 // ------------------------------------------------------------
 const SAVE_KEY = 'gladiator_ludus_proto_v1';
 
-// opts.story — новая история: долг отца, главы и задачи; opts.lanista — { portrait, sex } игрока
+// Знамя лудуса (js/banner.js): неизвестное или пустое заменяется первым
+const bannerId = id => (typeof bannerOf === 'function' ? bannerOf(id).id : id || 'wreath');
+
+// opts.story — новая история: долг отца, главы и задачи; opts.lanista — { portrait, sex } игрока; opts.banner — знамя
 function newGame(ludusName = 'Лудус', opts = {}) {
   STATE = {
-    ludusName, gold: 200, fame: 0, day: 1, nextId: 1,
+    ludusName, banner: bannerId(opts.banner), gold: 200, fame: 0, day: 1, nextId: 1,
     gladiators: [], armory: [], smith: [], market: [], events: [], graveyard: [],
     journal: [],
   };
@@ -443,6 +446,7 @@ function migrateGladiator(g, spare = null) {
   }
 }
 function migrateState() {
+  STATE.banner = bannerId(STATE.banner);
   for (const g of STATE.gladiators) migrateGladiator(g, STATE.armory);
   for (const g of STATE.market) migrateGladiator(g);
   for (const e of STATE.events) for (const g of e.enemies) migrateGladiator(g);

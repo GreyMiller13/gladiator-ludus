@@ -20,6 +20,12 @@ Composition: head-and-shoulders portrait, three-quarter view, the face turned sl
 Composition: one full-body figure in side view facing RIGHT (profile with a slight three-quarter turn toward the viewer), the whole body visible from the top of the helmet or head to the feet, horizontally centered. Fixed framing for every animation frame: the feet stand on an invisible ground line at 92% of the image height, the standing figure is about 80% of the image height. Background: perfectly flat solid chroma-key green (#00FF00), no ground, no floor, no cast shadow, no gradient, no other objects or people. Square image.
 ```
 
+## Знамёна
+
+```text
+Composition: a single Roman vexillum standard seen straight from the front, centered: a vertical wooden pole with a bronze finial on top, a horizontal wooden crossbar with small bronze knobs at both ends and a braided cord with a tassel hanging from each end, and a cloth banner hanging from the crossbar with soft vertical folds. The whole standard is visible from the tip of the finial to the bottom of the pole and fills about 90% of the image height. The emblem sits in the upper half of the cloth. Below the emblem, a plain empty band of cloth framed by a thin horizontal line is left blank for an inscription that the game adds later. Background: perfectly flat solid chroma-key green (#00FF00), no ground, no cast shadow, no other objects. Portrait image (3:4).
+```
+
 ## Препятствия
 
 ```text

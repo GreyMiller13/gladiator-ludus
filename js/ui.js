@@ -257,6 +257,7 @@ function screenLudus() {
   return `
   <div class="ludus-hero">
     <canvas class="ludus-bg" aria-hidden="true"></canvas>
+    <button type="button" class="lh-banner" data-act="bannerAsk" data-tip="${tipAttrHtml(`Знамя лудуса: <b>${bannerOf(STATE.banner).name}</b>, ${bannerOf(STATE.banner).motto}. Нажмите, чтобы сменить.`)}" aria-label="Знамя лудуса: ${bannerOf(STATE.banner).name}"><img data-banner="${bannerOf(STATE.banner).id}" src="${bannerUrl(STATE.banner)}" alt=""></button>
     <div class="lh-text">
       <span class="lh-pre">лудус</span><h2>${esc(STATE.ludusName)}</h2>
       <p>День ${STATE.day}, бойцов ${gs.length} из ${MAX_GLADIATORS}, слава ${STATE.fame}${gs.length ? `, <span data-tip="${tipAttrHtml(`Сумма мощи трёх сильнейших бойцов. ${POWER_TIP}`)}">мощь тройки <b>${power}</b></span>` : ''}</p>
@@ -1111,23 +1112,23 @@ function showNewGameDialog() {
       ? 'Весь текущий прогресс будет <b>удалён безвозвратно</b>: бойцы, снаряжение, денарии, слава, достижения и некрополь. Чтобы вернуться к нему позже, сначала скачайте файл в разделе «Сохранение».'
       : 'Отец оставил вам лудус в Помпеях. И долг. Кто вы и как назовёте школу?',
     input: { label: 'Название лудуса', value: 'Лудус Батиата', max: 28 },
-    after: `<div class="lanista-wrap"><span>Ваш ланиста</span><div class="lanista-pick">${PORTRAIT.LANISTAS.map((l, i) => `
+    after: `<div class="ng-cols"><div class="lanista-wrap"><span>Ваш ланиста</span><div class="lanista-pick">${PORTRAIT.LANISTAS.map((l, i) => `
       <button type="button" class="lp ${i ? '' : 'on'}" data-act="pickLanista" data-k="${l.key}" title="${esc(l.title)}. ${esc(l.desc)}" aria-pressed="${i ? 'false' : 'true'}">
-        <img src="${PORTRAIT.url(l.key, 'neutral', 88)}" alt=""><span>${esc(l.title)}</span></button>`).join('')}</div></div>
+        <img src="${PORTRAIT.url(l.key, 'neutral', 88)}" alt=""><span>${esc(l.title)}</span></button>`).join('')}</div></div>${bannerPickHtml()}</div>
       <label class="dlg-check"><input id="dlgTour" type="checkbox" ${tourOn ? 'checked' : ''}> Пройти обучение: наставник проведёт вас через первый бой</label>`,
     ok: STATE ? 'Удалить прогресс и начать' : 'Начать игру', danger: !!STATE,
     onOk: name => {
       const k = ($('.lanista-pick .lp.on') || { dataset: { k: 'm1' } }).dataset.k;
       const L = PORTRAIT.LANISTAS.find(x => x.key === k) || PORTRAIT.LANISTAS[0];
-      startNewGame((name || '').trim().slice(0, 28) || 'Лудус', $('#dlgTour').checked, { portrait: L.key, sex: L.sex });
+      startNewGame((name || '').trim().slice(0, 28) || 'Лудус', $('#dlgTour').checked, { portrait: L.key, sex: L.sex }, pickedBanner());
     },
   });
 }
-function startNewGame(name, tour, lanista = { portrait: 'm1', sex: 'm' }) {
+function startNewGame(name, tour, lanista = { portrait: 'm1', sex: 'm' }, banner = '') {
   try { localStorage.removeItem(SAVE_KEY); localStorage.setItem(TOUR_PREF, tour ? '1' : '0'); } catch (e) { /* хранилище недоступно */ }
   if (UI.battle) closeBattle();
   if (typeof hideCoach === 'function') hideCoach(); // подсказка прошлой игры не должна остаться на экране
-  newGame(name, { story: true, lanista });
+  newGame(name, { story: true, lanista, banner });
   if (tour) STATE.story.tutorWanted = true; // обучение начнётся и после перезагрузки во время пролога
   STATE.settings = { mode: 'auto' };
   UI.tab = 'ludus'; UI.gladId = null; UI.eventId = null; UI.picked = [];
@@ -1961,6 +1962,20 @@ const ACTIONS = {
   pickLanista: (d, el) => {
     document.querySelectorAll('.lanista-pick .lp').forEach(b => { b.classList.toggle('on', b === el); b.setAttribute('aria-pressed', b === el ? 'true' : 'false'); });
   },
+  pickBanner: (d, el) => {
+    document.querySelectorAll('.banner-pick .bp').forEach(b => { b.classList.toggle('on', b === el); b.setAttribute('aria-pressed', b === el ? 'true' : 'false'); });
+    const b = bannerOf(d.k), wrap = el.closest('.banner-pick');
+    const big = wrap.querySelector('.bp-big');
+    big.dataset.banner = b.id; big.src = bannerUrl(b.id);
+    wrap.querySelector('.bp-name').innerHTML = bannerNameHtml(b);
+  },
+  bannerAsk: () => showDialog({
+    title: 'Знамя лудуса', cls: 'bannerdlg',
+    text: 'Под этим знаменем ваши бойцы выходят на песок.',
+    after: bannerPickHtml(STATE.banner),
+    ok: 'Поднять знамя',
+    onOk: () => { STATE.banner = bannerId(pickedBanner()); save(); render(); },
+  }),
   newGameAsk: () => showNewGameDialog(),
   saveAsk: () => showSaveDialog(),
   dlgOk: () => {
