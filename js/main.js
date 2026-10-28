@@ -4,6 +4,8 @@
 (function init() {
   applyZoom();
   window.addEventListener('resize', applyZoom);
+  window.addEventListener('resize', () => { if (STATE) fitNav(); });
+  if (document.fonts) document.fonts.ready.then(() => { if (STATE) fitNav(); });
   bindEvents();
   if (load()) prepareState();
   // фоновая музыка лудуса; заиграет после первого клика или нажатия клавиши

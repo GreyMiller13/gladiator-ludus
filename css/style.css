@@ -159,6 +159,11 @@ nav button {
 nav button:hover:not(:disabled) { color: var(--text); }
 nav button { display: inline-flex; align-items: center; gap: 6px; padding-left: 9px; padding-right: 9px; }
 nav button .ti { width: 18px; height: 18px; flex: none; }
+nav.icons-only { gap: 0; padding-left: 6px; padding-right: 6px; }
+nav.icons-only button { flex: 1 1 0; max-width: 64px; justify-content: center; padding-left: 6px; padding-right: 6px; }
+nav.icons-only button .ti { width: 20px; height: 20px; }
+nav.icons-only .tl { display: none; }
+nav.icons-only .badge { position: absolute; top: 3px; right: calc(50% - 21px); margin: 0; min-width: 15px; padding: 0 4px; font-size: 10px; line-height: 15px; }
 #taskbar { padding: 8px 22px; background: linear-gradient(#120d0a, #100b09); border-bottom: 1px solid var(--seam); }
 #taskbar[hidden] { display: none; }
 .taskline { display: flex; gap: 10px; align-items: baseline; width: 100%; padding: 2px 0; background: none; border: none; box-shadow: none; text-align: left; color: var(--text); font-family: var(--font-body); font-size: 15px; }

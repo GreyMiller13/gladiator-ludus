@@ -219,7 +219,15 @@ function renderNav() {
     ['armory', 'Склад', STATE.armory.length], ...(meta ? [['glory', 'Достижения']] : []), ['necro', 'Некрополь'], ['rules', 'Справочник'],
   ];
   $('nav').innerHTML = tabs.map(([k, n, b]) =>
-    `<button class="${UI.tab === k ? 'on' : ''}" data-act="tab" data-tab="${k}">${TAB_ICON[k] || ''}${n}${b ? `<span class="badge">${b}</span>` : ''}</button>`).join('');
+    `<button class="${UI.tab === k ? 'on' : ''}" data-act="tab" data-tab="${k}" aria-label="${n}">${TAB_ICON[k] || ''}<span class="tl">${n}</span>${b ? `<span class="badge">${b}</span>` : ''}</button>`).join('');
+  fitNav();
+}
+// Если вкладки с подписями не помещаются в строку, остаются только значки
+function fitNav() {
+  const nav = $('nav');
+  if (!nav) return;
+  nav.classList.remove('icons-only');
+  if (nav.scrollWidth > nav.clientWidth + 1) nav.classList.add('icons-only');
 }
 
 // ------------------------------------------------------------
