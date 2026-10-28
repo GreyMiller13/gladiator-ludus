@@ -166,6 +166,22 @@ const ICON = {
   sun: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4L7 17M17 7l1.4-1.4"/></svg>',
 };
 
+// Значки вкладок: та же линия, что у значков шапки, крупные силуэты читаются и в 16 пикселях
+const tabSvg = body => `<svg class="ti" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${body}</svg>`;
+const TI_F = 'fill="currentColor" fill-opacity=".22"', TI_FM = 'fill="currentColor" fill-opacity=".4"', TI_FS = 'fill="currentColor" stroke="none"';
+const TAB_ICON = {
+  ludus: tabSvg(`<path d="M3 9.5L12 4l9 5.5z" ${TI_F}/><path d="M5.5 9.5V18M9.8 9.5V18M14.2 9.5V18M18.5 9.5V18M3.5 18h17M2.5 21h19"/>`),
+  arena: tabSvg('<ellipse cx="12" cy="7" rx="9" ry="3"/><path d="M3 7v9.5c0 1.7 4 3 9 3s9-1.3 9-3V7"/><path d="M3 12c0 1.7 4 3 9 3s9-1.3 9-3"/><path d="M7.5 9.8v2.6M12 10v3M16.5 9.8v2.6M7.5 15v3M12 15.2v3.6M16.5 15v3"/>'),
+  contracts: tabSvg(`<path d="M5 5.5a2 2 0 012-2h11a2 2 0 010 4H7a2 2 0 01-2-2z"/><path d="M7 7.5V17M18 7.5V17"/><path d="M5 19a2 2 0 012-2h11a2 2 0 010 4H7a2 2 0 01-2-2z"/><path d="M9.5 10.5h5M9.5 13h3"/><circle cx="15.5" cy="13.5" r="1.7" ${TI_FS} fill-opacity=".7"/>`),
+  smith: tabSvg(`<rect x="5" y="2.5" width="5" height="7.5" rx="1" ${TI_FM}/><path d="M10 6.2h10" stroke-width="2.2"/><path d="M3 13.5h12c0 2.2-1.6 3.4-3.8 3.7V19h2.4l.8 2.5H5.6l.8-2.5h2.4v-1.8C6 16.9 3.4 15.7 3 13.5z" ${TI_FM}/><path d="M15 13.5h4.5c-.9 1.5-2.2 2-4.5 2" ${TI_FM}/>`),
+  bazaar: tabSvg(`<path d="M6 4h12l3.5 5L12 20.5 2.5 9z" ${TI_F}/><path d="M2.5 9h19M9 4L7.5 9 12 20.5 16.5 9 15 4"/>`),
+  market: tabSvg(`<circle cx="12" cy="5" r="3.06" ${TI_F}/><path d="M6.15 16.25c0-3.96 2.61-6.66 5.85-6.66s5.85 2.7 5.85 6.66z" ${TI_F}/><rect x="2.5" y="17" width="19" height="4.5" rx=".8" ${TI_FM}/>`),
+  armory: tabSvg(`<path d="M3 10.5h18V20H3z" ${TI_FM}/><path d="M3 10.5C3 7.4 4.6 5.5 7 5.5h10c2.4 0 4 1.9 4 5" ${TI_F}/><rect x="10.2" y="12" width="3.6" height="4.2" rx=".7" ${TI_FS}/>`),
+  glory: tabSvg(`<path d="M7 3.5h10v4.5a5 5 0 01-10 0z" ${TI_FM}/><path d="M7 5.5H4.5a2.6 2.6 0 002.9 4.4M17 5.5h2.5a2.6 2.6 0 01-2.9 4.4"/><path d="M12 13v4" stroke-width="2"/><path d="M8 20.5h8v-3.5H8z" ${TI_F}/>`),
+  necro: tabSvg(`<path d="M12 3c-4.4 0-7.5 3-7.5 7 0 2.4 1 4.2 2.8 5.3V18h9.4v-2.7c1.8-1.1 2.8-2.9 2.8-5.3 0-4-3.1-7-7.5-7z"/><circle cx="9.2" cy="10.5" r="1.7" ${TI_FS}/><circle cx="14.8" cy="10.5" r="1.7" ${TI_FS}/><path d="M12 12.8l-.9 1.9h1.8z" ${TI_FS}/><path d="M10 18v2.5M12 18v2.5M14 18v2.5"/>`),
+  rules: tabSvg(`<rect x="4" y="4" width="3.2" height="16" rx="1.6"/><rect x="16.8" y="4" width="3.2" height="16" rx="1.6"/><path d="M7.2 6h9.6M7.2 18h9.6" ${TI_F}/><path d="M9.5 9h5M9.5 12h5M9.5 15h3"/>`),
+};
+
 const soundBtn = () => {
   if (typeof SFX === 'undefined') return '';
   const on = !SFX.muted, mus = !SFX.musicMuted;
@@ -203,7 +219,7 @@ function renderNav() {
     ['armory', 'Склад', STATE.armory.length], ...(meta ? [['glory', 'Достижения']] : []), ['necro', 'Некрополь'], ['rules', 'Справочник'],
   ];
   $('nav').innerHTML = tabs.map(([k, n, b]) =>
-    `<button class="${UI.tab === k ? 'on' : ''}" data-act="tab" data-tab="${k}">${n}${b ? `<span class="badge">${b}</span>` : ''}</button>`).join('');
+    `<button class="${UI.tab === k ? 'on' : ''}" data-act="tab" data-tab="${k}">${TAB_ICON[k] || ''}${n}${b ? `<span class="badge">${b}</span>` : ''}</button>`).join('');
 }
 
 // ------------------------------------------------------------

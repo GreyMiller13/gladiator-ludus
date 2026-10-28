@@ -157,6 +157,8 @@ nav button {
   padding: 12px 14px 14px; color: var(--muted); font-size: 18px; white-space: nowrap;
 }
 nav button:hover:not(:disabled) { color: var(--text); }
+nav button { display: inline-flex; align-items: center; gap: 6px; padding-left: 9px; padding-right: 9px; }
+nav button .ti { width: 18px; height: 18px; flex: none; }
 #taskbar { padding: 8px 22px; background: linear-gradient(#120d0a, #100b09); border-bottom: 1px solid var(--seam); }
 #taskbar[hidden] { display: none; }
 .taskline { display: flex; gap: 10px; align-items: baseline; width: 100%; padding: 2px 0; background: none; border: none; box-shadow: none; text-align: left; color: var(--text); font-family: var(--font-body); font-size: 15px; }
