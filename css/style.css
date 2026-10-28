@@ -489,7 +489,10 @@ button.sound.off { color: var(--dust); }
 @media (hover: none) { .dslot .dx { opacity: 1; } }
 
 /* характеристики */
-.attr { display: grid; grid-template-columns: 1fr auto 26px; align-items: center; gap: 8px; padding: 5px 0; border-bottom: 1px solid rgba(87,66,51,.35); }
+.attr { display: grid; grid-template-columns: 1fr auto 58px; align-items: center; gap: 8px; padding: 5px 0; border-bottom: 1px solid rgba(87,66,51,.35); }
+.attr .pm { display: flex; gap: 6px; justify-content: flex-end; }
+.attr .av.drafted { color: var(--bone); text-decoration: underline; text-decoration-color: var(--bronze-hi); text-underline-offset: 5px; }
+.attr-commit { display: flex; justify-content: flex-end; margin-top: 10px; }
 .attr .an { font-family: var(--font-head); font-size: 20px; }
 .attr .keymark { font-style: normal; font-size: 12px; color: var(--bronze-hi); margin-left: 6px; vertical-align: 3px; cursor: help; }
 .keynote { margin: 4px 0 2px; }

@@ -185,6 +185,23 @@ function bestClasses(g, n = 3) {
   return CLASS_KEYS.map(c => ({ c, a: classAptitude(g, c) })).sort((x, y) => y.a - x.a).slice(0, n);
 }
 
+// Черновик очков характеристик: пока не нажато «Закрепить», в бойца ничего не попадает.
+// attrDraftView — боец с черновиком для показа, сам боец не меняется
+const draftSum = add => Object.values(add || {}).reduce((s, n) => s + n, 0);
+function attrDraftView(g, add) {
+  if (!add || !draftSum(add)) return g;
+  const attrs = { ...g.attrs };
+  for (const k of ATTR_KEYS) attrs[k] += add[k] || 0;
+  return { ...g, attrs, freeAttr: g.freeAttr - draftSum(add) };
+}
+function commitAttrDraft(g, add) {
+  const n = draftSum(add);
+  if (!n || n > g.freeAttr || Object.values(add).some(v => v < 0)) return false;
+  for (const k of ATTR_KEYS) g.attrs[k] += add[k] || 0;
+  g.freeAttr -= n;
+  return true;
+}
+
 function levelUp(g, silent = false) {
   g.level++;
   g.freeAttr += 3;

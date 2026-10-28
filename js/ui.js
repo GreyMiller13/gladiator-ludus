@@ -365,22 +365,26 @@ const HERO_W = 1280;
 // ------------------------------------------------------------
 function renderModal() {
   const host = $('#modal');
+  // незакреплённые очки живут, пока открыто окно этого бойца
+  if (UI.attrDraft && UI.attrDraft.id !== UI.gladId) UI.attrDraft = null;
   const g = UI.gladId && glad(UI.gladId);
   if (!g) { host.innerHTML = ''; UI.gladId = null; return; }
   const scroll = host.querySelector('.modal-bg')?.scrollTop || 0;
   const colScroll = [...host.querySelectorAll('.gscroll, .stashbox')].map(el => el.scrollTop);
   const C = clsOf(g);
-  const s = computeStats(g);
+  const draft = UI.attrDraft ? UI.attrDraft.add : null;
+  const gv = attrDraftView(g, draft); // боец с незакреплёнными очками: для показа характеристик
+  const s = computeStats(gv);
   const st = gladiatorStatus(g);
 
-  const keyCls = g.cls || bestClasses(g, 1)[0].c, key = classBuild(keyCls);
+  const keyCls = g.cls || bestClasses(gv, 1)[0].c, key = classBuild(keyCls);
   const attrs = ATTR_KEYS.map(k => {
-    const bonus = s.attrs[k] - g.attrs[k];
+    const bonus = s.attrs[k] - gv.attrs[k], d = (draft && draft[k]) || 0;
     const mark = key.main.includes(k) ? `<i class="keymark" data-tip="${tipAttrHtml(`Главная характеристика ${g.cls ? 'школы' : 'самой подходящей школы'}: ${CLASSES[keyCls].name}`)}">◆</i>` : '';
     return `<div class="attr ${mark ? 'key' : ''}">
       <span class="an" data-tip="${tipAttrHtml(tipAttr[k]())}">${ATTRS[k].name}${mark}</span>
-      <span class="av">${g.attrs[k]}${bonus ? ` <small>+${bonus}</small>` : ''}</span>
-      ${g.freeAttr > 0 ? `<button class="plus" data-act="addAttr" data-k="${k}">+</button>` : '<span></span>'}
+      <span class="av ${d ? 'drafted' : ''}">${gv.attrs[k]}${bonus ? ` <small>+${bonus}</small>` : ''}</span>
+      <span class="pm">${d ? `<button class="plus" data-act="subAttr" data-k="${k}" aria-label="Убрать очко">−</button>` : ''}${gv.freeAttr > 0 ? `<button class="plus" data-act="addAttr" data-k="${k}" aria-label="Добавить очко">+</button>` : ''}</span>
     </div>`;
   }).join('');
 
@@ -459,9 +463,10 @@ function renderModal() {
           <div class="panel stash" data-drop="stash"><h3>Склад лудуса${sel ? `: ${SLOTS[sel].toLowerCase()} <button class="small" data-act="slotSel" data-slot="">Все слоты</button>` : ' <span class="muted small">перетащите вещь на бойца или нажмите на слот, чтобы отобрать подходящие</span>'}</h3><div class="stashbox">${stashHtml}</div></div>
         </div>
         <div class="panel gscroll attrs-panel"><h3>Характеристики</h3>
-          ${g.freeAttr ? `<div class="points">Свободных очков: ${g.freeAttr}</div>` : ''}
+          ${gv.freeAttr ? `<div class="points">Свободных очков: ${gv.freeAttr}</div>` : ''}
           <p class="tiny muted keynote">◆ отмечает главные характеристики ${g.cls ? `школы «${C.name}»` : `самой подходящей школы: ${CLASSES[keyCls].name}`}. Что нужно другим школам, смотрите в справочнике.</p>
           ${attrs}
+          ${draft && draftSum(draft) ? '<div class="attr-commit"><button class="small primary" data-act="commitAttrs">Закрепить</button></div>' : ''}
           <div class="derived">${derived.map(([a, b, k]) => `<span data-tip="${tipAttrHtml(tipStat[k](s))}">${a}</span><span>${b}</span>`).join('')}</div>
           ${hitTable}
           <div class="kv" style="margin-top:12px">
@@ -1904,8 +1909,24 @@ const ACTIONS = {
 
   addAttr: d => {
     const g = glad(UI.gladId);
-    if (!g || g.freeAttr <= 0) return;
-    g.attrs[d.k]++; g.freeAttr--; save(); render(); coach('attrSpent', g.freeAttr);
+    if (!g) return;
+    if (!UI.attrDraft) UI.attrDraft = { id: g.id, add: {} };
+    const add = UI.attrDraft.add;
+    if (draftSum(add) >= g.freeAttr) return;
+    add[d.k] = (add[d.k] || 0) + 1;
+    renderModal();
+  },
+  subAttr: d => {
+    const add = UI.attrDraft && UI.attrDraft.add;
+    if (!add || !add[d.k]) return;
+    add[d.k]--;
+    renderModal();
+  },
+  commitAttrs: () => {
+    const g = glad(UI.gladId);
+    if (!g || !UI.attrDraft || !commitAttrDraft(g, UI.attrDraft.add)) return;
+    UI.attrDraft = null;
+    save(); render(); coach('attrSpent', g.freeAttr);
   },
   learn: d => {
     const g = glad(UI.gladId);

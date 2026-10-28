@@ -158,7 +158,7 @@ const TUTOR_STEPS = [
   { id: 'heal', g: 'after', lock: true, back: 'lvlGlad', sel: '#modal [data-act="heal"]', wait: 'healed', skip: () => !(tutorGlad() && tutorGlad().wounded),
     text: () => `Раненый не выходит на песок, пока не заживёт. Лекарь поставит его на ноги сразу. Нажми «Лекарь», это стоит ${tutorGlad() ? healCost(tutorGlad()) : ''} денариев.` },
   { id: 'attrs', g: 'after', lock: true, back: 'lvlGlad', sel: '#modal .attrs-panel', wait: 'attrSpent', accept: d => d === 0, skip: () => !(tutorGlad() && tutorGlad().freeAttr),
-    text: 'За победу боец получил 2-й уровень и 3 очка характеристик. Раздай их кнопками «+». Знаком ◆ отмечено главное для его будущей школы. Наведи на название, и узнаешь, что даёт характеристика.' },
+    text: 'За победу боец получил 2-й уровень и 3 очка характеристик. Раздай их кнопками «+», лишнее убери кнопкой «−» и нажми «Закрепить». Знаком ◆ отмечено главное для его будущей школы. Наведи на название, и узнаешь, что даёт характеристика.' },
   { id: 'school', g: 'after', modal: true, back: 'lvlGlad', sel: '#modal .school-panel', wait: 'next',
     text: () => `На ${SCHOOL_LEVEL}-м уровне бойца посвящают в школу. Здесь видно, к какой школе он годится лучше и что ей нужно. После посвящения каждый уровень даёт очко на умения школы.` },
   { id: 'closeGlad2', g: 'after', lock: true, back: 'lvlGlad', sel: '#modal [data-act="closeModal"]', wait: 'modalClosed',
