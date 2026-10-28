@@ -389,9 +389,8 @@ button.sound.off { color: var(--dust); }
 .bet-side .portrait { width: 64px; height: 80px; flex: none; }
 .pw { font-size: 12.5px; color: var(--muted); white-space: nowrap; cursor: help; }
 .pw b { color: var(--bronze-hi); font-weight: 700; }
-.pwline { font-size: 14px; margin: 6px 0; padding: 4px 8px; border-left: 3px solid currentColor; background: rgba(0,0,0,.18); cursor: help; }
+.pwline { font-size: 14px; margin: 6px 0; padding: 4px 8px; border-left: 3px solid currentColor; background: rgba(0,0,0,.18); color: var(--bronze-hi); cursor: help; }
 .pwline b { color: var(--bone); }
-.pw-good { color: var(--q2); } .pw-fair { color: #b9c98a; } .pw-even { color: var(--bronze-hi); } .pw-risk { color: #e0955a; } .pw-bad { color: #e0604d; }
 .pbtn { padding: 0; border: none; background: none; box-shadow: none; cursor: zoom-in; flex: none; line-height: 0; border-radius: 2px; }
 /* при наведении меняется только рамка портрета — размеры кнопки те же, иначе окно «прыгает» */
 .pbtn:hover:not(:disabled) { border: none; background: none; box-shadow: none; }
@@ -571,14 +570,20 @@ button.sound.off { color: var(--dust); }
 .atab .badge { margin-left: 6px; }
 .atab.bets { border-color: var(--seam2); }
 .arena-sub { margin: 4px 0 10px; }
-.evgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; align-items: stretch; }
-.evgrid .event { display: flex; flex-direction: column; gap: 6px; padding: 12px 14px; }
-.evgrid .event .reward { margin-top: auto; }
-.evgrid .finalcard { grid-column: span 2; }
+/* бои сгруппированы по формату; карточка по ширине своих противников */
+.evgroups { display: flex; flex-wrap: wrap; align-items: flex-start; align-content: flex-start; gap: 16px 28px; }
+.evg-h { font-size: 24px; color: var(--blood-hi); margin: 0 0 8px; }
+.evrow { display: flex; flex-wrap: wrap; gap: 12px; align-items: stretch; }
+.evrow .event, .evgroups .finalcard { display: flex; flex-direction: column; gap: 6px; padding: 12px 14px; margin: 0; }
+.evrow .event { flex: none; width: max-content; min-width: 150px; max-width: min(320px, 100%); }
+.evrow .event .reward { margin-top: auto; flex-direction: column; align-items: flex-start; gap: 0; }
+.evgroups .finalcard { flex-basis: 100%; }
+.evgroups .finalcard { max-width: 760px; }
 .event .foes { flex-direction: row; flex-wrap: wrap; gap: 8px; margin: 4px 0; }
-.foe.pbtn { display: flex; flex-direction: column; align-items: center; gap: 2px; width: 62px; line-height: 1.15; cursor: zoom-in; }
-.foe .fn { font-size: 12.5px; color: #dc7a6a; font-weight: 700; max-width: 62px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.foe .fl { font-size: 11.5px; color: var(--muted); white-space: nowrap; }
+.foe.pbtn { display: flex; flex-direction: column; align-items: center; gap: 3px; width: 76px; line-height: 1.15; cursor: zoom-in; }
+.foe .portrait { width: 64px; height: 80px; }
+.foe .fn { font-size: 13.5px; color: #dc7a6a; font-weight: 700; max-width: 76px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.foe .fl { font-size: 12.5px; color: var(--muted); white-space: nowrap; }
 .event .reward { align-items: baseline; flex-wrap: wrap; gap: 4px 14px; }
 /* выбор бойцов — окно поверх экрана */
 .pick-bg { position: fixed; inset: 0; z-index: 35; background: rgba(8,5,4,.72); display: grid; place-items: center; padding: 16px; }

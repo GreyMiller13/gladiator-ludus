@@ -385,14 +385,6 @@ function bestTeam(n) {
   const pool = ready.length ? ready : STATE.gladiators;
   return pool.slice().sort((a, b) => combatPower(b) - combatPower(a)).slice(0, n);
 }
-// Расклад сил: r — отношение вашей мощи к мощи противника
-function powerVerdict(r) {
-  if (r >= 1.25) return { cls: 'pw-good', text: 'перевес за вами' };
-  if (r >= 1.08) return { cls: 'pw-fair', text: 'небольшой перевес за вами' };
-  if (r >= 0.93) return { cls: 'pw-even', text: 'силы равны' };
-  if (r >= 0.8) return { cls: 'pw-risk', text: 'противник сильнее' };
-  return { cls: 'pw-bad', text: 'почти без шансов' };
-}
 
 // Грубая оценка силы бойца — для цены рекрута
 function powerScore(g) {

@@ -11,11 +11,6 @@ module.exports = [
     assert.ok(ev(ctx, 'combatPower(h)') > p * 2.5);
     assert.equal(ev(ctx, 'teamPower([g, h])'), ev(ctx, 'combatPower(g) + combatPower(h)'));
   } },
-  { name: 'мощь: расклад сил по отношению мощи', fn: ctx => {
-    assert.equal(ev(ctx, 'powerVerdict(1.5).cls'), 'pw-good');
-    assert.equal(ev(ctx, 'powerVerdict(1).cls'), 'pw-even');
-    assert.equal(ev(ctx, 'powerVerdict(0.6).cls'), 'pw-bad');
-  } },
   { name: 'посильный бой: если на младшей арене нет боя по силам лудуса, один бой становится по размеру', fn: ctx => {
     ev(ctx, 'newGame("Т")');
     ev(ctx, 'var evs = [2, 3].map(size => ({ id: uid(), tier: 0, size, enemies: generateEnemyTeam(0, size), gold: 50, fame: 3, done: false })); ensureEasyEvent(evs)');

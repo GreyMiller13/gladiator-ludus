@@ -233,15 +233,13 @@ function fitNav() {
 // ------------------------------------------------------------
 //  Лудус
 // ------------------------------------------------------------
-// Мощь: значок у бойца и строка расклада сил у боя
-const POWER_TIP = 'Мощь показывает силу в бою: сколько урона боец наносит за ход и сколько выдержит, с учётом снаряжения, навыков школы и шагов. Мощь команды складывается из мощи бойцов. При перевесе в 1.25 раза вы выиграете примерно 3 боя из 4, при перевесе в 1.5 раза почти наверняка.';
+// Мощь: значок у бойца и строка мощи сторон у боя
+const POWER_TIP = 'Мощь показывает силу в бою: сколько урона боец наносит за ход и сколько выдержит, с учётом снаряжения, навыков школы и шагов. Мощь команды складывается из мощи бойцов.';
 const pwBadge = p => `<span class="pw" data-tip="${tipAttrHtml(POWER_TIP)}">мощь <b>${p}</b></span>`;
 function pwLine(ev, team) {
   if (!ev.enemies || !ev.enemies.length) return '';
-  const en = teamPower(ev.enemies);
-  if (!team || !team.length) return `<div class="pwline pw-even" data-tip="${tipAttrHtml(POWER_TIP)}">Мощь противников <b>${en}</b>. Выберите бойцов, чтобы сравнить.</div>`;
-  const my = teamPower(team), v = powerVerdict(my / Math.max(1, en));
-  return `<div class="pwline ${v.cls}" data-tip="${tipAttrHtml(POWER_TIP)}">Мощь: ваши <b>${my}</b> против <b>${en}</b>, ${v.text}</div>`;
+  const my = team && team.length ? teamPower(team) : 0;
+  return `<div class="pwline" data-tip="${tipAttrHtml(POWER_TIP)}">Мощь противников <b>${teamPower(ev.enemies)}</b>. Мощь ваших бойцов <b>${my}</b></div>`;
 }
 
 function gladCard(g, opts = {}) {
@@ -606,7 +604,8 @@ function screenArena() {
     const evs = STATE.events.filter(e => e.tier === cur);
     const fin = cur === 3 ? finalCard() : '';
     body = `<p class="arena-sub muted small">${T.name}. ${T.mood} Каждый боец выходит на песок раз в день, раненые не сражаются. Нажмите на бой, чтобы выбрать бойцов, или на портрет, чтобы рассмотреть противника.</p>
-      <div class="evgrid">${evs.map(eventCard).join('')}${fin}</div>
+      <div class="evgroups scrollfill">${[...new Set(evs.map(e => e.size))].sort((a, b) => a - b).map(n => `<section class="evgroup"><h3 class="evg-h">${n} на ${n}</h3>
+        <div class="evrow">${evs.filter(e => e.size === n).map(eventCard).join('')}</div></section>`).join('')}${fin}</div>
       ${evs.length || fin ? '' : '<p class="empty-note">Сегодня здесь боёв нет.</p>'}`;
   }
   return `<div class="arena-head"><h2>Арена</h2><div class="atabs">${tabs}<span class="sp"></span>${betTab}</div></div>
@@ -724,16 +723,16 @@ function finalCard() {
 }
 
 // Противники боя: нажатие на портрет открывает карточку бойца
-const foeRows = ev => ev.enemies.map((e, i) => `<button class="pbtn foe" data-act="foeInfo" data-ev="${ev.id}" data-i="${i}" data-tip="${tipAttrHtml(`${e.name}: ${clsOf(e).name}, ${e.level}-й уровень, мощь ${combatPower(e)}. Нажмите, чтобы рассмотреть.`)}" aria-label="Подробнее: ${esc(e.name)}"><img class="portrait sm" src="${portrait(e, 44, 55, { bust: true, enemy: true })}" alt=""><span class="fn">${esc(e.name)}</span><span class="fl">${e.level} ур.</span></button>`).join('');
+const foeRows = ev => ev.enemies.map((e, i) => `<button class="pbtn foe" data-act="foeInfo" data-ev="${ev.id}" data-i="${i}" data-tip="${tipAttrHtml(`${e.name}: ${clsOf(e).name}, ${e.level}-й уровень, мощь ${combatPower(e)}. Нажмите, чтобы рассмотреть.`)}" aria-label="Подробнее: ${esc(e.name)}"><img class="portrait" src="${portrait(e, 64, 80, { bust: true, enemy: true })}" alt=""><span class="fn">${esc(e.name)}</span><span class="fl">${e.level} ур.</span></button>`).join('');
 
 function eventCard(ev) {
   const sel = ev.id === UI.eventId;
   const title = ev.done ? 'Бой окончен' : ev.boss || ev.duo ? esc(ev.title) : ev.training ? 'Учебный бой' : 'Поединок';
   const note = ev.training ? 'Без смертей, ручное управление, наставник подскажет.' : ev.boss && !ev.done ? 'Победа откроет следующую арену. Проигранный бой можно повторить завтра.' : '';
   return `<div class="panel event ${ev.boss ? 'boss' : ''} ${ev.training ? 'training' : ''} ${ev.duo ? 'duo' : ''} ${sel ? 'sel' : ''} ${ev.done ? 'done' : ''}" data-act="${ev.done ? '' : 'pickEvent'}" data-id="${ev.id}" ${note ? `data-tip="${tipAttrHtml(note)}"` : ''}>
-    <div class="eh"><h3>${title}</h3><span class="fmt">${ev.size} на ${ev.size}</span></div>
+    <div class="eh"><h3>${title}</h3></div>
     <div class="foes">${foeRows(ev)}</div>
-    <div class="reward">${enemyPower(ev)}<span><b>${ev.gold}</b> ден.</span><span><b>+${ev.fame}</b> славы</span></div>
+    <div class="reward">${enemyPower(ev)}<span><b>${ev.gold}</b> ден., <b>+${ev.fame}</b> славы</span></div>
   </div>`;
 }
 const enemyPower = ev => `<span class="pw" data-tip="${tipAttrHtml(`Мощь противников. Сравните с мощью своих бойцов. ${POWER_TIP}`)}">мощь <b>${teamPower(ev.enemies)}</b></span>`;
