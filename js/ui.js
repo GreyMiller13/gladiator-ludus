@@ -603,9 +603,8 @@ function screenArena() {
     const T = TIERS[cur];
     const evs = STATE.events.filter(e => e.tier === cur);
     const fin = cur === 3 ? finalCard() : '';
-    body = `<p class="arena-sub muted small">${T.name}. ${T.mood} Каждый боец выходит на песок раз в день, раненые не сражаются. Нажмите на бой, чтобы выбрать бойцов, или на портрет, чтобы рассмотреть противника.</p>
-      <div class="evgroups scrollfill">${[...new Set(evs.map(e => e.size))].sort((a, b) => a - b).map(n => `<section class="evgroup"><h3 class="evg-h">${n} на ${n}</h3>
-        <div class="evrow">${evs.filter(e => e.size === n).map(eventCard).join('')}</div></section>`).join('')}${fin}</div>
+    body = `<p class="arena-sub muted small">${T.name}. ${T.mood} Каждый боец выходит на песок раз в день, раненые не сражаются. Нажмите на бой, чтобы выбрать бойцов.</p>
+      <div class="evgrid">${[...evs].sort((a, b) => a.size - b.size).map(eventCard).join('')}${fin}</div>
       ${evs.length || fin ? '' : '<p class="empty-note">Сегодня здесь боёв нет.</p>'}`;
   }
   return `<div class="arena-head"><h2>Арена</h2><div class="atabs">${tabs}<span class="sp"></span>${betTab}</div></div>
@@ -717,7 +716,7 @@ function finalCard() {
   return `<div class="panel event finalcard ${sel ? 'sel' : ''} ${ev.done ? 'done' : ''}" data-act="${ev.done ? '' : 'pickEvent'}" data-id="${ev.id}">
     <div class="eh"><h3>${ev.done ? 'Финал проигран. Чемпионы ждут завтра' : 'Финал: Игры за рудис свободы'}</h3><span class="fmt">3 на 3</span></div>
     <p class="small">Император выставляет трёх величайших гладиаторов Рима. Победа принесёт лудусу вечную славу и завершит историю. Бой насмерть: проигравших судит толпа.</p>
-    <div class="foes">${foeRows(ev)}</div>
+    <div class="foes">${foeTiles(ev)}</div>
     <div class="reward">${enemyPower(ev)}<span><b>${ev.gold}</b> ден.</span><span><b>+${ev.fame}</b> славы</span></div>
   </div>`;
 }
@@ -725,58 +724,74 @@ function finalCard() {
 // Противники боя: нажатие на портрет открывает карточку бойца
 const foeRows = ev => ev.enemies.map((e, i) => `<button class="pbtn foe" data-act="foeInfo" data-ev="${ev.id}" data-i="${i}" data-tip="${tipAttrHtml(`${e.name}: ${clsOf(e).name}, ${e.level}-й уровень, мощь ${combatPower(e)}. Нажмите, чтобы рассмотреть.`)}" aria-label="Подробнее: ${esc(e.name)}"><img class="portrait" src="${portrait(e, 64, 80, { bust: true, enemy: true })}" alt=""><span class="fn">${esc(e.name)}</span><span class="fl">${e.level} ур.</span></button>`).join('');
 
+// Противники в карточке боя: только портреты и подписи, нажатие на карточку открывает выбор бойцов
+function foeTiles(ev) {
+  const img = e => `<img class="portrait" src="${portrait(e, 64, 80, { bust: true, enemy: true })}" alt="">`;
+  if (ev.enemies.length === 1) { const e = ev.enemies[0]; return `<div class="fwide">${img(e)}<span class="fn">${esc(e.name)}</span><span class="fl">${clsOf(e).name}, ${e.level} ур.</span></div>`; }
+  return ev.enemies.map(e => `<div class="ftile">${img(e)}<span class="fn">${esc(e.name)}</span><span class="fs">${clsOf(e).name}</span><span class="fl">${e.level} ур.</span></div>`).join('');
+}
+
 function eventCard(ev) {
   const sel = ev.id === UI.eventId;
   const title = ev.done ? 'Бой окончен' : ev.boss || ev.duo ? esc(ev.title) : ev.training ? 'Учебный бой' : 'Поединок';
   const note = ev.training ? 'Без смертей, ручное управление, наставник подскажет.' : ev.boss && !ev.done ? 'Победа откроет следующую арену. Проигранный бой можно повторить завтра.' : '';
   return `<div class="panel event ${ev.boss ? 'boss' : ''} ${ev.training ? 'training' : ''} ${ev.duo ? 'duo' : ''} ${sel ? 'sel' : ''} ${ev.done ? 'done' : ''}" data-act="${ev.done ? '' : 'pickEvent'}" data-id="${ev.id}" ${note ? `data-tip="${tipAttrHtml(note)}"` : ''}>
-    <div class="eh"><h3>${title}</h3></div>
-    <div class="foes">${foeRows(ev)}</div>
-    <div class="reward">${enemyPower(ev)}<span><b>${ev.gold}</b> ден., <b>+${ev.fame}</b> славы</span></div>
+    <div class="eh"><h3>${title}</h3><span class="fmt">${ev.size} на ${ev.size}</span></div>
+    <div class="foes">${foeTiles(ev)}</div>
+    <div class="reward">${enemyPower(ev)}<span><b>${ev.gold}</b> ден.</span><span><b>+${ev.fame}</b> славы</span></div>
   </div>`;
 }
 const enemyPower = ev => `<span class="pw" data-tip="${tipAttrHtml(`Мощь противников. Сравните с мощью своих бойцов. ${POWER_TIP}`)}">мощь <b>${teamPower(ev.enemies)}</b></span>`;
 const emblemMini = cls => `<svg viewBox="0 0 48 48" width="16" height="16" style="vertical-align:-3px;color:#c96b5e" fill="none" stroke="currentColor" stroke-width="3">${EMBLEMS[cls]}</svg>`;
 
-// Боец в окне выбора: коротко — кто он, мощь и может ли выйти
-function pickCard(g, sel) {
-  const st = gladiatorStatus(g), ok = canFight(g);
-  return `<div class="pcard ${sel ? 'sel' : ''} ${ok ? '' : 'disabled'}" data-act="${ok ? 'pickGlad' : ''}" data-id="${g.id}">
-    <img class="portrait sm" src="${portrait(g, 44, 55, { bust: true })}" alt="">
-    <div><b>${esc(g.name)}</b><div class="tiny muted">${clsOf(g).name}, ур. ${g.level}</div><div class="tiny">${pwBadge(combatPower(g))} <span class="st ${st.key}">${st.text}</span></div></div>
-  </div>`;
-}
+// Окно выбора бойцов: противники слева, ваши бойцы справа, пары друг напротив друга со знаком VS.
+// Ниже — все бойцы лудуса сеткой портретов, у выбранных номер в строю
+const PICK_ICO = body => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${body}</svg>`;
+const ICO_EYE = PICK_ICO('<path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>');
+const ICO_X = PICK_ICO('<path d="M6 6l12 12M18 6L6 18"/>');
 
 function picker(ev) {
   const T = TIERS[clamp(ev.tier || 0, 0, 3)];
   const n = playerCount(ev);
-  const avgLvl = ev.enemies.reduce((s, e) => s + e.level, 0) / ev.enemies.length;
-  const cards = STATE.gladiators.map(g => pickCard(g, UI.picked.includes(g.id))).join('');
-  const ready = UI.picked.length === n;
+  const mine = UI.picked.map(glad).filter(Boolean);
+  const R = winReward(ev);
   const mode = battleMode();
-  const note = ev.kind === 'contract'
-    ? 'Бой не насмерть: выбывший боец сдаётся и отлёживается день. Приговора толпы не будет.'
-    : `Если команда проиграет, толпа решит судьбу каждого бойца. Кто успел повергнуть противника, того пощадят охотнее. ${T.mood}`;
-  return `<div class="pick-bg" data-act="cancelPickBg"><div class="panel picker" role="dialog" aria-label="Выбор бойцов">
-    <h3>Выбор бойцов: ${n} на ${ev.size}, ${ev.kind === 'contract' ? esc(ev.title) : ev.kind === 'final' ? 'Финал' : T.name}</h3>
-    <div class="foes pick-foes">${foeRows(ev)}</div>
-    ${pwLine(ev, UI.picked.map(glad).filter(Boolean))}
-    <p class="tiny muted">${note}</p>
-    <div class="pickgrid">${cards || '<p class="empty-note">Нет бойцов.</p>'}</div>
-    ${ev.training ? '<div class="modesel"><span class="muted small">Учебный бой: только ручное управление, вы сами командуете бойцом.</span></div>' : `<div class="modesel">
-      <span>Режим боя:</span>
-      <button class="small ${mode === 'auto' ? 'active' : ''}" data-act="setMode" data-m="auto" title="Бойцы расставляются и сражаются сами">Автобой</button>
-      <button class="small ${mode === 'manual' ? 'active' : ''}" data-act="setMode" data-m="manual" title="Вы расставляете бойцов и командуете каждым ходом">Ручное управление</button>
-      <span class="muted small">${mode === 'manual' ? 'Вы расставите бойцов на поле и будете отдавать приказы каждому. Перейти на автобой можно в любой момент.' : 'Бойцы встанут в строй и будут сражаться сами.'}</span>
-    </div>`}
-    ${canGoShort(ev) ? `<label class="modesel shortsel"><input type="checkbox" data-act="pickShort" ${ev.short ? 'checked' : ''}>
-      <span>Выйти меньшинством: <b>${ev.size - 1} на ${ev.size}</b></span>
-      <span class="muted small">Толпа любит смельчаков: за победу <b>${winReward({ ...ev, short: true }).gold}</b> ден. и <b>+${winReward({ ...ev, short: true }).fame}</b> славы вместо ${ev.gold} и +${ev.fame}.</span></label>` : ''}
-    <div class="bar-actions">
-      <span>Выбрано: <b>${UI.picked.length}/${n}</b></span>
-      <button class="primary" data-act="startBattle" ${ready ? '' : 'disabled'}>Выйти на арену</button>
-      <button data-act="cancelPick">Отмена</button>
+  const title = ev.kind === 'contract' ? esc(ev.title) : ev.kind === 'final' ? 'Финал' : ev.training ? 'Учебный бой' : ev.boss || ev.duo ? esc(ev.title) : 'Поединок';
+  const note = ev.training ? 'Учебный бой без смертей. Наставник подскажет.'
+    : ev.kind === 'contract' ? 'Бой не насмерть: выбывший боец сдаётся и отлёживается день. Приговора толпы не будет.'
+    : 'Если команда проиграет, толпа решит судьбу каждого бойца. Кто успел повергнуть противника, того пощадят охотнее.';
+  const info = g => `<div class="si"><span class="sn">${esc(g.name)}</span><span class="sl">${clsOf(g).name}, ${g.level} ур.</span><span class="sp">мощь <b>${combatPower(g)}</b></span></div>`;
+  const foeSlot = (e, i) => e ? `<div class="vslot foe"><img class="portrait" src="${portrait(e, 64, 80, { bust: true, enemy: true })}" alt="">${info(e)}<button type="button" class="ico" data-act="foeInfo" data-ev="${ev.id}" data-i="${i}" title="Осмотреть" aria-label="Осмотреть: ${esc(e.name)}">${ICO_EYE}</button></div>` : '<span></span>';
+  const mySlot = i => {
+    const g = mine[i];
+    if (i >= n) return '<div class="vslot empty">в меньшинстве</div>';
+    if (!g) return '<div class="vslot empty">выберите бойца</div>';
+    return `<div class="vslot mine"><img class="portrait" src="${portrait(g, 64, 80, { bust: true })}" alt="">${info(g)}<button type="button" class="ico" data-act="pickGlad" data-id="${g.id}" title="Убрать" aria-label="Убрать: ${esc(g.name)}">${ICO_X}</button></div>`;
+  };
+  const rows = Array.from({ length: Math.max(ev.enemies.length, n) }, (_, i) => `${foeSlot(ev.enemies[i], i)}<span class="vsmedal">VS</span>${mySlot(i)}`).join('');
+  const roster = STATE.gladiators.map(g => {
+    const k = UI.picked.indexOf(g.id), ok = canFight(g), st = gladiatorStatus(g);
+    return `<button type="button" class="rc ${k >= 0 ? 'on' : ''}" ${ok ? `data-act="pickGlad" data-id="${g.id}"` : 'disabled'}>${k >= 0 ? `<span class="num">${k + 1}</span>` : ''}
+      <img class="portrait" src="${portrait(g, 64, 80, { bust: true })}" alt=""><span class="rn">${esc(g.name)}</span><span class="rs">${clsOf(g).name}</span>
+      <span class="rl">${ok ? `${g.level} ур., мощь <b>${combatPower(g)}</b>` : `<span class="st ${st.key}">${st.text}</span>`}</span></button>`;
+  }).join('');
+  return `<div class="pick-bg" data-act="cancelPickBg"><div class="picker" role="dialog" aria-modal="true" aria-labelledby="pickTitle">
+    <div class="pick-h"><h2 id="pickTitle">${title}</h2><span class="fmtb">${n} на ${ev.size}</span><span class="tier">${ev.kind === 'contract' ? esc(ev.client || '') : T.name}</span><span class="sp"></span>
+      <span class="rwd">награда <b>${R.gold}</b> ден.${R.fame ? `, <b>+${R.fame}</b> славы` : ''}</span></div>
+    <button type="button" class="pclose" data-act="cancelPick" aria-label="Закрыть">${ICO_X}</button>
+    <div class="vs">
+      <h3 class="side-h foe-h">Противники</h3><span></span><h3 class="side-h my-h">Ваши бойцы</h3>
+      ${rows}
+      <div class="tp">мощь<b>${teamPower(ev.enemies)}</b></div><span></span><div class="tp">мощь<b>${mine.length ? teamPower(mine) : 0}</b></div>
     </div>
+    <div class="pick-roster-h"><h3>Бойцы лудуса</h3><span>выбрано ${UI.picked.length} из ${n}</span></div>
+    <div class="pick-roster">${roster || '<p class="empty-note">Нет бойцов.</p>'}</div>
+    <p class="crowd"><span>${note}</span></p>
+    <div class="pfoot">
+      ${ev.training ? '<span class="muted">Учебный бой: только ручное управление.</span>' : `<span class="pick-mode"><button type="button" class="${mode === 'auto' ? 'on' : ''}" data-act="setMode" data-m="auto" title="Бойцы расставляются и сражаются сами">Автобой</button><button type="button" class="${mode === 'manual' ? 'on' : ''}" data-act="setMode" data-m="manual" title="Вы расставляете бойцов и командуете каждым ходом. Перейти на автобой можно в любой момент">Ручное управление</button></span>`}
+      ${canGoShort(ev) ? `<label class="short"><input type="checkbox" data-act="pickShort" ${ev.short ? 'checked' : ''}> Меньшинством <em>(${ev.size - 1} на ${ev.size}, награда вдвое)</em></label>` : ''}
+    </div>
+    <div class="pact"><button type="button" class="primary go" data-act="startBattle" ${UI.picked.length === n ? '' : 'disabled'}>Выйти на арену</button></div>
   </div></div>`;
 }
 

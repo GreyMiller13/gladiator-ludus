@@ -570,33 +570,97 @@ button.sound.off { color: var(--dust); }
 .atab .badge { margin-left: 6px; }
 .atab.bets { border-color: var(--seam2); }
 .arena-sub { margin: 4px 0 10px; }
-/* бои сгруппированы по формату; карточка по ширине своих противников */
-.evgroups { display: flex; flex-wrap: wrap; align-items: flex-start; align-content: flex-start; gap: 16px 28px; }
-.evg-h { font-size: 24px; color: var(--blood-hi); margin: 0 0 8px; }
-.evrow { display: flex; flex-wrap: wrap; gap: 12px; align-items: stretch; }
-.evrow .event, .evgroups .finalcard { display: flex; flex-direction: column; gap: 6px; padding: 12px 14px; margin: 0; }
-.evrow .event { flex: none; width: max-content; min-width: 150px; max-width: min(320px, 100%); }
-.evrow .event .reward { margin-top: auto; flex-direction: column; align-items: flex-start; gap: 0; }
-.evgroups .finalcard { flex-basis: 100%; }
-.evgroups .finalcard { max-width: 760px; }
-.event .foes { flex-direction: row; flex-wrap: wrap; gap: 8px; margin: 4px 0; }
+/* бои сеткой; портреты в карточке не кнопки, вся карточка открывает выбор бойцов */
+.evgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+.evgrid .event, .evgrid .finalcard { display: grid; grid-template-rows: auto 1fr auto; gap: 12px; padding: 16px 18px; margin: 0; }
+.evgrid .finalcard { grid-column: 1 / -1; }
+.event .eh h3 { font-size: 24px; }
+.event .foes { display: flex; flex-direction: row; flex-wrap: wrap; gap: 14px; align-items: flex-start; align-content: center; margin: 0; }
+.ftile { display: grid; justify-items: center; gap: 2px; width: 80px; text-align: center; line-height: 1.2; }
+.ftile .portrait { margin-bottom: 2px; }
+.ftile .fn, .fwide .fn { color: #dc7a6a; font-weight: 700; font-size: 14.5px; }
+.ftile .fs { color: var(--bone); font-size: 13.5px; }
+.ftile .fl { color: var(--muted); font-size: 13.5px; }
+.fwide { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 2px 14px; align-content: center; align-items: center; }
+.fwide .portrait { grid-row: 1 / span 2; }
+.fwide .fn { font-size: 16px; align-self: end; }
+.fwide .fl { color: var(--muted); font-size: 14.5px; align-self: start; }
+.event .reward { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 18px; padding-top: 10px; border-top: 1px solid var(--seam); font-size: 15px; color: var(--muted); }
+.event .reward b { color: var(--bronze-hi); font-weight: 500; font-size: 17px; }
+/* портреты-кнопки противников в заказах */
 .foe.pbtn { display: flex; flex-direction: column; align-items: center; gap: 3px; width: 76px; line-height: 1.15; cursor: zoom-in; }
-.foe .portrait { width: 64px; height: 80px; }
-.foe .fn { font-size: 13.5px; color: #dc7a6a; font-weight: 700; max-width: 76px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.foe .fn { font-size: 13.5px; color: #dc7a6a; font-weight: 700; }
 .foe .fl { font-size: 12.5px; color: var(--muted); white-space: nowrap; }
-.event .reward { align-items: baseline; flex-wrap: wrap; gap: 4px 14px; }
-/* выбор бойцов — окно поверх экрана */
-.pick-bg { position: fixed; inset: 0; z-index: 35; background: rgba(8,5,4,.72); display: grid; place-items: center; padding: 16px; }
-.picker { width: min(860px, 100%); max-height: calc(100vh / var(--z, 1) - 32px); overflow-y: auto; margin: 0; }
-.picker h3 { margin-bottom: 6px; }
-.pick-foes { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 6px; }
-.pickgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 8px; margin: 8px 0; }
-.pcard { display: grid; grid-template-columns: 44px 1fr; gap: 10px; align-items: center; padding: 6px 8px; border: 1px solid var(--seam); background: rgba(0,0,0,.2); border-radius: 2px; cursor: pointer; }
-.pcard:hover { border-color: var(--bronze); }
-.pcard.sel { border-color: var(--bronze-hi); box-shadow: 0 0 0 1px var(--bronze-hi) inset; background: rgba(160,110,50,.15); }
-.pcard.disabled { opacity: .45; cursor: not-allowed; }
-.picker .bar-actions { display: flex; align-items: center; gap: 14px; margin-top: 10px; flex-wrap: wrap; }
-.modesel { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 12px 0 4px; padding-top: 10px; border-top: 1px solid var(--seam); }
+
+/* выбор бойцов: окно поверх экрана, стороны друг напротив друга */
+.pick-bg { position: fixed; inset: 0; z-index: 35; background: rgba(8,5,4,.8); display: grid; place-items: center; padding: 16px; }
+.picker { position: relative; width: min(800px, 100%); max-height: calc(100vh / var(--z, 1) - 32px); overflow-y: auto; display: grid; gap: 12px; padding: 16px 22px 18px; background: var(--grain), linear-gradient(#211813, #1a1310); border: 1px solid var(--bronze); box-shadow: 0 0 0 4px #0d0907, 0 0 0 5px rgba(168,129,74,.35), 0 24px 70px rgba(0,0,0,.75); }
+.pick-h { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; padding-right: 44px; }
+.pick-h h2 { font-size: 30px; line-height: 1.05; color: var(--bone); }
+.pick-h .fmtb { font-family: var(--font-head); font-size: 26px; color: var(--blood-hi); }
+.pick-h .tier { color: var(--muted); font-size: 15px; white-space: nowrap; }
+.pick-h .sp { flex: 1; }
+.pick-h .rwd { color: var(--muted); font-size: 15px; white-space: nowrap; }
+.pick-h .rwd b { color: var(--bronze-hi); font-weight: 500; font-size: 18px; }
+.picker .pclose, .picker .ico { display: grid; place-items: center; padding: 0; background: rgba(0,0,0,.25); border: 1px solid var(--seam2); box-shadow: none; color: var(--muted); }
+.picker .pclose { position: absolute; top: 14px; right: 16px; width: 34px; height: 34px; }
+.picker .pclose svg { width: 16px; height: 16px; }
+.picker .ico { width: 32px; height: 32px; flex: none; }
+.picker .ico svg { width: 18px; height: 18px; }
+.picker .pclose:hover:not(:disabled), .picker .ico:hover:not(:disabled) { color: var(--bone); border-color: var(--bronze); background: rgba(0,0,0,.25); }
+.vs { display: grid; grid-template-columns: minmax(0, 1fr) 52px minmax(0, 1fr); gap: 8px 6px; align-items: center; }
+.side-h { font-size: 19px; text-align: center; }
+.side-h.foe-h { color: #dc7a6a; }
+.side-h.my-h { color: var(--bronze-hi); }
+.vsmedal { justify-self: center; width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center; background: radial-gradient(circle at 40% 35%, #3a2a1c, #1a120d); border: 1px solid var(--bronze); box-shadow: 0 0 0 3px #120c09, 0 0 0 4px rgba(168,129,74,.4); font-family: var(--font-head); font-size: 18px; line-height: 1; color: var(--bronze-hi); }
+.vslot { display: flex; align-items: center; gap: 12px; min-width: 0; min-height: 88px; padding: 7px 10px; background: rgba(0,0,0,.25); border: 1px solid var(--seam); }
+.vslot.foe { border-left: 3px solid #7a2a20; }
+.vslot.mine { flex-direction: row-reverse; text-align: right; border-right: 3px solid var(--bronze); }
+.vslot .portrait { width: 58px; height: 72px; }
+.vslot.mine .portrait { transform: scaleX(-1); }
+.vslot .si { display: grid; flex: 1; min-width: 0; line-height: 1.25; }
+.vslot .sn { font-weight: 700; font-size: 17px; line-height: 1.2; }
+.vslot.foe .sn { color: #dc7a6a; }
+.vslot .sl, .vslot .sp { color: var(--muted); font-size: 14px; }
+.vslot .sp b { color: var(--bronze-hi); font-weight: 500; font-size: 16px; }
+.vslot.empty { justify-content: center; border: 1px dashed var(--seam2); background: rgba(0,0,0,.12); color: var(--dust); font-style: italic; font-size: 15px; }
+.tp { text-align: center; color: var(--muted); font-size: 14px; }
+.tp b { display: block; font-family: var(--font-head); font-size: 28px; font-weight: 400; line-height: 1; color: var(--bone); }
+.pick-roster-h { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding-top: 10px; border-top: 1px solid var(--seam); }
+.pick-roster-h h3 { font-size: 19px; color: var(--bronze-hi); }
+.pick-roster-h span { color: var(--muted); font-size: 14px; }
+.pick-roster { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 8px; }
+.picker .rc { position: relative; display: grid; justify-items: center; align-content: start; gap: 1px; padding: 7px 4px 6px; background: rgba(0,0,0,.25); border: 1px solid var(--seam); box-shadow: none; font-family: var(--font-body); letter-spacing: 0; line-height: 1.2; color: var(--text); }
+.picker .rc .portrait { width: 56px; height: 70px; margin-bottom: 3px; }
+.rc .rn { font-weight: 700; font-size: 14.5px; text-align: center; }
+.rc .rs { color: var(--bone); font-size: 13.5px; text-align: center; }
+.rc .rl { color: var(--muted); font-size: 13px; }
+.rc .rl b { color: var(--bronze-hi); font-weight: 500; }
+.picker .rc:hover:not(:disabled) { border-color: var(--bronze); color: var(--text); background: rgba(0,0,0,.25); }
+.picker .rc.on, .picker .rc.on:hover:not(:disabled) { border-color: var(--bronze-hi); box-shadow: 0 0 0 1px var(--bronze-hi) inset; background: rgba(168,129,74,.14); }
+.picker .rc:disabled { opacity: .5; }
+.rc .num { position: absolute; top: 4px; left: 4px; width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; background: var(--bronze-hi); color: #1a120d; font-size: 12px; font-weight: 700; }
+.crowd { display: flex; align-items: center; gap: 12px; margin: 0; color: #e0b27a; font-style: italic; font-size: 15px; text-align: center; }
+.crowd::before, .crowd::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, transparent, rgba(199,50,31,.7)); }
+.crowd::after { background: linear-gradient(90deg, rgba(199,50,31,.7), transparent); }
+.crowd span { max-width: 52ch; }
+.pfoot { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; }
+.pick-mode { display: inline-flex; }
+.pick-mode button { font-size: 14.5px; padding: 6px 12px; }
+.pick-mode button + button { border-left: none; }
+.pick-mode button.on { border-color: var(--bronze-hi); color: var(--bronze-hi); background: linear-gradient(#45341f, #2b2015); }
+.short { display: inline-flex; align-items: center; gap: 8px; font-size: 14.5px; cursor: pointer; }
+.short input { width: 17px; height: 17px; accent-color: var(--blood-hi); }
+.short em { color: var(--muted); font-style: normal; }
+.pact { display: flex; justify-content: flex-end; }
+.picker .go { font-size: 19px; padding: 9px 24px; }
+@media (max-width: 640px) {
+  .vs { grid-template-columns: minmax(0, 1fr) 40px minmax(0, 1fr); gap: 6px 4px; }
+  .vslot, .vslot.mine { flex-direction: column; gap: 4px; padding: 6px; text-align: center; }
+  .vslot .ico { width: 28px; height: 28px; }
+  .vslot.empty { min-height: 140px; }
+  .vsmedal { width: 34px; height: 34px; font-size: 15px; }
+}
 .finalcard { border-color: var(--q4); box-shadow: 0 0 0 1px rgba(217,160,67,.3) inset, 0 0 30px rgba(217,160,67,.1); }
 .finalcard h3 { color: var(--q4); }
 .finalcard.won { text-align: center; }
