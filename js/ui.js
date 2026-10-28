@@ -318,43 +318,14 @@ function todayPanel() {
   return `<div class="panel today"><h3>Дела дня</h3><ul class="today-list">${rows}</ul></div>`;
 }
 
-// Картина над казармами: песок арены и бойцы лудуса. Рисуется один раз на состав и арену, дальше копируется
-const LUDUS_ART = { key: '', cv: null };
+// Картина над казармами: песок арены и тренировка бойцов лудуса (js/training.js)
 function paintLudusHero() {
   const cv = $('main canvas.ludus-bg');
-  if (!cv || typeof paintArena !== 'function' || typeof drawFigure !== 'function') return;
+  if (!cv || typeof paintArena !== 'function' || typeof ludusTraining !== 'function') return;
   const tier = clamp(Math.max(...unlockedTiers()), 0, TIERS.length - 1);
-  const team = STATE.gladiators.slice(0, 6);
   // картина рисуется под пропорции полосы на экране: в низкой полосе бойцы мельче, но целиком
   const H = clamp(Math.round(HERO_W * (cv.clientHeight || 300) / (cv.clientWidth || HERO_W)), 100, 300);
-  const key = `${tier}|${H}|${team.map(g => `${g.id}:${g.cls}:${SLOT_KEYS.map(k => (g.equip[k] ? g.equip[k].base : '')).join(',')}`).join(';')}`;
-  if (LUDUS_ART.key !== key) {
-    // арена целиком, из неё — полоса от нижних трибун до песка; бойцы — в правой части, слева текст
-    const full = document.createElement('canvas');
-    full.width = AW; full.height = AH;
-    const fctx = full.getContext('2d');
-    const crowd = paintArena(fctx, tier);
-    for (const p of crowd) {
-      fctx.fillStyle = CROWD_CLOTH[p.c]; fctx.fillRect(p.x - 2.1 * p.s, p.y - 6.5 * p.s, 4.2 * p.s, 6.5 * p.s);
-      fctx.fillStyle = CROWD_SKIN[p.k]; fctx.fillRect(p.x - 1.5 * p.s, p.y - 9.6 * p.s, 3 * p.s, 3 * p.s);
-    }
-    const off = document.createElement('canvas');
-    off.width = HERO_W; off.height = H;
-    const ctx = off.getContext('2d');
-    // полоса от нижних трибун до песка: чем она ниже, тем ближе к песку
-    ctx.drawImage(full, 0, 250 + (300 - H) * 0.55, AW, H, 0, 0, HERO_W, H);
-    const k = Math.min(1, H / 250), n = team.length, gap = 150 * Math.max(0.75, k), cx = HERO_W * 0.64;
-    team.forEach((g, i) => {
-      ensureLook(g);
-      const x = cx + (i - (n - 1) / 2) * gap, y = H - 12 * k - 6;
-      ctx.fillStyle = 'rgba(40,22,8,.35)';
-      ctx.beginPath(); ctx.ellipse(x, y, 40 * k, 8 * k, 0, 0, Math.PI * 2); ctx.fill();
-      drawFigure(ctx, figureSpec(g), { ...stancePose(g.cls), ...GUARD }, x, y, { scale: 0.95 * k, facing: x < cx ? 1 : -1 });
-    });
-    LUDUS_ART.key = key; LUDUS_ART.cv = off;
-  }
-  cv.width = HERO_W; cv.height = H;
-  cv.getContext('2d').drawImage(LUDUS_ART.cv, 0, 0);
+  ludusTraining(cv, STATE.gladiators, tier, HERO_W, H);
 }
 const HERO_W = 1280;
 

@@ -932,14 +932,7 @@ class ArenaView {
   }
 
   weaponClip(f) {
-    const w = f.spec.weapon && f.spec.weapon.b;
-    if (f.spec.ranged) return 'shoot';
-    if (w === 'longsword' || w === 'axe') return Math.random() < 0.35 ? 'cleave' : 'swing';
-    if (w === 'trident' || w === 'spear') return 'thrust';
-    if (w === 'mace' || w === 'spatha') return 'swing';
-    if (w === 'sica') return Math.random() < 0.5 ? 'swing' : 'slash';
-    if (w === 'gladius') return Math.random() < 0.55 ? 'thrust' : 'swing';
-    return 'thrust';
+    return f.spec.ranged ? 'shoot' : meleeClipOf(f.spec);
   }
 
   async approach(A, D) {

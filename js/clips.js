@@ -284,3 +284,14 @@ function lerpPose(a, b, t) {
 }
 
 const inRange = (r, f) => r && f >= r[0] && f <= r[1];
+
+// Удар ближнего боя по оружию: общий для боя и тренировки в лудусе
+function meleeClipOf(spec) {
+  const w = spec.weapon && spec.weapon.b;
+  if (w === 'longsword' || w === 'axe') return Math.random() < 0.35 ? 'cleave' : 'swing';
+  if (w === 'trident' || w === 'spear') return 'thrust';
+  if (w === 'mace' || w === 'spatha') return 'swing';
+  if (w === 'sica') return Math.random() < 0.5 ? 'swing' : 'slash';
+  if (w === 'gladius') return Math.random() < 0.55 ? 'thrust' : 'swing';
+  return 'thrust';
+}
