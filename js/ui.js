@@ -1155,7 +1155,6 @@ function startNewGame(name, tour, lanista = { portrait: 'm1', sex: 'm' }, banner
 // ------------------------------------------------------------
 //  Перенос сохранения: экспорт в файл и импорт из файла
 // ------------------------------------------------------------
-const SAVE_FILE_TAG = 'gladiator-ludus';
 const saveSummary = st => `«${esc(st.ludusName || 'Лудус')}»${st.story ? `, глава ${['I', 'II', 'III', 'IV'][st.story.chapter] || 'I'}` : ''}, день ${st.day}, бойцов ${st.gladiators.length}, денариев ${st.gold}, слава ${st.fame}`;
 
 function showSaveDialog() {
@@ -1177,28 +1176,23 @@ function showSaveDialog() {
   });
 }
 
-// Проверка, что в файле действительно сохранение лудуса
-function parseSaveFile(text) {
-  let data;
-  try { data = JSON.parse(text); } catch (e) { return null; }
-  const st = data && data.game === SAVE_FILE_TAG ? data.state : data;
-  const arrays = ['gladiators', 'armory', 'smith', 'market', 'events', 'graveyard', 'journal'];
-  if (!st || typeof st !== 'object' || !arrays.every(k => Array.isArray(st[k]))) return null;
-  if (![st.gold, st.fame, st.day].every(Number.isFinite)) return null;
-  return st;
-}
+const SAVE_FILE_ERR = {
+  tampered: 'Файл сохранения изменён вручную или повреждён: подпись не сходится. Такой файл загрузить нельзя.',
+  unsigned: 'Файл в старом формате, без подписи. Скачайте сохранение заново в текущей версии игры.',
+  invalid: 'Это не файл сохранения «Лудуса». Выберите файл, скачанный кнопкой «Скачать файл сохранения».',
+};
 
 function readSaveFile(file) {
   const box = $('#importPreview');
   if (file.size > 5e6) { box.innerHTML = '<p class="bad">Файл слишком большой для сохранения лудуса.</p>'; return; }
   const rd = new FileReader();
   rd.onload = () => {
-    const st = parseSaveFile(String(rd.result));
-    UI.importState = st;
+    const { st, err } = parseSaveData(String(rd.result));
+    UI.importState = st || null;
     box.innerHTML = st
       ? `<div class="panel mt"><p>В файле: ${saveSummary(st)}.</p>
           <button class="danger" data-act="saveImport">Заменить текущий прогресс</button></div>`
-      : '<p class="bad mt">Это не файл сохранения «Лудуса». Выберите файл, скачанный кнопкой «Скачать файл сохранения».</p>';
+      : `<p class="bad mt">${SAVE_FILE_ERR[err]}</p>`;
   };
   rd.onerror = () => { box.innerHTML = '<p class="bad mt">Не удалось прочитать файл.</p>'; };
   rd.readAsText(file);
@@ -2003,8 +1997,7 @@ const ACTIONS = {
   dlgBg: (d, el, e) => { if (e.target === el) ACTIONS.dlgCancel(); },
   saveExport: () => {
     save();
-    const data = { game: SAVE_FILE_TAG, version: 2, exported: new Date().toISOString(), state: STATE };
-    const url = URL.createObjectURL(new Blob([JSON.stringify(data)], { type: 'application/json' }));
+    const url = URL.createObjectURL(new Blob([saveFileText(STATE)], { type: 'application/json' }));
     const a = document.createElement('a');
     a.href = url; a.download = `ludus-day${STATE.day}-${new Date().toISOString().slice(0, 10)}.json`;
     document.body.appendChild(a); a.click(); a.remove();
@@ -2016,7 +2009,7 @@ const ACTIONS = {
     const st = UI.importState;
     if (!st) return;
     if (UI.battle) return toast('Сначала закончите бой.', true);
-    try { localStorage.setItem(SAVE_KEY, JSON.stringify(st)); }
+    try { localStorage.setItem(SAVE_KEY, JSON.stringify(packSave(st))); }
     catch (e) { return toast('Браузер не дал записать сохранение: хранилище недоступно или переполнено.', true); }
     // перезагрузка проведёт сохранение через обычную загрузку и миграцию
     try { sessionStorage.setItem('ludus_imported', '1'); } catch (e) { /* не страшно */ }

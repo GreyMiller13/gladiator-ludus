@@ -18,7 +18,13 @@
     toast(`Сохранение загружено: ${saveSummary(STATE)}.`);
     if (STATE.lost) showDebtLost();
     else flushScenes(() => resumeStory());
-  } else showMenu();
+  } else {
+    showMenu();
+    if (SAVE_TAMPERED) showDialog({
+      title: 'Сохранение не загружено', ok: false, cancel: 'Понятно',
+      text: 'Сохранение в этом браузере изменено вручную или повреждено: подпись не сходится. Начните новую игру или загрузите файл сохранения.',
+    });
+  }
 })();
 
 // Загруженное сохранение: недостающие поля
