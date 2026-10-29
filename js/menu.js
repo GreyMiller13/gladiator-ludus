@@ -32,8 +32,10 @@ function renderMenu() {
     return;
   }
   box.className = 'menu-box';
-  const head = `<div class="menu-head">
-      <div class="menu-crest">${ICON.crest}</div>
+  // знамя лудуса — только когда есть игра, которую можно продолжить
+  const ban = STATE && !STATE.lost ? `<div class="menu-crest"><img data-banner="${STATE.banner}" src="${bannerUrl(STATE.banner)}" alt=""></div>` : '';
+  const head = `<div class="menu-head ${ban ? '' : 'no-crest'}">
+      ${ban}
       <span class="menu-pre">лудус</span>
       <h1 class="menu-title">Кровь и&nbsp;Песок</h1>
     </div>`;

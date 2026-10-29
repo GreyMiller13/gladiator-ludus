@@ -69,7 +69,7 @@ function render() {
 function renderHeader() {
   const res = (icon, label, value, cls = '') => `<div>${ICON[icon]}<div class="rv"><label>${label}</label><strong class="${cls}">${value}</strong></div></div>`;
   $('header').innerHTML = `
-    <div class="brand">${ICON.crest}<div><span>лудус</span><h1>${esc(STATE.ludusName)}</h1></div></div>
+    <div class="brand"><img class="crest" data-banner="${STATE.banner}" src="${bannerUrl(STATE.banner)}" alt=""><div><span>лудус</span><h1>${esc(STATE.ludusName)}</h1></div></div>
     <div class="res">
       ${res('coin', 'денарии', STATE.gold, STATE.gold < 0 ? 'neg' : '')}
       ${debtRes()}
@@ -158,7 +158,6 @@ function endDay() {
 
 // Значки шапки (рисуются линией, цвет — от текста)
 const ICON = {
-  crest: '<svg class="crest" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 40L35 10M39 40L13 10"/><path d="M31 9l6-1-1 6M17 9l-6-1 1 6"/><path d="M15 36l-4 4M33 36l4 4"/><path d="M17 30c0-9 3-14 7-14s7 5 7 14l-2 5h-10z" fill="currentColor" fill-opacity=".25"/><path d="M24 16v-5M20 12c1-3 7-3 8 0"/><path d="M21 26h6"/></svg>',
   coin: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="5.5" stroke-dasharray="1.5 1.5"/><path d="M10 9.5h3.2a1.6 1.6 0 010 3.2H10v-3.2zm0 3.2h3.6a1.6 1.6 0 010 3.2H10z"/></svg>',
   laurel: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M12 21c-5-2-8-6-8-12M12 21c5-2 8-6 8-12"/><path d="M5 9c1 1 2 1 3 0-1-1-2-1-3 0zM4.5 13c1 .8 2.2.8 3-.2-1-.8-2.2-.8-3 .2zM6 16.8c1 .5 2.2.3 2.8-.7-1-.5-2.2-.3-2.8.7zM19 9c-1 1-2 1-3 0 1-1 2-1 3 0zM19.5 13c-1 .8-2.2.8-3-.2 1-.8 2.2-.8 3 .2zM18 16.8c-1 .5-2.2.3-2.8-.7 1-.5 2.2-.3 2.8.7z" fill="currentColor"/></svg>',
   helm: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M5 18c0-8 3-12 7-12s7 4 7 12l-3 1v-4h-8v4z"/><path d="M12 6V3M9 4c1-1.5 5-1.5 6 0"/><path d="M9 12h6"/></svg>',

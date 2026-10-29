@@ -106,7 +106,7 @@ header::after {
           mask: linear-gradient(90deg, #000 0 28%, transparent 34% 52%, #000 60% 70%, transparent 78% 100%);
 }
 .brand { display: flex; align-items: center; gap: 12px; }
-.brand .crest { width: 44px; height: 44px; color: var(--blood); flex: none; }
+.brand .crest { width: 38px; height: auto; flex: none; filter: drop-shadow(0 2px 2px rgba(0,0,0,.6)); }
 .brand > div { display: flex; flex-direction: column; }
 .brand span { font-size: 13px; color: var(--muted); font-style: italic; }
 .brand h1 { font-size: 34px; line-height: 1; color: var(--blood-hi); text-shadow: 0 0 1px #5a0c06, 0 2px 0 rgba(0,0,0,.6); }
@@ -886,7 +886,9 @@ body.menu-on { overflow: hidden; }
 .menu-box { position: relative; min-height: calc(100vh / var(--z, 1)); width: min(500px, 100%); padding: 0 48px; display: flex; flex-direction: column; justify-content: center; align-items: flex-start; gap: 0; }
 .menu-head { display: grid; grid-template-columns: auto 1fr; column-gap: 14px; align-items: end; }
 .menu-crest { grid-row: 1 / 3; align-self: start; padding-top: 6px; }
-.menu-crest .crest { width: 52px; height: 52px; color: var(--blood); filter: drop-shadow(0 2px 0 rgba(0,0,0,.6)); }
+.menu-crest img { display: block; width: 78px; height: auto; filter: drop-shadow(0 3px 4px rgba(0,0,0,.7)); }
+.menu-head.no-crest { grid-template-columns: 1fr; }
+.menu-head.no-crest .menu-title { grid-column: 1; }
 .menu-pre { font-size: 17px; color: var(--dust); font-style: italic; line-height: 1; }
 .menu-title { grid-column: 2; font-size: clamp(52px, 6.6vw, 82px); line-height: .9; color: var(--blood-hi); text-shadow: 0 0 1px #5a0c06, 0 4px 0 rgba(0,0,0,.75); position: relative; padding-bottom: 24px; letter-spacing: .01em; }
 .menu-title::after { content: ''; position: absolute; left: 0; bottom: 0; width: 300px; height: 20px; background: var(--drips) left top / 220px 20px repeat-x; }
