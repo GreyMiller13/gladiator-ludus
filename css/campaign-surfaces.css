@@ -1,0 +1,119 @@
+/* States without a standalone mockup use the live shell component system. */
+#coach { z-index:65; }
+#scene { z-index:70; }
+#dialog .dlg-bg { z-index:80; }
+:is(#dialog,#scene,#coach,#modal) { --text:var(--ink); --muted:var(--sub); --bronze:var(--gold); --bronze-hi:var(--gold); --blood-hi:#d49b83; --font-head:Georgia,serif; --font-body:'Segoe UI',sans-serif; }
+:is(#dialog .dlg,#modal .narrative-card,#coach .tour-card) { background:#1b2218; color:var(--ink); border:1px solid #61573f; border-radius:12px; font-family:'Segoe UI',sans-serif; box-shadow:0 22px 70px #0009; }
+#dialog .dlg::before,#modal .narrative-card::before { display:none; }
+:is(#dialog,#modal .narrative-card,#scene,#coach) button { background:#252d20; color:var(--ink); border:1px solid #61573f; border-radius:6px; padding:10px 16px; font:600 13px 'Segoe UI',sans-serif; text-shadow:none; box-shadow:none; }
+:is(#dialog,#modal .narrative-card,#scene,#coach) button:hover { background:#343d2b; border-color:var(--gold); }
+:is(#dialog,#modal .narrative-card,#scene,#coach) button.primary { background:var(--gold); color:#201e13; border-color:var(--gold); }
+:is(#dialog,#modal .narrative-card,#scene,#coach) button.danger { background:#683b30; color:#fff0e2; }
+:is(#dialog,#modal .narrative-card,#scene,#coach) :focus-visible { outline:2px solid var(--gold); outline-offset:3px; }
+#dialog .dlg h2,#modal .narrative-card h2 { color:var(--ink); font:28px/1.2 Georgia,serif; text-shadow:none; }
+#dialog .dlg input { background:#131710; color:var(--ink); border-color:#61573f; }
+#dialog .dlg { max-height:calc(100dvh / var(--z,1) - 32px); overflow:auto; text-align:left; }
+#dialog .dlg-btns { justify-content:flex-end; padding-top:18px; border-top:1px solid #61573f; }
+#dialog .debt-sum { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; background:#131710; border:1px solid #61573f; border-radius:8px; padding:16px; }
+#dialog .debt-sum>div { min-width:0; }
+#dialog .debt-sum b { color:var(--gold); font-family:Georgia,serif; }
+#dialog .debt-face { width:72px;height:90px;object-fit:cover;border-radius:6px; }
+#dialog .tasklist { padding:0;list-style:none; }
+#dialog .tasklist li { background:#131710;border:1px solid #424b35;border-radius:7px;padding:14px;margin:8px 0; }
+#dialog .tasklist li.current { border-color:var(--gold); }
+#dialog .tasklist .mk { color:var(--gold); }
+#modal .narrative-card { width:min(760px,100%); max-width:760px; padding:28px; text-align:left; overflow:auto; }
+.narrative-heading { background:none;padding:0 0 20px;border-bottom:1px solid #61573f;margin-bottom:22px; }
+.narrative-heading::after { display:none; }
+#modal .narrative-card p { line-height:1.65; max-width:65ch; }
+#modal .narrative-card .kv { display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;background:#131710;border-radius:8px;padding:20px; }
+#modal .narrative-card .kv span { display:flex; flex-direction:column;gap:6px; }
+.narrative-actions { display:flex; flex-wrap:wrap;gap:12px;justify-content:flex-end;border-top:1px solid #61573f;padding-top:20px;margin-top:24px; }
+#modal .narrative-card>.debt-face,#modal .narrative-card>.portrait { float:left;width:96px;height:120px;object-fit:cover;border-radius:8px;margin:0 20px 16px 0; }
+#scene { align-items:center; padding:24px; }
+#scene .scene-bg { background:#080c09d9;backdrop-filter:blur(5px); }
+#scene .story-conversation { display:grid; grid-template-columns:220px minmax(0,1fr);align-items:stretch;gap:0;width:min(880px,100%);padding:0;overflow:hidden;border:1px solid #61573f;border-radius:12px;background:#1b2218;color:var(--ink);text-align:left; }
+#scene .scene-face { width:220px;height:100%;min-height:310px;object-fit:cover;margin:0;filter:none; }
+#scene .scene-text { display:flex;flex-direction:column;padding:28px; }
+#scene .scene-who { color:var(--gold);font:28px Georgia,serif;margin:14px 0; }
+#scene .scene-text p { font:16px/1.65 'Segoe UI',sans-serif; }
+#scene .scene-btns { flex-wrap:wrap;flex-direction:row;margin-top:auto;padding-top:30px; }
+.scene-progress { color:var(--sub);font-size:12px; }
+#coach .tour-card { padding:18px; }
+#coach .coach-head img { width:48px;height:60px;object-fit:cover;border-radius:5px; }
+#coach .coach-head b { font:22px Georgia,serif;color:var(--gold); }
+#coach .tour-card p { font:14px/1.55 'Segoe UI',sans-serif; }
+#toasts { max-width:calc(100vw / var(--z,1) - 24px); }
+#toasts .toast { background:#1b2218;border:1px solid #61573f;border-left:4px solid var(--gold);border-radius:8px;color:var(--ink);font:14px/1.5 'Segoe UI',sans-serif; }
+#toasts .toast.bad { border-left-color:#d49b83; }
+#tip { background:#1b2218;color:var(--ink);border-color:#61573f;font-family:'Segoe UI',sans-serif; }
+.campaign-tabs .betpanel { padding:26px;background:#1b2218;border:1px solid #61573f;border-radius:12px; }
+.campaign-tabs .betpanel>.eh { padding-bottom:16px;border-bottom:1px solid #61573f; }
+.campaign-tabs .betpanel .fmt { color:var(--gold);font:14px 'Segoe UI',sans-serif; }
+.campaign-tabs .betpanel .small { font-family:'Segoe UI',sans-serif; }
+.campaign-tabs .betpanel>.small { text-align:justify;max-width:none;margin:20px 0 30px; }
+.campaign-tabs .bet-sides { display:grid;grid-template-columns:minmax(0,380px) 40px minmax(0,380px);justify-content:center;gap:16px;align-items:stretch; }
+.campaign-tabs .bet-side { background:#131710;border:1px solid #424b35;border-radius:10px;padding:20px;gap:16px;min-width:0; }
+.campaign-tabs .bet-side.picked,.campaign-tabs .bet-side.won { border-color:var(--gold); }
+.campaign-tabs .bet-side .portrait { width:80px;height:100px; }
+.campaign-tabs .bet-who { min-width:0;flex:1; }
+.campaign-tabs .bet-payout { margin:8px 0; }
+.campaign-tabs .bet-btns { margin-top:auto; }
+.campaign-tabs .bet-odds { flex-wrap:wrap; }
+.campaign-tabs .bet-who,.campaign-tabs .bet-stake { overflow-wrap:anywhere; }
+.campaign-tabs .bet-who>b { display:block;font:22px Georgia,serif;overflow-wrap:anywhere; }
+.campaign-tabs .bet-pct { color:var(--gold);font:32px Georgia,serif; }
+.campaign-tabs .bet-vs { align-self:center;color:var(--sub); }
+.campaign-tabs .bet-stake { flex-wrap:wrap;gap:12px;border-top:1px solid #61573f;padding-top:20px;margin-top:24px; }
+@media(max-width:1100px){
+ .campaign-tabs .bet-sides { grid-template-columns:minmax(0,380px); }
+ .campaign-tabs .bet-vs { text-align:center; }
+}
+@media(max-width:700px){
+ #scene { padding:12px; }
+ #scene .story-conversation { grid-template-columns:88px minmax(0,1fr);max-height:calc(100dvh / var(--z,1) - 24px);overflow:auto; }
+ #scene .scene-face { width:88px;height:120px;min-height:0;margin-top:18px; }
+ #scene .scene-text { padding:18px 14px; }
+ #scene .scene-who { font-size:23px; }
+ #scene .scene-text p { font-size:14px; }
+ #scene .scene-btns { margin-left:-88px;padding-top:20px;gap:8px; }
+ #scene .scene-btns .sp { display:none; }
+ #modal .narrative-card { padding:18px; }
+ #modal .narrative-card .kv { grid-template-columns:repeat(2,minmax(0,1fr)); }
+ #dialog .debt-sum { padding:10px;gap:8px;font-size:12px; }
+ .campaign-tabs .betpanel { padding:16px; }
+ .campaign-tabs .bet-sides { grid-template-columns:minmax(0,380px); }
+ .campaign-tabs .bet-vs { text-align:center; }
+ .campaign-tabs .bet-side { padding:14px; }
+}
+
+/* Fighter sale confirmation */
+#dialog .dlg.fighter-sale{padding:0;width:min(520px,calc(100vw / var(--z,1) - 24px));text-align:left}
+#dialog .fighter-sale .dialog-head{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:20px 24px;border-bottom:1px solid #61573f}
+#dialog .fighter-sale .dialog-head h2{margin:0;font-size:26px}
+#dialog .fighter-sale .close{position:static;padding:4px 10px;background:transparent;font-size:24px}
+#dialog .fighter-sale>p{padding:22px 24px 0;margin:0;max-width:none;line-height:1.6}
+#dialog .fighter-sale .dlg-btns{border:0;margin:0;padding:24px;gap:10px}
+
+#dialog .debt-who { justify-content:flex-start; }
+
+/* Compact betting controls and cards */
+#game-shell .betpanel{padding:16px 18px}
+#game-shell .betpanel>.eh{padding-bottom:8px}
+#game-shell .betpanel>.small{margin:12px 0 16px;line-height:1.5}
+#game-shell .betpanel .bet-sides{gap:12px;margin:0;grid-template-columns:minmax(0,380px) 28px minmax(0,380px)}
+#game-shell .betpanel .bet-side{padding:12px;gap:12px}
+#game-shell .betpanel .pbtn{align-self:flex-start;flex-shrink:0;padding:0}
+#game-shell .betpanel .bet-who{gap:3px}
+#game-shell .betpanel .bet-who>b{font-size:20px}
+#game-shell .betpanel .bet-pct{font-size:26px}
+#game-shell .betpanel .bet-payout{margin:5px 0}
+#game-shell .betpanel .bet-stake{max-width:812px;margin:14px auto 0;padding-top:12px;gap:8px;justify-content:center}
+#game-shell .betpanel .bet-stake .sp{flex:0 0 8px}
+@media(max-width:900px){
+ #game-shell .betpanel .bet-sides{grid-template-columns:minmax(0,380px);gap:8px}
+ #game-shell .betpanel .bet-vs{font-size:18px;line-height:1}
+ #game-shell .betpanel .bet-stake .sp{display:none}
+}
+
+#game-shell .betpanel .small:not(button){min-height:0;padding:0}

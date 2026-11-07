@@ -263,6 +263,7 @@ const META = (() => {
     }
     if (!Array.isArray(STATE.contracts) || !STATE.contracts.length) generateContracts();
     else STATE.contracts.forEach(c => (c.enemies || []).forEach(lookOf));
+    (STATE.contracts || []).forEach(c => recordContractHistory(c));
     check();
   }
 
@@ -581,6 +582,19 @@ const META = (() => {
   // Бой можно остановить после этого раунда и передать info.survived = true.
   const contractRoundLimit = c => (c && c.cond && c.cond.type === 'survive' ? c.cond.rounds : null);
 
+  function recordContractHistory(contract, info = {}) {
+    if (!contract.done || !contract.result) return;
+    const history = STATE.meta.contractHistory ||= [];
+    if (history.some(c => c.id === contract.id)) return;
+    history.unshift({
+      id: contract.id, day: STATE.meta.contractsDay || STATE.day,
+      title: contract.title, client: contract.client, playerSize: contract.playerSize,
+      size: contract.size, condition: contract.cond?.text || 'Победить',
+      xpMult: contract.xpMult, ...contract.result,
+      team: (info.playerUnits || []).map(u => u.g.name), rounds: info.rounds ?? null,
+    });
+  }
+
   function contractResult(contract, info) {
     const none = { success: false, gold: 0, text: '', artifact: null };
     if (!ready() || !contract) return none;
@@ -608,6 +622,7 @@ const META = (() => {
     contract.done = true;
     contract.success = ok;
     contract.result = { success: ok, gold, fame, text, artifactName: art ? art.name : null };
+    recordContractHistory(contract, info);
     log(text);
     if (art) say(`<b>Реликвия на складе:</b> <span class="q4">${escH(art.name)}</span>`);
     check();
@@ -717,7 +732,7 @@ const META = (() => {
 
   return {
     // данные
-    ACHIEVEMENTS: ACH, ACH_BY_ID, GROUPS, DIFFICULTY, ARTIFACTS, CONTRACT_ARTS,
+    ACHIEVEMENTS: ACH, ACH_BY_ID, GROUPS, DIFFICULTY, ARTIFACTS, CONTRACT_ARTS, FAIL_FEE,
     // хуки
     init, onNewDay, track, check, contractResult,
     // экраны
