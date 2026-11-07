@@ -9,12 +9,21 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Forum&family=Alegreya:ital,wght@0,400;0,500;0,700;1,400&family=Cormorant+SC:wght@500;600;700&family=PT+Serif:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css?v=ec17e93">
-</head>
+  <link rel="stylesheet" href="css/combat-screen.css?v=20261104">
+  <link rel="stylesheet" href="css/shell-reference.css?v=shell-20261105">
+  <link rel="stylesheet" href="css/menu-reference.css?v=shell-20261105">
+  <link rel="stylesheet" href="css/shell.css?v=tasks-fighter-20261106">
+  <link rel="stylesheet" href="css/campaign-reference.css?v=tabs-20261105">
+  <link rel="stylesheet" href="css/campaign-tabs.css?v=guide-wheel-20261107">
+  <link rel="stylesheet" href="css/menu-pages.css?v=menu-clean-20261105">
+<link rel="stylesheet" href="css/campaign-surfaces.css?v=compact-banners-20261107">
+  </head>
 <body>
-  <header></header>
-  <nav></nav>
-  <div id="taskbar" hidden></div>
-  <main></main>
+  <div id="game-shell" class="app">
+    <aside id="sidebar" class="sidebar" aria-label="Навигация игры"><nav></nav></aside>
+    <button id="nav-shade" class="menu-backdrop" data-act="shellNavClose" aria-label="Закрыть навигацию" hidden></button>
+    <div class="workspace"><header class="topbar"></header><div id="taskbar" class="taskbar" hidden></div><main class="content"></main></div>
+  </div>
   <div id="modal"></div>
   <div id="battle" hidden></div>
   <div id="menu" hidden><canvas class="menu-bg" aria-hidden="true"></canvas><div class="menu-shade"></div><div class="menu-box"></div></div>
@@ -36,11 +45,22 @@
   <script src="js/arena.js"></script>
   <script src="js/training.js"></script>
   <script src="js/portrait.js"></script>
-  <script src="js/banner.js"></script>
-  <script src="js/ui.js"></script>
+  <script src="js/banner.js?v=compact-banners-20261107"></script>
+  <script src="js/ui.js?v=bets-layout-20261107"></script>
   <script src="js/meta.js"></script>
-  <script src="js/scene.js"></script>
+  <script src="js/scene.js?v=bets-layout-20261107"></script>
   <script src="js/menu.js"></script>
+  <script src="js/arena-art.js?v=combat-20261104"></script>
+  <script src="js/combat-campaign.js?v=combat-20261104"></script>
+  <script src="js/combat-screen.js?v=hotkey-labels-20261107"></script>
+  <script src="js/shell-art.js?v=shell-20261105"></script>
+  <script src="js/shell-training.js?v=shell-20261105"></script>
+  <script src="js/shell.js?v=rules-layout-20261106"></script>
+  <script src="js/fighter-screen.js?v=guide-finish-20261107"></script>
+  <script src="js/menu-scene.js?v=menu-fix-20261105"></script>
+  <script src="js/campaign-tabs.js?v=battle-pickers-20261106"></script>
+  <script src="js/menu-pages.js?v=compact-banners-20261107"></script>
+  <script src="js/campaign-surfaces.js?v=final-20261105"></script>
   <script src="js/main.js"></script>
 </body>
 </html>

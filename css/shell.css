@@ -1,0 +1,211 @@
+/* Editable campaign integration. Reference geometry lives in shell-reference.css.
+   Scope avoids the independent combat screen and injected META style rules. */
+body{--ink:#f4ead6;--sub:#c4b69e;--dim:#a19682;--gold:#dab777;--green:#b2c592;--side:210px;--venue-height:clamp(280px,calc(100svh - 480px),400px);background:#131710}
+#game-shell,#modal,#menu,#dialog{--font-head:Georgia,'Times New Roman',serif;--font-body:'Segoe UI',system-ui,sans-serif;--panel:#1b2218;--panel2:#20291c;--line:#61573f;--line2:#83714d;--text:var(--ink);--muted:var(--sub);--bronze:var(--gold);--bronze-hi:var(--gold);--bone:var(--ink);--ash:var(--dim);--bg:#131710;--q0:#929087;--q1:#8bb781;--q2:#79afcf;--q3:#b696da;--q4:#dab777;color:var(--ink);font:15px/1.45 'Segoe UI',system-ui,sans-serif}
+#game-shell{display:grid;grid-template-columns:var(--side) minmax(0,1fr);width:100%;max-width:none;margin:0;min-height:100svh}
+#game-shell *{min-width:0}
+#game-shell header,#game-shell nav,#game-shell main{margin:0;max-width:none}
+#game-shell header{position:relative;top:auto;z-index:1;box-shadow:none;border-radius:0}
+#game-shell header::before,#game-shell header::after,#game-shell h1::after,#game-shell h2::after,#game-shell h3::after,#modal h2::after,#modal h3::after{display:none}
+#game-shell nav{display:block;border:0;padding:0;background:none;box-shadow:none;overflow:visible;flex:none;white-space:normal}
+#game-shell .sidebar{overflow-y:auto;gap:0}
+#game-shell .nav-group{margin-top:12px}
+#game-shell nav .nav-button{display:flex;width:100%;font-family:inherit;letter-spacing:0;text-transform:none;white-space:normal;box-shadow:none}
+#game-shell nav .nav-button .ico{width:22px}
+#game-shell .sidebar-menu{border-top:1px solid #77624555;margin-top:12px;padding-top:10px}
+#game-shell .side-bottom{margin-top:auto}
+#game-shell .resources.res{padding:0;background:none;border:0;box-shadow:none;flex-wrap:nowrap;align-items:center}
+#game-shell .res svg{width:24px;height:24px}
+#game-shell .res .resource{display:flex;flex-direction:row;gap:8px}
+#game-shell .res .resource>div{display:block}
+#game-shell .res .debtres{background:transparent;border:0;color:var(--gold);padding:0;display:flex;gap:8px;align-items:center;text-align:left;box-shadow:none}
+#game-shell .debtres label{font:10px 'Segoe UI',sans-serif;text-transform:uppercase;color:var(--dim)}
+#game-shell .debtres strong{font:23px Georgia,serif;color:var(--ink)}
+#game-shell .debtres small{font-size:10px;color:var(--gold);display:block}
+#game-shell .debtres.urgent strong,#game-shell .debtres.urgent small{color:#efa287}
+#game-shell .identity h1{font-family:Georgia,serif;color:var(--ink);text-shadow:none;text-transform:none;letter-spacing:0}
+#game-shell #taskbar{margin:0;max-width:none;min-height:0;padding:0}
+#game-shell #taskbar .taskline{width:100%;border:0;border-radius:0;display:flex;gap:15px;align-items:center;padding:10px 25px;background:#a98d4610;color:var(--sub);font:13px 'Segoe UI',sans-serif;text-align:left}
+#game-shell .tl-ch{color:var(--gold);font-size:12px;flex-shrink:0}
+#game-shell .tl-more{margin-left:auto;color:var(--gold);font-size:12px;white-space:nowrap}
+#game-shell main.content{display:block;overflow:auto;padding:20px 25px 38px;min-height:0;height:auto}
+#game-shell main:not([data-tab="ludus"]){display:flex;flex-direction:column}
+#game-shell .training{height:var(--venue-height);min-height:var(--venue-height);margin:0 0 18px}
+#game-shell .training canvas{height:100%;top:0;bottom:0}
+#game-shell .dashboard{height:auto;overflow:visible;align-items:start}
+#game-shell .barracks-section,#game-shell .right-rail{height:auto;overflow:visible}
+#game-shell .right-rail{display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto}
+#game-shell .right-rail>.panel{grid-column:auto;grid-row:auto;height:auto;overflow:visible}
+#game-shell .cards{height:auto;overflow:visible;padding:0}
+#game-shell .fighter.gcard{margin:0;box-shadow:none;border-radius:3px;cursor:pointer;color:var(--ink);text-transform:none;letter-spacing:normal}
+#game-shell .fighter.gcard::before,#game-shell .fighter.gcard::after{display:none}
+#game-shell .section-head h2,#game-shell .barracks-head h3{color:var(--ink);text-shadow:none;letter-spacing:0}
+#game-shell .panel{box-shadow:none;border-radius:3px}
+#game-shell .panel h3{padding:0;border:0;letter-spacing:0;color:var(--ink)}
+#game-shell .journal-scroll{max-height:250px;overflow:auto}
+#game-shell .today-list{display:block;margin:0;padding:0;list-style:none}
+#game-shell .todo-row .link{font-family:inherit;text-transform:none;letter-spacing:0;box-shadow:none}
+#game-shell .recruit{margin-top:0}
+#game-shell .motion-toggle{min-width:32px;font-size:18px}
+#game-shell button,#modal button,#dialog button{font-family:'Segoe UI',sans-serif;text-transform:none;letter-spacing:normal;box-shadow:none}
+#game-shell button::after,#modal button::after,#dialog button::after{background-image:none}
+#game-shell .primary,#modal .primary,#dialog .primary{background:linear-gradient(#ddc08b,#b99a60);color:#241e13;border:1px solid #c7a76c;text-shadow:none}
+#game-shell button:focus-visible,#modal button:focus-visible,#dialog button:focus-visible,#modal [tabindex]:focus-visible{outline:3px solid #f3d28d;outline-offset:2px}
+#game-shell .small,#modal .small{min-height:32px}
+body.menu-on #game-shell,body.combat-active #game-shell{display:none}
+#nav-shade{padding:0;border:0}
+
+/* Main menu: approved backdrop, choreography and text composition. */
+#menu{position:fixed;inset:0;z-index:50;overflow:auto;background:#131510;font-size:18px;padding:0;display:block}
+#menu[hidden]{display:none!important}
+#menu::before{content:'';position:fixed;inset:0;background:#55472f url('../assets/shell/menu-background.jpg') center/cover no-repeat;pointer-events:none}
+#menu .menu-bg{position:fixed;inset:0;width:100%;height:100%;object-fit:fill;opacity:1;filter:brightness(.86) saturate(.72)}
+#menu .menu-shade{position:fixed;inset:0;background:linear-gradient(90deg,#0c100dfa 0%,#0c100df0 24%,#0d110e9e 47%,#0d110e21 80%),linear-gradient(0deg,#0c100df2,transparent 65%,#0c100d59);pointer-events:none}
+#menu .menu-box{position:relative;width:min(1150px,calc(100% - 30px));max-width:none;margin:30px auto;padding:25px;background:#182017f2;border:1px solid #766448;box-shadow:none}
+#menu .menu-box.shell-menu{width:100%;margin:0;padding:0;background:none;border:0;min-height:100svh}
+#menu .shell{min-height:100svh}
+#menu .main-home{display:flex;align-items:center;min-height:calc(100svh - 105px)}
+#menu .menu-nav{border:0;padding:0;background:none;margin:16px 0 0;box-shadow:none}
+#menu .nav-button{font-family:'Segoe UI',sans-serif;text-transform:none;letter-spacing:0;box-shadow:none;border-radius:0}
+#menu .arena-caption{pointer-events:none}
+#menu .continue{font-family:'Segoe UI',sans-serif;letter-spacing:normal;text-transform:none}
+#menu .menu-title{font:44px Georgia,serif;color:var(--ink);text-shadow:none}
+#menu .menu-title::after{display:none}
+#menu .menu-h{color:var(--ink);text-shadow:none}
+
+/* New campaign retains the real form and choices, laid out like the approved form. */
+#dialog .campaign-form{width:min(1150px,calc(100vw - 32px));max-width:none;background:linear-gradient(135deg,#22251ff7,#151a16f5);padding:30px 34px;border:1px solid #766448;border-radius:3px;color:var(--ink)}
+#dialog .campaign-form h2{font:40px Georgia,serif;color:var(--ink);margin-bottom:20px;text-shadow:none}
+#dialog .campaign-form .dlg-text{font:16px/1.5 'Segoe UI',sans-serif;color:var(--sub)}
+#dialog .campaign-form input[type="text"]{background:#121912;border:1px solid #8c7958;color:var(--ink);padding:12px 15px;font-size:22px;min-height:53px}
+#dialog .campaign-form .ng-cols{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:30px;margin-top:22px}
+#dialog .campaign-form .lanista-pick{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+#dialog .campaign-form .lp{display:flex;align-items:center;flex-direction:column;justify-content:center;border:1px solid #5b5d49;background:#11191088;padding:10px;min-width:0;min-height:145px;color:var(--sub)}
+#dialog .campaign-form .lp img{width:88px;height:88px;object-fit:contain}
+#dialog .campaign-form .lp span{font-size:13px;white-space:normal}
+#dialog .campaign-form .banner-pick{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
+#dialog .campaign-form .bp{width:auto;height:145px;min-width:0;padding:5px;background:#11191088;border:1px solid #5b5d49}
+#dialog .campaign-form .bp img{height:125px;width:100%;object-fit:contain}
+#dialog .campaign-form .lp.on,#dialog .campaign-form .bp.on{border-color:var(--gold);background:#a0803030;box-shadow:inset 0 0 0 1px #dab77744}
+#dialog .campaign-form .choice-descriptions{display:grid;grid-template-columns:1.2fr 1fr;gap:30px;margin:18px 0;font-size:13px}
+#dialog .campaign-form .dlg-check{font-size:15px}
+#dialog .campaign-form .dlg-actions{margin-top:20px}
+
+/* Fighter window uses the reference layout, with original DnD selector contracts. */
+#modal .modal-bg{position:fixed;inset:0;padding:12px;background:#060a07cf;backdrop-filter:blur(7px);z-index:60;display:flex;align-items:center;justify-content:center;overflow:auto}
+#modal .fighter-dialog{position:relative;flex:none;margin:auto;max-width:100%;color:var(--ink);border:1px solid #98805a;background:#20271d;box-shadow:0 24px 100px #0009;padding:0}
+#modal .fighter-dialog .dialog-head{display:flex;align-items:center;justify-content:space-between}
+#modal .fighter-dialog .close{position:static;display:grid;place-items:center;flex-shrink:0;color:var(--ink);background:transparent;font:28px 'Segoe UI',sans-serif;line-height:1;width:38px;height:38px;padding:0}
+#modal .fighter-dialog h2,#modal .fighter-dialog h3,#modal .fighter-dialog h4{color:var(--ink);text-shadow:none;letter-spacing:0}
+#modal .fighter-dialog h4{font:16px Georgia,serif}
+#modal .profile-identity{min-width:0}
+#modal .profile-identity h3{overflow-wrap:anywhere}
+#modal .equipment-doll.doll{padding:0;background:none;border:0;overflow:visible;width:auto}
+#modal .equip-slot.dslot{display:flex;position:relative;width:auto;border:1px solid #61573f;background:#161d14;padding:6px;gap:6px;box-shadow:none;border-radius:3px;cursor:pointer}
+#modal .equip-slot.dslot img{width:42px;height:52px;object-fit:contain;flex-shrink:0}
+#modal .equip-slot.dslot strong{display:block;font-size:11px;overflow-wrap:anywhere;padding-right:12px}
+#modal .equip-slot .dx{position:absolute;top:0;right:0;padding:0;width:22px;height:22px;min-height:22px;background:#1119;color:var(--sub);border:0}
+#modal .equip-slot.on{outline:1px solid var(--gold)}
+#modal .equipment-figure.dfig{display:flex;flex-direction:column;justify-content:center;align-items:center;position:relative;background:none;border:0;width:auto;min-width:0;min-height:0;overflow:hidden}
+#modal .equipment-figure>img,#modal .equipment-figure>canvas{width:100%;height:100%;min-height:0;object-fit:contain;flex:1}
+#modal .equipment-figure .pv-btns{position:static;display:flex;gap:3px;justify-content:center;flex-wrap:wrap;flex-shrink:0;width:100%;padding-top:4px}
+#modal .pv-btns .small{font-size:10px;min-height:23px;padding:2px 5px}
+#modal .stash-panel.panel{margin:0;box-shadow:none;border-radius:0}
+#modal .stash-panel h3{border:0;padding:0;display:flex;gap:8px;align-items:center;justify-content:space-between}
+#modal .stash-list{display:grid;grid-template-columns:minmax(0,1fr);gap:5px}
+#modal .stash-item{display:flex;align-items:center;min-width:0;width:100%;border:1px solid #61573f;padding:6px;gap:8px;background:#151c13;font-size:12px}
+#modal .stash-item>div{flex:1;min-width:0}
+#modal .stash-item strong,#modal .stash-item small{display:block;overflow-wrap:anywhere}
+#modal .stash-item small{font-size:10px;color:var(--sub)}
+#modal .stash-item img{width:42px;height:48px;object-fit:contain;flex-shrink:0}
+#modal .stash-item details{font-size:11px;margin-top:4px}
+#modal .gear-compare{display:grid;grid-template-columns:1fr auto;gap:3px 8px;margin-top:6px}
+#modal .better{color:#b2c592}#modal .worse{color:#e0a18d}
+#modal .qb0{border-color:var(--q0)!important}#modal .qb1{border-color:var(--q1)!important}#modal .qb2{border-color:var(--q2)!important}#modal .qb3{border-color:var(--q3)!important}#modal .qb4{border-color:var(--q4)!important}
+#modal .drop-ok{outline:1px dashed var(--gold)}#modal .drop-hover{outline:3px solid var(--gold);background:#a98d4540}
+#modal .attr-row b small{font-size:11px;color:var(--green);margin-left:3px}
+#modal .derived{border:0;margin:0;padding:0;grid-template-columns:minmax(0,1fr) auto;font-size:13px}
+#modal .derived b{font-weight:500;color:var(--ink)}
+#modal .derived span{color:var(--sub)}
+#modal .skill small{font-size:10px;color:var(--sub)}
+#modal .profile-foot .switcher{width:100%;justify-content:space-between}
+#modal .profile-head .actions{margin-top:0}
+#modal .attrs-panel .points,#modal .profile-view .points{background:none;border:0}
+#dialog .dlg{background:#20271d;border-color:#98805a;color:var(--ink)}
+#dialog .dlg h2{color:var(--ink);text-shadow:none}
+#dialog .dlg::before{display:none}
+#dialog .dlg p{color:var(--sub)}
+.shell-journal{max-height:55vh;overflow:auto}
+.shell-journal small{color:var(--gold)}
+@media(min-width:1101px){#game-shell .workspace{height:100svh;display:grid;grid-template-rows:auto auto minmax(0,1fr);overflow:hidden}#game-shell main.content{height:100%;overflow:auto}}
+@media(min-width:801px){
+ #game-shell main.content[data-tab="ludus"]{display:grid;height:100%;grid-template-rows:auto var(--venue-height) minmax(0,1fr);gap:11px;padding-top:12px;padding-bottom:12px;overflow:hidden}
+ #game-shell main[data-tab="ludus"]>.training,#game-shell main[data-tab="ludus"]>.section-head{margin:0}
+ #game-shell .dashboard{height:100%;min-height:0;overflow:hidden;grid-template-columns:minmax(0,1fr) 280px;gap:16px}
+ #game-shell .barracks-section{height:100%;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+ #game-shell .cards{flex:1;min-height:0;overflow:auto;grid-auto-rows:max-content;align-content:start}
+ #game-shell .right-rail{height:100%;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:12px;margin:0}
+ #game-shell .right-rail>.panel{flex-shrink:0}
+}
+@media(max-width:800px){
+ #game-shell main.content[data-tab="ludus"]{display:block;height:auto;overflow:visible}
+ #game-shell main.content[data-tab="ludus"] .dashboard{display:grid;height:auto;overflow:visible;grid-template-columns:minmax(0,1fr)}
+ #game-shell main.content[data-tab="ludus"] .right-rail{display:grid;grid-column:1;grid-row:auto;height:auto;overflow:visible;margin-top:15px}
+ #game-shell main.content[data-tab="ludus"] .barracks-section{height:auto;overflow:visible}
+ #game-shell main.content[data-tab="ludus"] .cards{overflow:visible}
+ #game-shell .workspace{height:auto;overflow:visible}
+}
+@media(max-width:1100px){#modal .equipment-figure>img,#modal .equipment-figure>canvas{height:300px;flex:none}#modal .equipment-figure{min-height:360px}}
+@media(max-width:650px){
+  #game-shell{display:block}#game-shell .sidebar{position:fixed;z-index:45;height:100svh;width:250px;max-width:86vw}
+  #game-shell .resources.res{display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px 14px;grid-column:1/-1}
+  #game-shell .resource strong,#game-shell .debtres strong{font-size:20px}
+  #game-shell .header-actions{grid-column:3;grid-row:1}
+  #game-shell .header-actions button{white-space:normal;max-width:100px;padding:7px;font-size:11px}
+  #game-shell .identity h1{font-size:20px}
+  #game-shell .identity{min-width:0}#game-shell .identity>img{height:48px;width:25px}
+  #game-shell #taskbar .taskline{padding:10px 14px;flex-wrap:wrap;gap:5px 12px}
+  #game-shell main.content{padding:15px 12px 30px}
+  #game-shell .section-head{align-items:flex-start}#game-shell .section-head h2{font-size:27px}
+  #game-shell .section-head .right{max-width:145px;text-align:right}
+  #game-shell .barracks-head{flex-wrap:wrap}#game-shell .filters{margin-left:auto}
+  #game-shell .training-copy{left:12px;right:35px}#game-shell .training-copy h3{font-size:22px}
+  #game-shell .finance-pair{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+  #game-shell .recruit{flex-wrap:wrap}
+  #menu .arena-caption{display:none}#menu .main-home{min-height:calc(100svh - 155px)}
+  #menu .shell{padding:85px 20px 35px}#menu .top{position:absolute;left:20px;top:24px}
+  #menu .menu-column{width:100%}#menu .chapter-line .eyebrow{font-size:11px}
+  #menu .menu-shade{background:#0c100dd9}#menu .tagline{font-size:20px}
+  #menu .menu-box:not(.shell-menu){padding:15px;margin:15px auto}
+  #dialog .campaign-form{padding:18px 14px;width:calc(100vw - 20px)}
+  #dialog .campaign-form h2{font-size:30px}
+  #dialog .campaign-form .ng-cols,#dialog .campaign-form .choice-descriptions{grid-template-columns:minmax(0,1fr);gap:16px}
+  #dialog .campaign-form .lp{padding:5px;min-height:128px}#dialog .campaign-form .lp img{width:65px;height:75px}
+  #dialog .campaign-form .lp span{font-size:11px}#dialog .campaign-form .banner-pick{gap:6px}
+  #modal .modal-bg{padding:6px}#modal .fighter-dialog[open]{height:calc(100svh - 12px);max-height:calc(100svh - 12px)}
+  #modal .fighter-dialog .dialog-head{padding:14px}#modal .fighter-dialog .dialog-body{padding:12px}
+  #modal .fighter-dialog .dialog-head h2{font-size:26px;overflow-wrap:anywhere}
+  #modal .equipment-doll{grid-template-columns:minmax(0,1fr) minmax(80px,1fr) minmax(0,1fr);gap:5px}
+  #modal .equip-slot.dslot{flex-direction:column;align-items:center;text-align:center;padding:6px 3px}
+  #modal .equip-slot.dslot strong{padding-right:0;font-size:10px}
+  #modal .equip-slot-label{font-size:9px}
+  #modal .profile-head .actions{max-width:none}
+  #modal .profile-record{gap:8px}
+  #modal .profile-layout .equipment-column>.stash-panel{max-height:330px}
+  #modal .stash-panel .stash-list{overflow:auto}
+  #modal .profile-tablist button{font-size:13px;padding:9px 6px}
+  #modal .attributes-layout{grid-template-columns:minmax(0,1fr)}
+  #modal .profile-view{padding:12px}
+  #modal .skill-pair{grid-template-columns:minmax(0,1fr)}
+}
+
+/* Compact fighter stash and grouped navigation from the mock. */
+#modal .fighter-dialog .stash-list{display:flex;flex-wrap:wrap;gap:7px;align-content:flex-start;align-items:flex-start}
+#modal .fighter-dialog .stash-item{width:auto;max-width:100%;min-height:36px;display:flex;gap:6px;align-items:center;padding:7px;font-size:11px;text-align:left}
+#modal .fighter-dialog .stash-item img{width:27px;height:27px}
+#modal .fighter-dialog .stash-item span{min-width:0;overflow-wrap:anywhere}
+#modal .fighter-dialog .stash-hint{margin:0 0 7px;font-size:11px}
+#modal .fighter-dialog .profile-foot{justify-content:flex-end}
+#modal .fighter-dialog .profile-foot .switcher{display:flex;width:auto;max-width:100%;justify-content:flex-start;align-items:center;gap:7px}
+#modal .fighter-dialog .profile-foot .switcher button{flex:none}
+#dialog .tasksdlg .dlg-btns{border-top:0}

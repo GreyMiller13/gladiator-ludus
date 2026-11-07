@@ -97,10 +97,9 @@ function showTasksDialog() {
   const rows = STORY.tasks().map(t => `<li class="${t.state}"><span class="mk">${mark[t.state]}</span>
     <span class="tx">${esc(t.text)}${t.progress && t.state !== 'done' ? ` <i>(${esc(t.progress)})</i>` : ''}</span>
     ${t.state === 'current' && t.tab ? `<button class="small" data-act="taskGo" data-tab="${t.tab}">Перейти</button>` : ''}</li>`).join('');
-  const n = typeof debtNext === 'function' ? debtNext() : null;
   showDialog({
     title: ch.title, cls: 'tasksdlg',
-    body: `<ul class="tasklist">${rows}</ul>${n ? `<p class="small muted">Ближайший платёж: ${n.amount} ден. на ${n.day}-й день (${debtHolderName()}).</p>` : ''}`,
+    body: `<ul class="tasklist">${rows}</ul>`,
     ok: 'Закрыть', cancel: false,
   });
 }
@@ -137,13 +136,13 @@ const TUTOR_STEPS = [
   { id: 'deploy', g: 'battle', dock: true, sel: '#bTact', wait: 'deployPlace',
     text: 'Расстановка. Нажми на своего бойца, потом на подсвеченную клетку слева.' },
   { id: 'deployGo', g: 'battle', dock: true, sel: '[data-act="dStart"]', wait: 'fightStart',
-    text: 'Хорошо стоит. Жми «В бой!».' },
+    text: 'Хорошо стоит. Жми «Начать бой».' },
   { id: 'move', g: 'battle', dock: true, wait: 'moved', skip: () => coachCanAttack(),
     text: 'Твой ход. У бойца есть очки действия, ОД: шаг стоит 1, удар 4. Нажми на подсвеченную клетку поближе к врагу.' },
   { id: 'aim', g: 'battle', dock: true, wait: 'hoverEnemy',
     text: 'Наведи курсор на врага, и увидишь шанс попасть. На телефоне просто нажми на него.' },
   { id: 'attack', g: 'battle', dock: true, wait: 'attacked',
-    text: 'Нажми на врага, чтобы ударить. Если он далеко, боец подойдёт сам, лишь бы хватило ОД. Хватает ещё на удар? Бей снова.' },
+    text: 'Нажми «Удар», затем выбери врага. Если он далеко, боец подойдёт сам, лишь бы хватило ОД. Хватает ещё на удар? Снова нажми «Удар» и выбери цель.' },
   { id: 'ability', g: 'battle', dock: true, sel: '[data-act="tAbility"]', wait: 'next', skip: () => !$('[data-act="tAbility"]'),
     text: 'Это особый приём бойца. Применяй его, когда враг рядом.' },
   { id: 'endTurn', g: 'battle', dock: true, sel: '[data-act="tWait"]', wait: 'turnEnd',
@@ -158,7 +157,7 @@ const TUTOR_STEPS = [
   { id: 'heal', g: 'after', lock: true, back: 'lvlGlad', sel: '#modal [data-act="heal"]', wait: 'healed', skip: () => !(tutorGlad() && tutorGlad().wounded),
     text: () => `Раненый не выходит на песок, пока не заживёт. Лекарь поставит его на ноги сразу. Нажми «Лекарь», это стоит ${tutorGlad() ? healCost(tutorGlad()) : ''} денариев.` },
   { id: 'attrs', g: 'after', lock: true, back: 'lvlGlad', sel: '#modal .attrs-panel', wait: 'attrSpent', accept: d => d === 0, skip: () => !(tutorGlad() && tutorGlad().freeAttr),
-    text: 'За победу боец получил 2-й уровень и 3 очка характеристик. Раздай их кнопками «+», лишнее убери кнопкой «−» и нажми «Закрепить». Знаком ◆ отмечено главное для его будущей школы. Наведи на название, и узнаешь, что даёт характеристика.' },
+    text: 'За победу боец получил 2-й уровень и 3 очка характеристик. Раздай их кнопками «+», лишнее убери кнопкой «−» и нажми «Подтвердить». Золотым выделены главные характеристики самой подходящей школы. Наведи на название, и узнаешь, что даёт характеристика.' },
   { id: 'school', g: 'after', modal: true, back: 'lvlGlad', sel: '#modal .school-panel', wait: 'next',
     text: () => `На ${SCHOOL_LEVEL}-м уровне бойца посвящают в школу. Здесь видно, к какой школе он годится лучше и что ей нужно. После посвящения каждый уровень даёт очко на умения школы.` },
   { id: 'closeGlad2', g: 'after', lock: true, back: 'lvlGlad', sel: '#modal [data-act="closeModal"]', wait: 'modalClosed',
@@ -208,7 +207,7 @@ const TUTOR_STEPS = [
   { id: 'toBets', g: 'duo', lock: true, sel: 'nav [data-tab="arena"]', wait: 'tab:arena',
     text: 'Напоследок трибуны. Открой «Арену», там вкладка «Бой дня: ставки».' },
   { id: 'bets', g: 'duo', modal: true, tab: 'arena', arenaTab: 'bets', sel: 'main .betpanel', wait: 'next',
-    text: 'Здесь ставят на поединок дня. Нажми на портрет, чтобы рассмотреть бойца, выбери сумму и нажми «Поставить». Выигрыш равен ставке, умноженной на коэффициент. Ставка играет, только если смотреть бой. До боя её можно забрать, а если бой пропустить, деньги вернут.' },
+    text: 'Здесь ставят на поединок дня. Нажми на портрет, чтобы рассмотреть бойца, выбери сумму и нажми «Сделать ставку». Выигрыш равен ставке, умноженной на коэффициент. Ставка играет, только если смотреть бой. До боя её можно забрать, а если бой пропустить, деньги вернут.' },
   { id: 'done', g: 'duo', modal: true, wait: 'next', last: true,
     text: 'Дальше сам: заказы горожан, кузнец, школы, Келад, хозяин арены Помпей. Правила есть в «Справочнике». И помни о платеже ростовщику. Ave!' },
 ];
@@ -230,7 +229,14 @@ const tutorGlad = () => (STATE && STATE.gladiators[0]) || null;
 // модальный шаг и шаг «нажми сюда» затемняют всё вокруг цели, остальные — только мерцающая рамка
 const holeCls = s => (s.modal || s.lock ? '' : 'soft');
 const coachText = s => (typeof s.text === 'function' ? s.text() : s.text);
-const coachSel = s => (typeof s.sel === 'function' ? s.sel() : s.sel);
+const coachSel = s => {
+  const sel = typeof s.sel === 'function' ? s.sel() : s.sel;
+  if (!UI.battle?.redesign) return sel;
+  return ({ '#bTact': '#combat-canvas', '#bresults': '#combat-screen',
+    '[data-act="dStart"]': '[data-act="combatStart"]',
+    '[data-act="tAbility"]': '[data-act="combatAim"]',
+    '[data-act="tWait"]': '[data-act="combatCommand"][data-id="wait"]' })[sel] || sel;
+};
 
 // Покупки в обучении: самое дешёвое одноручное оружие у кузнеца и самый дешёвый раб на рынке
 function tutorPicks() {
@@ -273,7 +279,7 @@ function tutorFund() {
   toast(`Ферокс: «Отец откладывал на чёрный день. Держи ${add} денариев».`);
   save(); render();
 }
-const coachCanAttack = () => { const T = UI.battle && UI.battle.turn; return !!(T && T.o && T.o.attackNow.length); };
+const coachCanAttack = () => { if (UI.battle?.redesign) { const s=UI.battle; return !!(s.b.current && s.b.options(s.b.current).attackNow.length); } const T = UI.battle && UI.battle.turn; return !!(T && T.o && T.o.attackNow.length); };
 
 function startTutorial() {
   if (!STATE || !STATE.story) return;
