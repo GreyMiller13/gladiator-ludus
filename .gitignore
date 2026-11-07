@@ -5,3 +5,23 @@ _site/
 .DS_Store
 Thumbs.db
 .superpowers/
+
+# Local design archives and one-off migration scripts
+/Arena-preview/
+/discovery/
+/art-prompts/
+/docs/superpowers/
+/docs/redesign-sessions/
+/docs/guide-accuracy.md
+/design-qa.md
+/COMBAT_MECHANICS.md
+/AGENTS.md
+/tools/*.py
+/tools/*-source.js
+/tools/*-manifest.json
+/tools/gen-art.mjs
+__pycache__/
+.playwright-cli/
+/output/
+/test-results/
+/playwright-report/
