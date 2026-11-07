@@ -9,6 +9,9 @@
  for(const id of ['smith','market'])step(id).sel='main .legacy-heading';
  step('pickTraining').sel=()=>{const ev=STATE.events.find(e=>e.training&&!e.duo&&!e.done);return `main [data-act="pickEvent"][data-id="${ev?.id}"]`;};
  step('pickDuo').sel=()=>{const ev=STATE.events.find(e=>e.duo&&!e.done);return `main [data-act="pickEvent"][data-id="${ev?.id}"]`;};
+ // The battle pickers were re-rendered as .battle-picker (campaign-tabs.js battlePickerFrame);
+ // Ferox's guard must allow clicks inside the new dialog.
+ for(const id of ['pickGlad','pickDuo2'])step(id).sel='.battle-picker';
  step('buyItem').sel=()=>{const id=tutorPicks().item?.id;return `main [data-act="campaignItem"][data-id="${id}"],main [data-act="campaignTrade"][data-item="${id}"]`;};
  step('buyItem').enter=()=>{CAMPAIGN.slot='all';CAMPAIGN.school='all';CAMPAIGN.selected=tutorPicks().item?.id;render();};
  step('buyGlad').sel=()=>`main [data-act="campaignRecruit"][data-id="${tutorPicks().glad?.id}"]`;
