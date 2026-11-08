@@ -55,8 +55,18 @@ async function files(dir) {
     }
     await page.evaluate(() => { UI.tab = 'rules'; UI.guide = 'combat'; render(); });
     await page.locator('.manual-content h3').first().hover();
+    // Hover can scroll the heading into view; measure only the subsequent wheel.
+    const scrollBefore = await page.evaluate(() => [
+      document.scrollingElement,
+      document.querySelector('main.content'),
+      document.querySelector('.manual-content'),
+    ].map(el => el?.scrollTop ?? 0));
     await page.mouse.wheel(0, 450);
-    await page.waitForFunction(() => document.querySelector('main.content').scrollTop > 0 || document.querySelector('.manual-content').scrollTop > 0);
+    await page.waitForFunction(before => [
+      document.scrollingElement,
+      document.querySelector('main.content'),
+      document.querySelector('.manual-content'),
+    ].some((el, i) => el && el.scrollTop > before[i]), scrollBefore);
     for (const width of [1440, 390]) {
       await page.setViewportSize({ width, height: 900 });
       await page.evaluate(() => { UI.tab = 'arena'; UI.arenaTab = 'bets'; STATE.gold = 1000; render(); });
