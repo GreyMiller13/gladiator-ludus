@@ -56,7 +56,7 @@ function check(n,v){assert.ok(v,n);checks.push(n);console.log('PASS '+n);}
  }
  await tab('bazaar');await page.evaluate(()=>{STATE.fame=300;refreshRareShop(true);render();});
  const rare=await page.evaluate(()=>({id:STATE.rareShop.items[0].id,price:STATE.rareShop.items[0].price,gold:STATE.gold,ach:Object.keys(STATE.meta.ach)}));
- await page.locator(`[data-act=campaignItem][data-id="${rare.id}"]`).click();await page.locator('[data-act=campaignTrade]').click();await page.locator('[data-act=dlgOk]').click();
+ await page.locator(`.bazaar-grid [data-act=buyRare][data-item="${rare.id}"]`).click();
  check('rare item purchased once including META reward',await page.evaluate(v=>{const gold=STATE.gold;ACTIONS.buyRare({item:v.id});const bonus=META.ACHIEVEMENTS.filter(a=>STATE.meta.ach[a.id]&&!v.ach.includes(a.id)).reduce((n,a)=>n+(a.reward?.gold||0),0);return STATE.gold===gold&&gold===v.gold-v.price+bonus&&STATE.armory.filter(i=>i.id===v.id).length===1&&!STATE.rareShop.items.some(i=>i.id===v.id);},rare));
  await page.evaluate(()=>{const id=Object.keys(META.ARTIFACTS)[0];META.giveArtifact(id,'Проверка',true);const it=STATE.armory.find(i=>i.base===id);STATE.gladiators[0].equip[it.slot]=it;STATE.armory=STATE.armory.filter(i=>i.id!==it.id);UI.gloryTab='relics';});
  await tab('glory');check('relic location names real owner',await page.locator('main').innerText().then(s=>s.includes('Носит')));
