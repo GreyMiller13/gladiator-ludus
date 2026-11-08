@@ -209,3 +209,16 @@ body.menu-on #game-shell,body.combat-active #game-shell{display:none}
 #modal .fighter-dialog .profile-foot .switcher{display:flex;width:auto;max-width:100%;justify-content:flex-start;align-items:center;gap:7px}
 #modal .fighter-dialog .profile-foot .switcher button{flex:none}
 #dialog .tasksdlg .dlg-btns{border-top:0}
+
+/* Campaign document scrolling: start */
+body:not(.menu-on):not(.combat-active){display:block;height:auto;min-height:0;overflow-y:auto}
+#game-shell{height:auto;min-height:calc(100svh / var(--z,1));overflow:visible}
+#game-shell .sidebar{height:calc(100svh / var(--z,1))}
+#game-shell .workspace{height:auto;min-height:0;display:block;overflow:visible}
+#game-shell main.content{height:auto;min-height:0;overflow:visible}
+#game-shell main.content[data-tab="ludus"]{height:auto;grid-template-rows:auto var(--venue-height) auto;overflow:visible}
+#game-shell main.content[data-tab="ludus"] .dashboard,
+#game-shell main.content[data-tab="ludus"] .barracks-section,
+#game-shell main.content[data-tab="ludus"] .right-rail,
+#game-shell main.content[data-tab="ludus"] .cards{height:auto;overflow:visible}
+/* Campaign document scrolling: end */
