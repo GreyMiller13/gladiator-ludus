@@ -27,7 +27,25 @@ function campaignShop(kind) {
 }
 screenSmith=()=>campaignShop('smith');
 screenArmory=()=>campaignShop('armory');
-screenBazaar=()=>campaignShop('bazaar');
+// Live rare catalogue: start
+function liveRareCard(it,open){
+ const B=ITEM_BASES[it.base],poor=STATE.gold<it.price;
+ return `<article class="rare-card" aria-labelledby="rare-name-${it.id}"><div class="rare-head"><span>Редкое снаряжение</span><small>${SLOTS[it.slot]}</small></div><h3 id="rare-name-${it.id}">${esc(it.name)}</h3>
+ <div class="rare-body"><div class="rare-art"><img src="${itemIcon(it,160)}" alt="${esc(it.name)}"></div><dl class="rare-stats">${liveSmithRows(it.stats).map(([k,label,value])=>`<div><dt>${label}</dt><dd class="${it.stats[k]<0?'penalty':''}">${value}</dd></div>`).join('')}</dl></div>
+ <p class="rare-desc">${esc(B.desc)}</p><div class="rare-schools"><span>Школы · </span>${B.classes.length>=CLASS_KEYS.length?'Любая школа':B.classes.map(c=>CLASSES[c].name).join(', ')}</div>
+ <div class="rare-foot"><span class="rare-price">${shellIcon('coin')}<strong>${it.price.toLocaleString('ru-RU')}</strong><small>ден.</small></span><button class="primary" data-act="buyRare" data-item="${it.id}" aria-label="Купить: ${esc(it.name)}, ${it.price} денариев" ${!open||poor?'disabled':''}>${!open?`Нужно ${RARE_SHOP_FAME} славы`:poor?'Не хватает денег':'Купить'}</button></div></article>`;
+}
+screenBazaar=function(){
+ const heading=campaignHead('Лавка редкостей','Именное снаряжение с историей. Каждую редкость можно купить лишь однажды.');
+ if(!rareShopOpen()) return `<section class="campaign-tabs bazaar-screen">${heading}${campaignEmpty(`Лавка откроется при славе ${RARE_SHOP_FAME}. Сейчас ${STATE.fame}.`)}</section>`;
+ refreshRareShop();
+ const goods=STATE.rareShop?.items||[],left=rareShopDaysLeft();
+ return `<section class="campaign-tabs bazaar-screen">${heading}
+ <div class="bazaar-summary"><div><strong>${goods.length} ${plural(goods.length,'редкость','редкости','редкостей')} в продаже</strong> · По одному экземпляру</div><span>Новый завоз через ${left} ${plural(left,'день','дня','дней')}</span></div>
+ <section class="bazaar-grid" aria-label="Редкости в продаже">${goods.map(it=>liveRareCard(it,true)).join('')||'<div class="legacy-empty"><h3>Все редкости проданы</h3><p>Торговец привезёт новые изделия со следующим завозом.</p></div>'}</section>
+ <footer class="bazaar-demo"><span>Купленные вещи отправляются на склад · Бонус своей школы +25%</span></footer></section>`;
+};
+// Live rare catalogue: end
 
 showFighterInfo=function(g) {
  const s=computeStats(g), items=Object.values(g.equip||{}).filter(Boolean);

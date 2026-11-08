@@ -678,3 +678,12 @@
 
 /* The reading panel may grow with its text; let the main page scroll. */
 #game-shell .rules-screen .manual-content{overscroll-behavior-y:auto}
+
+/* Live rare catalogue: start */
+#game-shell .bazaar-screen .legacy-heading{background:transparent;border:0;padding:0;margin:4px 0 22px;box-shadow:none}
+#game-shell .bazaar-screen .legacy-heading h2{color:var(--ink);text-shadow:none}
+#game-shell .bazaar-screen .legacy-heading p{margin-top:8px;color:var(--sub)}
+#game-shell .bazaar-screen .rare-card h3{color:var(--ink);text-transform:none;letter-spacing:normal;text-shadow:none;border:0}
+#game-shell .bazaar-screen .rare-foot .primary{background:var(--gold);color:#201e13;border-color:var(--gold);box-shadow:none;text-transform:none;letter-spacing:normal}
+#game-shell .bazaar-screen .legacy-empty{grid-column:1/-1}
+/* Live rare catalogue: end */
