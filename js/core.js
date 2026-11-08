@@ -572,7 +572,7 @@ function migrateState() {
 
 function journal(text) {
   STATE.journal.unshift({ day: STATE.day, text });
-  STATE.journal.length = Math.min(STATE.journal.length, 60);
+  // Keep every event for the lifetime of this campaign, including in saves.
 }
 
 const MAX_GLADIATORS = 10;

@@ -117,3 +117,14 @@
 }
 
 #game-shell .betpanel .small:not(button){min-height:0;padding:0}
+
+/* Complete ludus journal, one scroll area per view. */
+#game-shell .chronicle-panel .journal-scroll{max-height:none;overflow:visible;overscroll-behavior:auto;flex:none;padding-right:0}
+body:has(#dialog .journal-dialog){overflow:hidden}
+#dialog .dlg-bg:has(.journal-dialog){overflow:hidden}
+#dialog .dlg.journal-dialog{display:flex;flex-direction:column;overflow:hidden;max-height:calc(100dvh / var(--z,1) - 32px)}
+#dialog .journal-dialog>h2,#dialog .journal-dialog>.dlg-btns{flex:none}
+#dialog .journal-dialog .shell-journal{flex:1 1 auto;min-height:0;max-height:none;overflow:auto;overscroll-behavior:contain;scrollbar-color:#887146 #171e14;padding-right:10px}
+#dialog .journal-dialog .shell-journal p{margin:0;padding:12px 0;border-bottom:1px solid #61573f66;line-height:1.55;overflow-wrap:anywhere}
+#dialog .journal-dialog .shell-journal p:last-child{border-bottom:0}
+#dialog .journal-dialog .shell-journal small{display:block;margin-bottom:3px}

@@ -66,12 +66,12 @@ function shellToday() {
 screenLudus = function () {
   const gs = STATE.gladiators, shown = gs.filter(g => SHELL.filter === 'all' || SHELL.filter === 'ready' && canFight(g) || SHELL.filter === 'wounded' && g.wounded > 0);
   const canRecruit = gs.length < MAX_GLADIATORS;
-  const recent = STATE.journal.filter(j => j.day >= STATE.day - 1 && j.day <= STATE.day);
+  const recent = STATE.journal.slice(0, 5);
   return `<div class="section-head"><h2>Лудус</h2><div class="right"><span class="muted">${gs.filter(canFight).length} из ${gs.length} готовы к бою</span></div></div>
     <section class="training" aria-label="Тренировочный двор"><canvas class="ludus-bg" aria-hidden="true"></canvas><div class="training-copy"><h3>Тренировка во дворе школы</h3></div><button class="motion-toggle" data-act="shellMotion" aria-pressed="${SHELL.motion}" aria-label="${SHELL.motion ? 'Приостановить' : 'Продолжить'} анимацию">${SHELL.motion ? 'Ⅱ' : '▷'}</button></section>
     <div class="dashboard"><section class="barracks-section"><div class="barracks-head"><h3>Казармы</h3><span class="count">${gs.length} / ${MAX_GLADIATORS}</span><div class="filters" role="group" aria-label="Фильтр бойцов">${[['all','Все'],['ready','Готовы'],['wounded','Раненые']].map(([k,n]) => `<button data-act="shellFilter" data-filter="${k}" aria-pressed="${SHELL.filter === k}">${n}</button>`).join('')}</div></div>
     <div class="cards" data-roster-count="${shown.length + (canRecruit ? 1 : 0)}">${shown.map(shellCard).join('')}${!shown.length && gs.length ? '<div class="empty-state">Нет бойцов с таким статусом. Выберите другой фильтр.</div>' : ''}${canRecruit ? shellRecruitCard() : ''}</div></section>
-    <aside class="right-rail" aria-label="Дела и события">${shellToday()}<section class="panel chronicle-panel"><div class="panel-heading"><h3>Хроника лудуса</h3></div><p class="chronicle-period">События за последние 2 дня</p><div class="journal-scroll" tabindex="0" role="region" aria-label="Хроника за последние два дня">${recent.map(j => `<div class="journal-row"><span class="journal-day">День ${j.day}</span><span>${j.text}</span></div>`).join('') || '<p>За последние два дня событий нет.</p>'}</div><div class="chronicle-footer"><button class="link" data-act="shellJournal">Показать всю хронику</button></div></section></aside></div>`;
+    <aside class="right-rail" aria-label="Дела и события">${shellToday()}<section class="panel chronicle-panel"><div class="panel-heading"><h3>Хроника лудуса</h3></div><p class="chronicle-period">Последние 5 событий</p><div class="journal-scroll" tabindex="0" role="region" aria-label="Последние пять событий хроники">${recent.map(j => `<div class="journal-row"><span class="journal-day">День ${j.day}</span><span>${j.text}</span></div>`).join('') || '<p>Событий пока нет.</p>'}</div><div class="chronicle-footer"><button class="link" data-act="shellJournal">Показать всю хронику</button></div></section></aside></div>`;
 };
 
 paintLudusHero = function () {
@@ -125,7 +125,7 @@ Object.assign(ACTIONS, {
   shellAttention: () => { const g = STATE.gladiators.find(shellPending); if (g) ACTIONS.openGlad({id:g.id}); },
   shellTrainFirst: () => { const g = STATE.gladiators.find(canTrain); if (g) ACTIONS.openGlad({id:g.id}); },
   shellBets: () => { UI.arenaTab = 'bets'; ACTIONS.tab({tab:'arena'}); },
-  shellJournal: () => showDialog({title:'Хроника лудуса', body: `<div class="shell-journal">${STATE.journal.map(j => `<p><small>День ${j.day}</small> ${j.text}</p>`).join('') || 'Событий пока нет.'}</div>`, ok:'К школе', cancel:false}),
+  shellJournal: () => showDialog({title:'Хроника лудуса', cls:'journal-dialog', body: `<div class="shell-journal" tabindex="0" role="region" aria-label="Вся хроника лудуса">${STATE.journal.map(j => `<p><small>День ${j.day}</small> ${j.text}</p>`).join('') || 'Событий пока нет.'}</div>`, ok:'К школе', cancel:false}),
   shellMotion: () => { SHELL.motion = !SHELL.motion; render(); },
 });
 const originalShowMenu = showMenu;
