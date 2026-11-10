@@ -222,3 +222,20 @@ body:not(.menu-on):not(.combat-active){display:block;height:auto;min-height:0;ov
 #game-shell main.content[data-tab="ludus"] .right-rail,
 #game-shell main.content[data-tab="ludus"] .cards{height:auto;overflow:visible}
 /* Campaign document scrolling: end */
+
+/* Особенность ланисты в меню и личной карточке. */
+.lanista-bonus{margin-top:18px;padding-top:14px;border-top:1px solid #77624555}
+.lanista-bonus h3{margin:0 0 8px;color:var(--gold);font:600 17px/1.35 'Segoe UI',sans-serif}
+.lanista-bonus p{margin:0;line-height:1.5;color:var(--sub)}
+.lanista-bonus strong{display:block;margin-bottom:4px;color:var(--ink);font-weight:600}
+.lanista-bonus span{display:block}
+#game-shell .lanista-profile{width:100%;border:0;border-top:1px solid #77624555;border-radius:0;background:none;box-shadow:none;text-align:left;letter-spacing:0;text-transform:none;color:var(--ink);font-family:inherit;cursor:pointer}
+#game-shell .lanista-profile:hover{background:#dab7770a}
+#game-shell .lanista-profile:focus-visible{outline:2px solid var(--gold);outline-offset:-2px}
+#dialog .lanista-dialog{width:min(760px,calc(100vw / var(--z,1) - 32px));max-width:760px}
+#dialog .lanista-details{display:grid;grid-template-columns:180px minmax(0,1fr);gap:26px;margin-top:20px;text-align:left}
+#dialog .lanista-details>img{width:180px;height:230px;object-fit:cover;object-position:center 30%;border:1px solid var(--line)}
+#dialog .lanista-details h3{margin:0 0 8px;color:var(--gold);font:600 17px/1.35 'Segoe UI',sans-serif}
+#dialog .lanista-details p{margin:0;color:var(--sub);font-size:16px;line-height:1.55}
+#dialog .lanista-dialog .dlg-btns{margin-top:24px}
+@media(max-width:600px){#dialog .lanista-details{grid-template-columns:minmax(0,1fr);gap:18px}#dialog .lanista-details>img{width:120px;height:150px;justify-self:center}}

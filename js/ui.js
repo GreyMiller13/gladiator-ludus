@@ -537,7 +537,7 @@ function perkBox(g, p, locked) {
   </div>`;
 }
 
-const trainXp = g => 25 + g.level * 6;
+const trainXp = g => Math.round((25 + g.level * 6) * (1 + (lanistaBonus().trainingXp || 0)));
 const canTrain = g => !g.trainedToday && !g.wounded && g.level < MAX_LEVEL && STATE.gold >= trainCost(g);
 const sellGladPrice = g => Math.round(recruitPrice(g) * 0.35);
 const respecCost = g => 20 * g.level;
@@ -748,7 +748,7 @@ function picker(ev) {
   }).join('');
   return `<div class="pick-bg" data-act="cancelPickBg"><div class="picker" role="dialog" aria-modal="true" aria-labelledby="pickTitle">
     <div class="pick-h"><h2 id="pickTitle">${title}</h2><span class="fmtb">${n} на ${ev.size}</span><span class="tier">${ev.kind === 'contract' ? esc(ev.client || '') : T.name}</span><span class="sp"></span>
-      <span class="rwd">награда <b>${R.gold}</b> ден.${R.fame ? `, <b>+${R.fame}</b> славы` : ''}</span></div>
+      <span class="rwd">награда <b>${ev.kind === 'contract' ? contractWinGold(ev) : R.gold}</b> ден.${R.fame ? `, <b>+${R.fame}</b> славы` : ''}</span></div>
     <button type="button" class="pclose" data-act="cancelPick" aria-label="Закрыть">${ICO_X}</button>
     <div class="vs">
       <h3 class="side-h foe-h">Противники</h3><span></span><h3 class="side-h my-h">Ваши бойцы</h3>
@@ -802,8 +802,8 @@ function screenMarket() {
       <div class="kv"><span>Здоровье <b>${s.maxHp}</b></span><span>Очки специализации <b>${g.freeSpec}</b></span></div>
       <div class="small mt" style="margin-top:6px"><span class="muted">Лучше всего подойдёт:</span><br>${apt}</div>
       <div class="bar-actions" style="display:flex;justify-content:space-between;align-items:center;margin-top:10px">
-        <span class="price">${g.price} ден.</span>
-        <button class="primary" data-act="buyGlad" data-id="${g.id}" ${full || STATE.gold < g.price ? 'disabled' : ''}>Купить</button>
+        <span class="price">${marketBuyPrice(g)} ден.</span>
+        <button class="primary" data-act="buyGlad" data-id="${g.id}" ${full || STATE.gold < marketBuyPrice(g) ? 'disabled' : ''}>Купить</button>
       </div>
     </div>`;
   }).join('');
@@ -1725,7 +1725,7 @@ function resultsPanel(B) {
       <div class="small muted">${v.u.alive ? 'Остался на ногах' : `Повержен${v.u.killedBy ? ` (добил ${esc(v.u.killedBy.g.name)})` : ''}`}, урон ${v.u.dmgDealt}, повержено противников: ${v.u.kills}</div>
       <div class="parts">${parts}</div>
       <div class="chance"><span>Шанс помилования</span><b>${m.total}%</b></div>
-      ${m.raw > m.cap ? `<div class="capnote">Сумма факторов ${m.raw}%, но ${v.u.kills ? 'даже лучшим бойцам толпа не даёт гарантий: не более 90%.' : 'не повергнув ни одного противника, нельзя рассчитывать больше чем на 50%.'}</div>` : (!v.u.kills ? '<div class="capnote">Без поверженного противника шанс ограничен 50%.</div>' : '')}
+      ${m.raw > m.cap ? `<div class="capnote">Сумма факторов ${m.raw}%, но ${v.u.kills ? `даже лучшим бойцам толпа не даёт гарантий: не более ${m.cap}%.` : `не повергнув ни одного противника, нельзя рассчитывать больше чем на ${m.cap}%.`}</div>` : (!v.u.kills ? `<div class="capnote">Без поверженного противника шанс ограничен ${m.cap}%.</div>` : '')}
       ${B.event.training ? '<div class="capnote">Учебный бой: толпа пощадит бойца в любом случае, подкуп не нужен.</div>' : `<label class="bribe"><input type="checkbox" data-act="bBribe" data-i="${i}" ${v.bribed ? 'checked' : ''} ${canBribe ? '' : 'disabled'}> Подкупить распорядителя игр (${cost} ден., +15%)${useless ? ', <span class="muted">бесполезно: шанс уже на пределе</span>' : ''}</label>`}
       ${fate}
     </div>`;
@@ -1853,7 +1853,7 @@ function endingLine(best) {
 function checkGameOver() {
   if (STATE.gladiators.length) return;
   if (!STATE.market.length) return;
-  const cheapest = Math.min(...STATE.market.map(g => g.price));
+  const cheapest = Math.min(...STATE.market.map(g => marketBuyPrice(g)));
   if (STATE.gold >= cheapest) return;
   $('#modal').innerHTML = `<div class="modal-bg"><div class="modal" style="max-width:560px;text-align:center">
     <h2 style="color:var(--blood);font-size:34px">Лудус пал</h2>
@@ -2152,8 +2152,8 @@ const ACTIONS = {
   buyGlad: d => {
     const idx = STATE.market.findIndex(g => g.id === +d.id);
     const g = STATE.market[idx];
-    if (!g || STATE.gold < g.price || STATE.gladiators.length >= MAX_GLADIATORS) return;
-    STATE.gold -= g.price; STATE.market.splice(idx, 1);
+    if (!g || STATE.gold < marketBuyPrice(g) || STATE.gladiators.length >= MAX_GLADIATORS) return;
+    STATE.gold -= marketBuyPrice(g); STATE.market.splice(idx, 1);
     delete g.price;
     STATE.gladiators.push(g);
     journal(`Куплен новый боец: ${g.name}, ${clsOf(g).name}.`);

@@ -603,7 +603,7 @@ const META = (() => {
     const ok = condMet(contract, info);
     let gold, fame = 0, art = null, text;
     if (ok) {
-      gold = contract.gold || 0;
+      gold = contractWinGold(contract);
       fame = contract.fame || 0;
       STATE.gold += gold;
       STATE.fame += fame;
@@ -650,7 +650,7 @@ const META = (() => {
       <div class="small m-desc" data-tip="${escH(c.desc)}">${escH(c.desc)}</div>
       <div class="m-cond"><span class="m-lbl">Условие</span>${escH(c.cond ? c.cond.text : 'Победить')}</div>
       <div class="foes">${foes}</div>
-      <div class="reward">${!c.done && typeof enemyPower === 'function' ? enemyPower(c) : ''}<span><b>${c.gold}</b> ден.</span>${c.fame ? `<span><b>+${c.fame}</b> славы</span>` : ''}<span>опыт <b>×${c.xpMult}</b></span></div>
+      <div class="reward">${!c.done && typeof enemyPower === 'function' ? enemyPower(c) : ''}<span><b>${contractWinGold(c)}</b> ден.</span>${c.fame ? `<span><b>+${c.fame}</b> славы</span>` : ''}<span>опыт <b>×${c.xpMult}</b></span></div>
       ${art ? `<div class="m-artline">Реликвия: <b class="q4">${escH(art.name)}</b> <span class="tiny muted">(${SLOTS[art.slot].toLowerCase()})</span></div>` : ''}
       ${c.done ? outcome : `<div class="tiny muted m-fee">При неудаче плата за выход: ${Math.round(c.gold * FAIL_FEE)} ден.${c.playerSize < c.size ? ' Вы в меньшинстве.' : ''}</div>`}
     </div>`;

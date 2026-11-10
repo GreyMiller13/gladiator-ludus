@@ -377,6 +377,7 @@ class Battle {
       for (const b of u.bleeds) { total += b.dmg; b.turns--; }
       const src = u.bleeds[u.bleeds.length - 1].src;
       u.bleeds = u.bleeds.filter(b => b.turns > 0);
+      total = this.incomingDamage(u, total);
       this.say(`${this.nm(u)} истекает кровью: −${total}`, 'bleed');
       const e = this.ev({ t: 'bleed', u: u.uid, dmg: total });
       this.damage(u, total, src);
@@ -834,7 +835,12 @@ class Battle {
     if (cry) dmg *= 1 + cry / 100;
 
     const crit = !opts.noCrit && (opts.forceCrit || chance(Math.min(100, (u.s.crit + (opts.critBonus || 0)) * (back ? 2 : 1))));
-    if (crit) { dmg *= u.s.critMult; u.crits++; u.flair += 1; }
+    if (crit) {
+      // Матрона уменьшает только прибавку крита, остальные множители сохраняются.
+      const reduction = t.side === 'player' && this.event.kind !== 'bet' ? (lanistaBonus().criticalExtraReduction || 0) : 0;
+      dmg *= 1 + (u.s.critMult - 1) * (1 - reduction);
+      u.crits++; u.flair += 1;
+    }
 
     let blocked = false;
     const blockChance = opts.unblockable ? 0 : t.s.block + (t.defending ? 20 : 0) - u.s.blockPierce;
@@ -855,7 +861,7 @@ class Battle {
     const phalanx = this.pv(t, 'hop_phalanx');
     if (phalanx) dmg *= 1 - (1 + Math.min(2, this.alliesOf(t).length - 1)) * phalanx / 100;
 
-    dmg = Math.max(1, Math.round(dmg));
+    dmg = this.incomingDamage(t, dmg);
     const tag = crit ? ' <span class="crit">КРИТ!</span>' : '';
     const btag = blocked ? ' (блок щитом)' : '';
     this.say(`${this.nm(u)} → ${this.nm(t)}${back ? ' в спину' : ''}: −${dmg}${tag}${btag}`, crit ? 'hit crit' : 'hit');
@@ -907,6 +913,14 @@ class Battle {
   }
 
   // e — событие удара, в которое записывается здоровье после урона
+  // Общая обработка входящего урона для ударов и кровотечения.
+  incomingDamage(t, amount) {
+    if (t.side === 'player' && this.event.kind !== 'bet' && this.alliesOf(t).length >= 2) {
+      amount *= 1 - (lanistaBonus().damageReduction || 0);
+    }
+    return Math.max(1, Math.round(amount));
+  }
+
   damage(t, dmg, src, e = null) {
     if (!t.alive) return;
     t.hp -= dmg;
@@ -966,9 +980,12 @@ function mercyBreakdown(unit, battle, bribed = false) {
   if (battle.surrendered && unit.alive) add('Сдался, оставаясь на ногах', 15);
   if (bribed) add('Подкуп распорядителя игр', 15);
 
+  const bonus = unit.side === 'player' && battle.event?.kind !== 'bet' ? (lanistaBonus().mercy || 0) : 0;
+  // Сначала обычные пределы 5–50/90%, затем прибавка наследника.
+  add('Красивое слово, особенность ланисты', bonus);
   const raw = parts.reduce((s, p) => s + p.v, 0);
-  const cap = unit.kills > 0 ? 90 : 50;
-  const total = clamp(raw, 5, cap);
+  const cap = (unit.kills > 0 ? 90 : 50) + bonus;
+  const total = clamp(raw, 5 + bonus, cap);
   return { parts, raw, cap, total, capped: raw > cap };
 }
 

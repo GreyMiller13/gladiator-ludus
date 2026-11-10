@@ -1,4 +1,8 @@
 // Campaign presentation. Mechanics and delegated data-act handlers remain in ui.js.
+const lanistaBonusMarkup = key => {
+  const bonus = lanistaBonus(key);
+  return bonus.name ? `<div class="lanista-bonus"><h3>Особенность ланисты</h3><p><strong>${esc(bonus.name)}</strong><span>${esc(bonus.desc)}</span></p></div>` : '';
+};
 const SHELL = { filter: 'all', motion: !trainStill(), nav: false };
 const shellIcon = key => `<span class="ico">${SHELL_ART.tabIcons[key] || SHELL_ART.icons[key] || ''}</span>`;
 const shellPending = g => g.freeAttr > 0 || (g.cls && g.freeSpec > 0) || (!g.cls && g.level >= SCHOOL_LEVEL);
@@ -23,7 +27,16 @@ renderNav = function () {
   const lanista = PORTRAIT.LANISTAS.find(l => l.key === STATE.lanista?.portrait);
   $('#sidebar nav').innerHTML = `<div class="wordmark">${shellIcon('laurel')}ЛУДУС</div><div class="side-caption">Кровь и песок</div>${group('Школа и арена', ['ludus','arena','contracts'])}${group('Торговля', ['smith','bazaar','market','armory'])}${group('Наследие', ['glory','necro','rules'])}<div class="sidebar-menu"><button class="nav-button" data-act="menu">${shellIcon('tablet')}<span>Меню игры</span></button></div>`;
   $('#sidebar .side-bottom')?.remove();
-  $('#sidebar').insertAdjacentHTML('beforeend', `<div class="side-bottom">${lanista ? `<img src="${PORTRAIT.url(lanista.key, 'neutral', 64)}" alt="">` : ''}<div><strong>${lanista ? esc(lanista.title) : 'Хозяин школы'}</strong><small>Ланиста</small></div></div>`);
+  $('#sidebar').insertAdjacentHTML('beforeend', `<button class="side-bottom lanista-profile" data-act="lanistaInfo" aria-label="${lanista ? esc(lanista.title) : 'Ланиста'}: биография и бонус">${lanista ? `<img src="${PORTRAIT.url(lanista.key, 'neutral', 64)}" alt="">` : ''}<span><strong>${lanista ? esc(lanista.title) : 'Хозяин школы'}</strong><small>Биография и бонус</small></span></button>`);
+};
+ACTIONS.lanistaInfo = () => {
+  const lanista = MENU_LANISTAS.find(l => l.key === STATE.lanista?.portrait);
+  if (!lanista) return;
+  const trigger = document.activeElement;
+  showDialog({ title: esc(lanista.title), cls: 'lanista-dialog', ok: 'Закрыть', cancel: false,
+    body: `<div class="lanista-details"><img src="${lanista.url}" alt="${esc(lanista.title)}"><div><h3>Биография</h3><p>${esc(lanista.desc)}</p>${lanistaBonusMarkup(lanista.key)}</div></div>`,
+    onOk: () => trigger?.focus({preventScroll:true}),
+  });
 };
 fitNav = function () {}; // Navigation wraps into a mobile drawer, never loses labels.
 
@@ -96,14 +109,16 @@ showNewGameDialog = function () {
   originalNewGame();
   const form = $('#dialog .newgame');
   form.classList.add('campaign-form');
-  form.querySelector('.ng-cols').insertAdjacentHTML('afterend', '<div class="choice-descriptions"><p id="lanista-description"></p><p id="banner-description"></p></div>');
+  form.querySelector('.ng-cols').insertAdjacentHTML('afterend', '<div class="choice-descriptions"><section><h3>Биография ланисты</h3><p id="lanista-description"></p><div id="lanista-bonus"></div></section><p id="banner-description"></p></div>');
   shellChoiceDescription();
 };
 function shellChoiceDescription() {
   const el = $('#lanista-description');
   if (!el) return;
   const key = $('.lanista-pick .lp.on')?.dataset.k, l = PORTRAIT.LANISTAS.find(l => l.key === key);
-  el.textContent = l?.desc || '';
+  el.textContent = MENU_LANISTAS.find(item => item.key === key)?.desc || l?.desc || '';
+  const bonus = $('#lanista-bonus');
+  if (bonus) bonus.innerHTML = lanistaBonusMarkup(key);
   const banner = bannerOf(pickedBanner());
   $('#banner-description').textContent = banner.desc || banner.name || '';
 }

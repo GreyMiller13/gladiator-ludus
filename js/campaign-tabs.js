@@ -56,8 +56,8 @@ screenMarket=function(){
  return `<section class="campaign-tabs market-screen">` + `<div class="section-head"><h2 tabindex="-1">Невольничий рынок</h2><div class="right"><span class="count">${STATE.market.length} в продаже</span></div></div>
  <div class="market-intro"><p>Будущие гладиаторы вашей школы. Выберите бойца по его сильным сторонам, боевую школу он освоит в лудусе.</p><span class="market-capacity">Казармы · ${STATE.gladiators.length} / ${MAX_GLADIATORS}</span></div>
  <section class="market-grid" aria-label="Бойцы в продаже">${STATE.market.map(g=>{
- const st=computeStats(g),full=STATE.gladiators.length>=MAX_GLADIATORS,poor=STATE.gold<g.price;
- return `<article class="market-card" aria-labelledby="market-name-${g.id}"><header class="market-card-head"><div><h3 id="market-name-${g.id}">${esc(g.name)}</h3><p class="market-origin">${esc(g.origin)} · ${g.cls?clsOf(g).name:'Без школы'}</p></div><span class="market-level">${g.level} ур.</span></header><div class="market-body"><div class="market-art"><img src="${fullFighter(g)}" alt="${esc(g.name)}"></div><div class="market-attrs"><dl>${[['str','Сила'],['agi','Ловкость'],['end','Выносливость'],['skl','Мастерство'],['wil','Воля']].map(([key,label])=>`<div><dt>${label}</dt><dd>${g.attrs[key]}</dd></div>`).join('')}</dl><div class="market-health"><span>Здоровье</span><b>${st.maxHp}</b></div></div></div><footer class="market-foot"><span class="market-price">${shellIcon('coin')}<strong>${g.price.toLocaleString('ru-RU')}</strong><small>ден.</small></span><button class="primary" data-act="campaignRecruit" data-id="${g.id}" aria-label="Купить: ${esc(g.name)}, ${g.price} денариев" ${full||poor?'disabled':''}>${full?'Нет мест':poor?'Не хватает денег':'Купить'}</button></footer></article>`;
+ const st=computeStats(g),full=STATE.gladiators.length>=MAX_GLADIATORS,poor=STATE.gold<marketBuyPrice(g);
+ return `<article class="market-card" aria-labelledby="market-name-${g.id}"><header class="market-card-head"><div><h3 id="market-name-${g.id}">${esc(g.name)}</h3><p class="market-origin">${esc(g.origin)} · ${g.cls?clsOf(g).name:'Без школы'}</p></div><span class="market-level">${g.level} ур.</span></header><div class="market-body"><div class="market-art"><img src="${fullFighter(g)}" alt="${esc(g.name)}"></div><div class="market-attrs"><dl>${[['str','Сила'],['agi','Ловкость'],['end','Выносливость'],['skl','Мастерство'],['wil','Воля']].map(([key,label])=>`<div><dt>${label}</dt><dd>${g.attrs[key]}</dd></div>`).join('')}</dl><div class="market-health"><span>Здоровье</span><b>${st.maxHp}</b></div></div></div><footer class="market-foot"><span class="market-price">${shellIcon('coin')}<strong>${marketBuyPrice(g).toLocaleString('ru-RU')}</strong><small>ден.</small></span><button class="primary" data-act="campaignRecruit" data-id="${g.id}" aria-label="Купить: ${esc(g.name)}, ${marketBuyPrice(g)} денариев" ${full||poor?'disabled':''}>${full?'Нет мест':poor?'Не хватает денег':'Купить'}</button></footer></article>`;
  }).join('')||'<div class="empty-state">Все бойцы проданы. Новые кандидаты прибудут завтра.</div>'}</section><p class="market-note">Новые бойцы прибывают каждый день. Покупка сразу переводит бойца в казармы.</p>` + `</section>`;
 };
 
@@ -91,7 +91,7 @@ function campaignOrderPicker(c){
 }
 const ORDERS_VIEW = {tab:'today',filter:'all'};
 function campaignOrderRewards(c){
- return `<div class="order-rewards"><span>${shellIcon('coin')}<strong>${c.gold}</strong> ден.</span><span>${shellIcon('laurel')}<strong>+${c.fame||0}</strong> славы</span><span>Опыт <strong>×${c.xpMult}</strong></span></div>`;
+ return `<div class="order-rewards"><span>${shellIcon('coin')}<strong>${contractWinGold(c)}</strong> ден.</span><span>${shellIcon('laurel')}<strong>+${c.fame||0}</strong> славы</span><span>Опыт <strong>×${c.xpMult}</strong></span></div>`;
 }
 function campaignOrderCard(c){
  const ready=STATE.gladiators.filter(canFight).length,needed=playerCount(c),art=c.artifact&&ITEM_BASES[c.artifact],result=c.result;
@@ -151,7 +151,7 @@ Object.assign(ACTIONS,{
   const sell=d.action==='sellItem',price=sell?sellItemPrice(it):it.price;
   showDialog({title:sell?'Продать вещь?':'Купить вещь?',body:campaignWrap(campaignItem(it,false)+`<p>${sell?'Кузнец заплатит':'Цена'}: ${price} денариев.</p>`),ok:sell?'Продать':'Купить',cancel:'Отмена',onOk:()=>{ACTIONS[d.action]({item:it.id});}});
  },
- campaignRecruit:d=>{const g=STATE.market.find(g=>g.id===+d.id);if(!g)return;showDialog({title:'Принять бойца в школу?',body:`${esc(g.name)}. Цена ${g.price} денариев.`,ok:'Купить',cancel:'Отмена',onOk:()=>ACTIONS.buyGlad(d)});}
+ campaignRecruit:d=>{const g=STATE.market.find(g=>g.id===+d.id);if(!g)return;showDialog({title:'Принять бойца в школу?',body:`${esc(g.name)}. Цена ${marketBuyPrice(g)} денариев.`,ok:'Купить',cancel:'Отмена',onOk:()=>ACTIONS.buyGlad(d)});}
 });
 
 // Compact arena opponent inspection, matching the approved mock.

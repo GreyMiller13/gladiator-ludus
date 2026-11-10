@@ -98,3 +98,13 @@ html:has(body.menu-on){overflow:hidden}
  #dialog .menu-start-confirm h2{font-size:30px}
  #dialog .menu-start-confirm .dlg-btns>button{flex:auto;padding-inline:14px;font-size:17px}
 }
+
+/* Подробность бонуса не перекрывает биографию, знамя и нижние действия. */
+#menu .new-campaign .lanista-bonus p{font-size:16px;line-height:1.45;min-height:0}
+#menu .new-campaign .lanista-bonus strong{color:var(--ink)}
+
+/* Обучение справа от особенности, кнопка под ним. */
+#menu .new-campaign .tutorial-aside{flex-direction:column;align-items:flex-end;gap:22px;margin-top:18px;padding-top:14px;border-top:1px solid #77624555}
+#menu .new-campaign .tutorial-aside .tutorial-check{align-self:stretch;margin:0}
+#menu .new-campaign .tutorial-aside .actions{margin:0}
+@media(max-width:720px){#menu .new-campaign .tutorial-aside{align-items:stretch;margin-top:0;padding-top:0;border-top:0}}
