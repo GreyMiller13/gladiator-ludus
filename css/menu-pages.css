@@ -108,3 +108,33 @@ html:has(body.menu-on){overflow:hidden}
 #menu .new-campaign .tutorial-aside .tutorial-check{align-self:stretch;margin:0}
 #menu .new-campaign .tutorial-aside .actions{margin:0}
 @media(max-width:720px){#menu .new-campaign .tutorial-aside{align-items:stretch;margin-top:0;padding-top:0;border-top:0}}
+
+/* Меню прокручивается от верхнего края при любом масштабе интерфейса. */
+#menu{container:menu-viewport / inline-size}
+#menu .menu-box.shell-menu,#menu .menu-box.menu-pages{display:block;height:100%;min-height:0;overflow-x:hidden;overflow-y:auto;scrollbar-width:thin;scrollbar-color:#83714d #131710;scroll-behavior:auto}
+#menu .menu-box::-webkit-scrollbar{display:block;width:8px}
+#menu .shell{width:100%;height:auto;min-height:100%;justify-content:flex-start}
+#menu .main-home{flex:1 0 auto;min-height:0;width:100%}
+#menu .menu-column{flex:0 1 440px;max-height:none;overflow:visible}
+#menu .chapter-line,#menu .tagline{position:static;flex:none}
+#menu .arena-caption{position:fixed;display:block;left:auto;right:24px;bottom:24px;top:auto;width:min(350px,calc(100% - 520px));max-width:350px;margin:0;transform:none}
+#menu .arena-caption strong,#menu .arena-caption span{white-space:normal;overflow-wrap:anywhere}
+#menu .menu-pages .subscreen{margin:28px auto;flex:none}
+@container menu-viewport (max-width:950px){
+ #menu .shell{padding:28px 24px}
+ #menu .main-home{flex-direction:column;align-items:flex-start;justify-content:flex-start;padding:28px 0 0}
+ #menu .menu-column{flex:none;width:min(440px,100%)}
+}
+@container menu-viewport (max-width:760px){
+ #menu .menu-pages .subscreen{width:calc(100% - 24px);margin:12px auto;padding:18px}
+ #menu .menu-pages .page-head{align-items:flex-start;flex-wrap:wrap;gap:12px}
+ #menu .new-campaign .create-grid,#menu .new-campaign .choice-descriptions{grid-template-columns:minmax(0,1fr);gap:18px}
+ #menu .new-campaign .tutorial-aside{align-items:stretch;margin-top:0;padding-top:0;border-top:0}
+ #menu .new-campaign .creation-footer .primary{width:100%}
+ #menu .new-campaign .name-row input{width:100%;min-width:0}
+ #menu .setting-row{flex-wrap:wrap;gap:12px}
+ #menu .setting-row>div{flex:1 1 230px;min-width:0}
+ #menu .setting-row .switch{flex:none}
+ #menu .volume{max-width:140px}
+}
+@container menu-viewport (max-width:640px){#menu .arena-caption{display:none}}

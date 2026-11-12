@@ -687,3 +687,16 @@
 #game-shell .bazaar-screen .rare-foot .primary{background:var(--gold);color:#201e13;border-color:var(--gold);box-shadow:none;text-transform:none;letter-spacing:normal}
 #game-shell .bazaar-screen .legacy-empty{grid-column:1/-1}
 /* Live rare catalogue: end */
+
+/* Центрируем заполненные ряды, включая последний неполный ряд. */
+#game-shell .campaign-tabs .arena-fights{display:flex;flex-wrap:wrap;justify-content:center;align-items:stretch;gap:12px}
+#game-shell .campaign-tabs .arena-fights>.arena-fight{flex:0 1 320px;min-width:0;height:auto}
+#game-shell .campaign-tabs .arena-fights>.finalcard,#game-shell .campaign-tabs .arena-fights>.finallock{flex:0 1 100%;min-width:0}
+#game-shell .bazaar-screen .bazaar-grid{display:flex;flex-wrap:wrap;justify-content:center;align-items:stretch;gap:14px}
+#game-shell .bazaar-screen .rare-card{flex:0 1 418px;min-width:0}
+#game-shell .market-screen .market-grid{display:flex;flex-wrap:wrap;justify-content:center;gap:14px}
+#game-shell .market-screen .market-card{flex:0 1 350px;min-width:0}
+@media(min-width:1700px){
+ #game-shell .bazaar-screen .rare-card{flex-basis:338px}
+ #game-shell .market-screen .market-card{flex-basis:280px}
+}

@@ -44,6 +44,7 @@ function closeScene() {
   const f = SCENE.onDone;
   SCENE.onDone = null;
   if (f) f();
+  if (typeof IMAGE_PRELOAD !== 'undefined') IMAGE_PRELOAD.plan();
 }
 
 function showSceneLine() {
@@ -52,7 +53,7 @@ function showSceneLine() {
   const last = SCENE.i === SCENE.lines.length - 1 && !SCENE.ids.length;
   $('#scene').innerHTML = `<div class="scene-bg"></div>
     <div class="scene-box ${l.me ? 'me' : ''} ${SCENE.i === 0 ? 'enter' : ''}" role="dialog" aria-modal="true" aria-labelledby="sceneWho">
-      <img class="scene-face" src="${PORTRAIT.url(l.key, l.expr, 120, l.me)}" alt="">
+      <img class="scene-face" src="${PORTRAIT.url(l.key, l.expr, 310, l.me)}" alt="">
       <div class="scene-text">
         <div class="scene-who" id="sceneWho">${esc(l.name)}</div>
         <p>${esc(l.text)}</p>
@@ -64,6 +65,7 @@ function showSceneLine() {
       </div>
     </div>`;
   $('#scene [data-act="sceneNext"]').focus();
+  if (typeof IMAGE_PRELOAD !== 'undefined') IMAGE_PRELOAD.plan();
 }
 
 // Клавиши сцены: Enter и пробел — дальше, Esc — пропустить сцену целиком

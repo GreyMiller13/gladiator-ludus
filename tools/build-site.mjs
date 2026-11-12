@@ -11,7 +11,20 @@ const out = path.join(root, '_site');
 if (path.dirname(out) !== path.resolve(root)) throw new Error('Invalid output path');
 await rm(out, { recursive: true, force: true });
 await mkdir(out);
-for (const dir of ['css', 'js', 'assets']) await cp(path.join(root, dir), path.join(out, dir), { recursive: true });
+// Исходный фон сохраняется в репозитории, сайт использует WebP.
+const menuBackgroundSource = path.join(root, 'assets', 'shell', 'menu-background.jpg');
+await readFile(path.join(root, 'assets', 'shell', 'menu-background.webp'));
+const portraitSources = path.join(root, 'assets', 'portraits');
+for (const name of await readdir(portraitSources)) {
+  if (!/\.jpg$/i.test(name)) continue;
+  for (const size of [512, 1280]) {
+    await readFile(path.join(portraitSources, 'webp', name.replace(/\.jpg$/i, `-${size}.webp`)));
+  }
+}
+for (const dir of ['css', 'js', 'assets']) await cp(path.join(root, dir), path.join(out, dir), {
+  recursive: true,
+  filter: source => source !== menuBackgroundSource && (path.dirname(source) !== portraitSources || !/\.jpg$/i.test(source)),
+});
 for (const name of await readdir(path.join(out, 'js'))) {
   if (name.endsWith('.js')) execFileSync(process.execPath, ['--check', path.join(out, 'js', name)]);
 }

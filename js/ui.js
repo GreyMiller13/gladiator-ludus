@@ -64,6 +64,7 @@ function render() {
   $('main').innerHTML = screens[UI.tab]();
   if (UI.tab === 'ludus') paintLudusHero();
   renderModal();
+  if (typeof IMAGE_PRELOAD !== 'undefined') IMAGE_PRELOAD.plan();
 }
 
 function renderHeader() {
@@ -574,7 +575,7 @@ function screenArena() {
     const evs = STATE.events.filter(e => e.tier === cur);
     const fin = cur === 3 ? finalCard() : '';
     body = `<p class="arena-sub muted small">${T.name}. ${T.mood} Каждый боец выходит на песок раз в день, раненые не сражаются. Нажмите на бой, чтобы выбрать бойцов.</p>
-      <div class="evgrid">${[...evs].sort((a, b) => a.size - b.size).map(eventCard).join('')}${fin}</div>
+      ${evs.length || fin ? `<div class="evgrid">${[...evs].sort((a, b) => a.size - b.size).map(eventCard).join('')}${fin}</div>` : ''}
       ${evs.length || fin ? '' : '<p class="empty-note">Сегодня здесь боёв нет.</p>'}`;
   }
   return `<div class="arena-head"><h2>Арена</h2><div class="atabs">${tabs}<span class="sp"></span>${betTab}</div></div>
@@ -680,7 +681,7 @@ async function finishBetBattle(B) {
 
 // Финал игры: открывается при славе FINAL_FAME
 function finalCard() {
-  if (STATE.finalWon) return `<div class="panel finalcard won mt"><h3>Рудис свободы получен</h3><p class="small">Ваш лудус победил чемпионов Рима в Колизее (день ${STATE.finalDay}). Игра продолжается: слава лишней не бывает.</p></div>`;
+  if (STATE.finalWon) return '';
   if (!finalUnlocked()) return `<div class="locked-tier mt finallock">Финал: «Игры за рудис свободы» в Колизее против трёх легендарных чемпионов. Откроется ${STATE.story && STATE.story.chapter < 3 ? 'в главе IV, когда лудус попадёт на игры Императора, и ' : ''}при славе лудуса ${FINAL_FAME} (сейчас ${STATE.fame}).</div>`;
   const ev = finalEvent();
   const sel = ev.id === UI.eventId;

@@ -716,7 +716,19 @@ const PORTRAIT = (() => {
     return u;
   }
 
+  // size — наибольшая сторона портрета в CSS-пикселях.
+  // Крупные портреты и миниатюры на экранах высокой плотности получают 1280px.
+  function assetUrl(key, expr = 'calm', size = 96) {
+    if (!['doctore','lender','rival','senator','m1','m2','m3','f1','f2','f3'].includes(key)) return null;
+    const mood = ['angry','pleased'].includes(expr) ? expr : 'calm';
+    const zoom = parseFloat(document.documentElement.style.zoom) || 1;
+    const pixels = size * zoom * (window.devicePixelRatio || 1);
+    const edge = size > 128 || pixels > 512 ? 1280 : 512;
+    return `assets/portraits/webp/${key}-${mood}-${edge}.webp`;
+  }
+
   return {
+    assetUrl,
     url,
     LANISTAS: LANISTAS.map(([key, title, desc]) => ({ key, sex: key[0] === 'f' ? 'f' : 'm', title, desc })),
     NAMES: { doctore: 'Ферокс', lender: 'Лукрион', rival: 'Гней Вар', senator: 'Публий Сервилий' },

@@ -4,9 +4,13 @@ const checks=[],errors=[];
 function check(n,v){assert.ok(v,n);checks.push(n);console.log('PASS '+n);}
 (async()=>{const browser=await chromium.launch({channel:'chrome',headless:true});const page=await browser.newPage({viewport:{width:1440,height:1000}});page.on('pageerror',e=>errors.push(e.message));
 try{
- await page.goto(new URL('index.html?v=new-game-refine-20261105',process.env.SITE_URL||'http://127.0.0.1:8765/').href);await page.locator('#menu [data-act=newGameAsk]').click();
+ await page.goto(new URL('index.html?v=new-game-refine-20261105',process.env.SITE_URL||'http://127.0.0.1:8765/').href );
+ await page.waitForFunction(()=>performance.getEntriesByType('resource').some(e=>e.name.endsWith('doctore-calm-1280.webp'))&&performance.getEntriesByType('resource').some(e=>e.name.endsWith('arena-1.jpg')));
+ check('preload waits for main load and does not create campaign',await page.evaluate(()=>STATE===null&&performance.getEntriesByType('resource').filter(e=>e.name.endsWith('doctore-calm-1280.webp')||e.name.endsWith('arena-1.jpg')).every(e=>e.startTime>=performance.getEntriesByType('navigation')[0].loadEventEnd)));
+ await page.locator('#menu [data-act=newGameAsk]').click();
  await page.waitForFunction(()=>[...document.querySelectorAll('.new-campaign img')].every(e=>e.complete&&e.naturalWidth>0));
  check('six supplied portraits loaded',await page.locator('.new-campaign .lp img').evaluateAll(es=>es.length===6&&es.every(e=>e.src.includes('/assets/portraits/'))));
+ check('menu uses decoded 512px WebP portraits',await page.locator('.new-campaign .lp img').evaluateAll(es=>es.every(e=>e.currentSrc.endsWith('-512.webp')&&e.naturalWidth===512)));
  check('approved labels',JSON.stringify(await page.locator('.new-campaign .lp span').allTextContents())===JSON.stringify(['Молодой наследник','Бывший легионер','Старый торговец','Дочь ланисты','Вдова из Карфагена','Строгая матрона']));
  for(const width of [1440,390]){
   await page.setViewportSize({width,height:1000});
@@ -26,6 +30,7 @@ try{
  for(let i=0;i<10&&await page.locator('[data-act=sceneSkip]').isVisible();i++)await page.locator('[data-act=sceneSkip]').click();
  await page.locator('[data-act=lanistaInfo]').click();
  check('lanista profile shows portrait, biography and bonus',await page.locator('.lanista-dialog').evaluate(el=>!!el.querySelector('.lanista-details>img')&&el.textContent.includes('Строгая матрона')&&el.textContent.includes('Держать удар')&&el.scrollWidth<=el.clientWidth+1));
+ check('lanista profile uses a large WebP portrait',await page.locator('.lanista-details>img').getAttribute('src').then(src=>src.endsWith('-1280.webp')));
  await page.locator('.lanista-dialog [data-act=dlgOk]').click();
  check('lanista profile closes',await page.locator('.lanista-dialog').count()===0);
  check('no JS errors',!errors.length);

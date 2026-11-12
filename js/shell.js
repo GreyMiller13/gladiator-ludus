@@ -34,7 +34,7 @@ ACTIONS.lanistaInfo = () => {
   if (!lanista) return;
   const trigger = document.activeElement;
   showDialog({ title: esc(lanista.title), cls: 'lanista-dialog', ok: 'Закрыть', cancel: false,
-    body: `<div class="lanista-details"><img src="${lanista.url}" alt="${esc(lanista.title)}"><div><h3>Биография</h3><p>${esc(lanista.desc)}</p>${lanistaBonusMarkup(lanista.key)}</div></div>`,
+    body: `<div class="lanista-details"><img src="${PORTRAIT.assetUrl(lanista.key, 'calm', 230)}" alt="${esc(lanista.title)}"><div><h3>Биография</h3><p>${esc(lanista.desc)}</p>${lanistaBonusMarkup(lanista.key)}</div></div>`,
     onOk: () => trigger?.focus({preventScroll:true}),
   });
 };
@@ -102,7 +102,7 @@ renderMenu = function () {
   const box = $('#menu .menu-box'); box.className = 'menu-box shell-menu';
   box.innerHTML = `<div class="shell"><div class="top"><div class="wordmark">${shellIcon('laurel')}ЛУДУС</div></div><div class="main-home"><div class="menu-column"><div class="chapter-line"><span class="eyebrow">Кровь. Песок. Твоё наследие.</span></div><p class="tagline">Возглавь школу гладиаторов.<br>Дай ей имя, достойное арены.</p>
     ${STATE ? `<button class="continue ${STATE.lost ? 'lost' : ''}" data-act="${STATE.lost ? 'menuLost' : 'menuContinue'}"><img src="${bannerUrl(STATE.banner)}" alt=""><span class="continue-body"><strong>${STATE.lost ? 'Лудус отобран' : 'Продолжить'}</strong><span class="continue-name">${esc(STATE.ludusName)}</span><small>${STATE.story ? `Глава ${['I','II','III','IV'][STATE.story.chapter] || 'I'} · ` : ''}День ${STATE.day}</small><span class="campaign-stats">${[['coin',STATE.gold,'денариев'],['laurel',STATE.fame,'славы'],['helm',STATE.gladiators.length,'бойцов']].map(([k,v,n]) => `<span>${shellIcon(k)}<b>${v}</b><small>${n}</small></span>`).join('')}</span></span></button>` : ''}
-    <div class="menu-nav" role="navigation" aria-label="Главное меню">${[['newGameAsk','helm','Новая игра'],['saveAsk','armory','Сохранение'],['menuGuide','rules','Справочник'],['menuSettings','sun','Настройки']].map(([act,k,n]) => `<button class="nav-button" data-act="${act}" data-on="1">${shellIcon(k)}${n}</button>`).join('')}</div></div><div class="arena-caption"><strong>Мурмиллон против ретиария</strong><span>Сталь и щит. Сеть и трезубец.</span></div></div></div>`;
+    <div class="menu-nav" role="navigation" aria-label="Главное меню">${[['newGameAsk','helm','Новая игра'],['saveAsk','armory','Сохранение'],['menuGuide','rules','Справочник'],['menuSettings','sun','Настройки']].map(([act,k,n]) => `<button class="nav-button" data-act="${act}" data-on="1">${shellIcon(k)}${n}</button>`).join('')}</div></div></div></div>`;
 };
 const originalNewGame = showNewGameDialog;
 showNewGameDialog = function () {

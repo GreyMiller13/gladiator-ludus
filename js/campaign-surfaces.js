@@ -16,9 +16,7 @@
  step('buyItem').enter=()=>{CAMPAIGN.slot='all';CAMPAIGN.school='all';CAMPAIGN.selected=tutorPicks().item?.id;render();};
  step('buyGlad').sel=()=>`main [data-act="campaignRecruit"][data-id="${tutorPicks().glad?.id}"]`;
  const originalPortrait=PORTRAIT.url;
- PORTRAIT.url=(key,expr,size,me)=>['doctore','lender','rival','senator','m1','m2','m3','f1','f2','f3'].includes(key)
-  ? `assets/portraits/${key}-${['angry','pleased'].includes(expr)?expr:'calm'}.jpg`
-  : originalPortrait(key,expr,size,me);
+ PORTRAIT.url=(key,expr,size,me)=>PORTRAIT.assetUrl(key,expr,size)||originalPortrait(key,expr,size,me);
 
  const line=showSceneLine;
  showSceneLine=()=>{line();const box=$('#scene .scene-box');if(!box)return;

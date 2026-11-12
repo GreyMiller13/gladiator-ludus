@@ -1,7 +1,7 @@
 // Approved menu choreography. No STATE reads or writes.
 (function () {
 const canvas = document.querySelector('#menu canvas'), ctx = canvas.getContext('2d');
-let cw=0,ch=0,dpr=1,time=0,last=0,lastImpact=-1,blood=[],bloodMarks=[],lastBloodTime=0,raf=0;
+let cw=0,ch=0,dpr=1,time=0,last=0,lastImpact=-1,blood=[],bloodMarks=[],lastBloodTime=0,raf=0,resizePending=false;
 function resize(){cw=innerWidth / uiZoom();ch=innerHeight / uiZoom();dpr=Math.min(devicePixelRatio||1,1.7);canvas.width=Math.round(cw*dpr);canvas.height=Math.round(ch*dpr);}
 function drawArenaDaze(ctx, f, now) {
     if (!f.stunned || f.state !== 'idle') return;
@@ -124,11 +124,31 @@ function paintBlood(t,ground){
  for(const p of bloodMarks){ctx.fillStyle=`rgba(110,18,14,${Math.max(0,.6*(1-(t-p.t)/12))})`;ctx.beginPath();ctx.ellipse(p.x,p.y,p.r*2,p.r*.45,0,0,Math.PI*2);ctx.fill();}
 }
 
-function frame(now){
- if(!MENU.open){raf=0;return;}
- if(!document.hidden){if(menuMotionEnabled())time+=Math.min((now-(last||now))/1000,.05);drawFrame(time);}
- last=now;raf=requestAnimationFrame(frame);
+function stop(){
+ if(raf)cancelAnimationFrame(raf);
+ raf=0;last=0;
 }
-paintMenuBg=function(){resize();last=0;if(!raf)raf=requestAnimationFrame(frame);};
-addEventListener('resize',()=>{if(MENU.open)resize();});
+function frame(now){
+ raf=0;
+ if(!MENU.open||document.hidden){last=0;return;}
+ // Размер читается после обработчиков resize, когда масштаб уже обновлён.
+ if(resizePending){resize();resizePending=false;}
+ const motion=menuMotionEnabled();
+ if(motion)time+=Math.min((now-(last||now))/1000,.05);
+ drawFrame(time);
+ last=motion?now:0;
+ // Статичному меню достаточно одного кадра по запросу.
+ if(motion)raf=requestAnimationFrame(frame);
+}
+paintMenuBg=function(){
+ stop();
+ if(!MENU.open||document.hidden)return;
+ resizePending=true;raf=requestAnimationFrame(frame);
+};
+MENU.stopScene=stop;
+addEventListener('resize',()=>{if(MENU.open)paintMenuBg();});
+document.addEventListener('visibilitychange',()=>{
+ if(document.hidden)stop();
+ else if(MENU.open)paintMenuBg();
+});
 })();

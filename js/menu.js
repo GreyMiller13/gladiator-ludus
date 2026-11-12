@@ -20,6 +20,7 @@ function showMenu() {
 }
 function hideMenu() {
   MENU.open = false; MENU.guide = false;
+  MENU.stopScene?.();
   $('#menu').hidden = true;
   document.body.classList.remove('menu-on');
 }

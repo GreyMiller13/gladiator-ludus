@@ -4,6 +4,10 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
 try{await p.goto(new URL('index.html?v=menu-clean-20261105',process.env.SITE_URL||'http://127.0.0.1:8765/').href);
 for(const section of ['new','save','settings','guide']){
  await p.evaluate(s=>menuPage(s),section);
+ // Курсор после возврата из раздела может остаться над новой кнопкой.
+ // Проверяем обычное оформление, дождавшись завершения CSS-перехода.
+ await p.mouse.move(0,0);
+ await p.locator('.page-head button').evaluate(async button=>{getComputedStyle(button).backgroundColor;await Promise.all(button.getAnimations().map(animation=>animation.finished.catch(()=>{})));});
  const styles=await p.locator('.subscreen').evaluate(e=>{const h=e.querySelector('.page-head'),btn=h.querySelector('button');return {text:btn.textContent,background:getComputedStyle(h).backgroundImage,after:getComputedStyle(h,'::after').content,button:getComputedStyle(btn).backgroundColor,shadows:[...e.querySelectorAll('button:not(.pick)')].every(x=>getComputedStyle(x).boxShadow==='none')};});
  assert.equal(styles.text,'В меню');assert.equal(styles.background,'none');assert.equal(styles.after,'none');assert.equal(styles.button,'rgba(0, 0, 0, 0)');assert.ok(styles.shadows);checks.push(section+' header, button and shadows');
  await p.locator('.page-head button').click();assert.ok(await p.locator('.shell-menu').isVisible());

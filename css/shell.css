@@ -58,7 +58,7 @@ body.menu-on #game-shell,body.combat-active #game-shell{display:none}
 /* Main menu: approved backdrop, choreography and text composition. */
 #menu{position:fixed;inset:0;z-index:50;overflow:auto;background:#131510;font-size:18px;padding:0;display:block}
 #menu[hidden]{display:none!important}
-#menu::before{content:'';position:fixed;inset:0;background:#55472f url('../assets/shell/menu-background.jpg') center/cover no-repeat;pointer-events:none}
+#menu::before{content:'';position:fixed;inset:0;background:#55472f url('../assets/shell/menu-background.webp') center/cover no-repeat;pointer-events:none}
 #menu .menu-bg{position:fixed;inset:0;width:100%;height:100%;object-fit:fill;opacity:1;filter:brightness(.86) saturate(.72)}
 #menu .menu-shade{position:fixed;inset:0;background:linear-gradient(90deg,#0c100dfa 0%,#0c100df0 24%,#0d110e9e 47%,#0d110e21 80%),linear-gradient(0deg,#0c100df2,transparent 65%,#0c100d59);pointer-events:none}
 #menu .menu-box{position:relative;width:min(1150px,calc(100% - 30px));max-width:none;margin:30px auto;padding:25px;background:#182017f2;border:1px solid #766448;box-shadow:none}
@@ -239,3 +239,35 @@ body:not(.menu-on):not(.combat-active){display:block;height:auto;min-height:0;ov
 #dialog .lanista-details p{margin:0;color:var(--sub);font-size:16px;line-height:1.55}
 #dialog .lanista-dialog .dlg-btns{margin-top:24px}
 @media(max-width:600px){#dialog .lanista-details{grid-template-columns:minmax(0,1fr);gap:18px}#dialog .lanista-details>img{width:120px;height:150px;justify-self:center}}
+
+/* Компактные карточки: перенос только при нехватке места для колонки 264px. */
+#game-shell .workspace{container:campaign-space / inline-size}
+#game-shell .barracks-section{container:roster-space / inline-size}
+#game-shell main.content[data-tab="ludus"] .cards{grid-template-columns:repeat(4,minmax(0,1fr));width:100%;max-width:1396px;margin-inline:auto;justify-content:center;align-items:stretch;gap:12px}
+#game-shell main.content[data-tab="ludus"] .cards>.fighter:nth-child(n){grid-column:auto;grid-row:auto}
+#game-shell .cards>.fighter{display:grid;grid-template-columns:88px minmax(0,1fr);grid-template-rows:auto auto auto auto;min-height:0;height:auto;padding:0;position:relative;overflow:hidden;text-align:left}
+#game-shell .cards>.fighter .roster-body{display:contents;min-height:0;padding:0}
+#game-shell .cards>.fighter .roster-heading{grid-column:1/-1;grid-row:1;display:flex;flex-direction:row;justify-content:space-between;align-items:flex-start;gap:10px;padding:10px 12px 0}
+#game-shell .cards>.fighter .fighter-name{position:static;display:block;flex:1;min-width:0;font-size:21px;line-height:1.2;max-width:none;min-height:0;margin:0;white-space:normal;overflow-wrap:anywhere}
+#game-shell .cards>.fighter .fighter-sub{position:static;display:block;flex:none;font-size:11px;line-height:1.4;max-width:none;min-height:0;margin:0;text-align:right;white-space:normal}
+#game-shell .cards>.fighter .fighter-sub br{display:block}
+#game-shell .cards>.fighter .roster-art{position:relative;inset:auto;grid-column:1;grid-row:2/4;width:auto;min-height:120px;align-self:stretch}
+#game-shell .cards>.fighter .roster-portrait{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+#game-shell .cards>.fighter .roster-status{grid-column:2;grid-row:2;display:flex;align-items:center;justify-content:flex-start;flex-wrap:wrap;gap:5px 7px;padding:9px 12px 0 0}
+#game-shell .cards>.fighter .roster-status .tag{font-size:10px;white-space:normal}
+#game-shell .cards>.fighter .roster-status .power{font-size:11px}
+#game-shell .cards>.fighter .roster-status .roster-flag{font-size:10px;line-height:1.3}
+#game-shell .cards>.fighter .roster-stats{grid-column:2;grid-row:3;display:grid;grid-template-columns:minmax(max-content,1fr) max-content minmax(max-content,1fr);gap:7px;border:0;margin:0;padding:9px 12px 9px 0}
+#game-shell .cards>.fighter .roster-stats>span{display:block;font-size:11px;line-height:1.3;white-space:normal}
+#game-shell .cards>.fighter .roster-stats b{display:block;margin-top:3px;font-size:17px;line-height:1.3;white-space:nowrap}
+#game-shell .cards>.fighter .roster-experience{grid-column:1/-1;grid-row:4;padding:0 12px 10px}
+#game-shell .cards>.fighter .roster-experience>div:first-child{font-size:10px;margin-bottom:5px}
+#game-shell .cards>.fighter .roster-experience b{font-size:11px}
+/* Пороги: число колонок × 264px плюс промежутки по 12px. */
+@container roster-space (max-width:1091px){#game-shell main.content[data-tab="ludus"] .cards{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@container roster-space (max-width:815px){#game-shell main.content[data-tab="ludus"] .cards{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@container roster-space (max-width:539px){#game-shell main.content[data-tab="ludus"] .cards{grid-template-columns:minmax(0,360px)}}
+@container campaign-space (max-width:1100px){
+ #game-shell main.content[data-tab="ludus"] .dashboard{grid-template-columns:minmax(0,1fr)}
+ #game-shell main.content[data-tab="ludus"] .right-rail{grid-column:auto;grid-row:auto}
+}
